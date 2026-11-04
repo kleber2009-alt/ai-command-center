@@ -167,7 +167,7 @@ export const projects = [
       'Архитектура: статика /var/www/aisales-dashboard/ + FastAPI aisales-api-v2 (:8001); проект aisales (aisales-command-center, postgres, redis, qdrant, minio). Деплой deploy-ai-sales.yml.',
     technologies: ['FastAPI', 'Postgres', 'Redis', 'Qdrant', 'MinIO', 'HTML', 'Caddy'],
     links: [
-      admin('https://crm.aicex.club/', 'CRM-дашборд'),
+      admin('https://crm.aicex.club/', 'CRM AICEX (общая с Директом)'),
       live('https://sales.aicex.club/', 'Портал'),
       api('https://sales-api.aicex.club/health', 'API'),
       live('https://landings.aicex.club/aisales/', 'Лендинг'),
@@ -524,19 +524,23 @@ export const projects = [
       'ИИ-менеджер в Instagram Direct на ChatPlace: воронки кодовых слов, каталог из 48 бесплатных материалов двух Telegram-каналов в базе знаний и тематических правилах агентов. ' +
       'Еженедельный разбор переписок — скилл direct-ai-weekly-review; обновление каталога — direct-materials-catalog. Самописная альтернатива — IG Agent (не задеплоен).',
     technologies: ['ChatPlace', 'Instagram Direct', 'Claude'],
-    links: [art('5dj56wNJrKph3AYLbiibKH', 'Каталог бесплатных материалов'), admin('https://direct-crm.aicex.club/', 'CRM Директа')],
+    links: [art('5dj56wNJrKph3AYLbiibKH', 'Каталог бесплатных материалов'), admin('https://crm.aicex.club/', 'CRM AICEX')],
   },
   {
-    slug: 'direct-crm', name: 'CRM Директа', emoji: '📥', status: 'dev', sort_order: 45,
-    tagline: 'Переписки ИИ-менеджера ChatPlace, очередь по приоритету и оценка ответов ИИ — продукт Богдана, РОП',
+    slug: 'direct-crm', name: 'CRM AICEX', emoji: '📥', status: 'production', sort_order: 45,
+    tagline: 'Аналитика Директа и работа с перепиской в одном месте — продукт Богдана, РОП',
     description:
-      'Хозяин — Богдан, руководитель отдела продаж. Каждую минуту забирает из ChatPlace все переписки (Instagram Direct @ilia.paliy и @paliy_ilya, Telegram-боты) и хранит их целиком. ' +
-      'Claude читает каждую переписку: приоритет (готов купить → нужен человек → обычный), этап воронки (новый → тёплый → горячий → купил / потерян), источник (кодовое слово), ' +
-      'что сделать менеджеру и оценка работы ИИ-менеджера 1–5 с типами ошибок. Очередь сортирует готовых купить и тех, кому нужен человек, по времени ожидания; ' +
-      'Богдан забирает переписку у ИИ и отвечает прямо из CRM (ChatPlace ставит ИИ на паузу), потом возвращает. Отчёты: воронка и конверсия по кодовым словам, качество ИИ по дням, где ИИ справился плохо.\n\n' +
+      'crm.aicex.club — один проект на двоих: Илья (админ) и Богдан (руководитель продаж). Заменила статичный прототип «AI Sales CRM».\n\n' +
+      '«Аналитика»: дашборд — касания по дням (люди / ИИ-менеджер и бот / менеджеры) со сравнением с прошлым периодом, когда пишут люди (дни × часы), ' +
+      'отклик на бота, запуски цепочек по кодовым словам, цепочки ChatPlace с первой кнопкой и переходами по ссылкам, сегменты аудитории ' +
+      '(купили, готовы купить, тёплые ждут ответа, вовлечённые, новые, остыли, только за материалом, потеряны — по клику список), интересы, ' +
+      'самые активные люди; воронка, качество ИИ-менеджера, цепочки с каждой кнопкой и CTR.\n\n' +
+      '«Директ»: переписки ChatPlace (Instagram Direct и Telegram-боты) раз в 15 с в пределах лимита ChatPlace (1 запрос в 1,5 с, пауза при 429), ' +
+      'хранятся целиком; Claude ставит приоритет, этап, источник, квалификацию (балл 0–100, интерес, возражение, контакт) и оценку ИИ; очередь, ответ вручную ' +
+      '(ChatPlace ставит ИИ на паузу), обучение ИИ-менеджера (ответы в его базу знаний — только по кнопке).\n\n' +
       'Архитектура: Node 22 + node:sqlite, контейнер aicex-direct-crm в сети edge, блок /opt/edge/sites/direct-crm.caddy; ChatPlace через MCP (сервер chatplace из HQ_RUNNER_MCP_JSON). Деплой deploy-direct-crm.yml.',
     technologies: ['Node.js', 'SQLite', 'ChatPlace MCP', 'Claude', 'Caddy'],
-    links: [admin('https://direct-crm.aicex.club/', 'CRM Директа'), code('apps/direct-crm'), md('apps/direct-crm/CLAUDE.md', 'CLAUDE.md'), wf('deploy-direct-crm.yml')],
+    links: [admin('https://crm.aicex.club/', 'CRM AICEX'), code('apps/direct-crm'), md('apps/direct-crm/CLAUDE.md', 'CLAUDE.md'), wf('deploy-direct-crm.yml')],
   },
   {
     slug: 'marketing', name: 'Маркетинг: витрина и материалы', emoji: '📣', status: 'production', sort_order: 46,

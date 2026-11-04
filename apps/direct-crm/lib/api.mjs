@@ -4,6 +4,18 @@ import { ISSUE_TYPES } from './analyze.mjs';
 import { funnels } from './catalog.mjs';
 
 const RANK = { hot:0, human:1, normal:2, low:3 };
+// audience segments: a chat may be in several; the same SQL counts them on the dashboard and filters the list
+const FIRST = `(SELECT MIN(created_at) FROM messages m WHERE m.chat_id = chats.id AND m.side IN ('client','user','contact'))`;
+export const SEGMENTS = {
+  customers:{ name:'Купили', note:'этап «купил»', sql:() => `stage = 'customer'` },
+  ready:{ name:'Готовы купить', note:'балл 80+ или этап «горячий», ещё не купили', sql:() => `stage <> 'customer' AND (lead_score >= 80 OR stage = 'hot')` },
+  waiting:{ name:'Тёплые ждут ответа', note:'балл 50+, последнее слово за клиентом', sql:() => `stage NOT IN ('customer','lost') AND lead_score >= 50 AND last_side IN ('client','user','contact')` },
+  engaged:{ name:'Вовлечённые', note:'5 и больше сообщений от человека', sql:() => `client_count >= 5` },
+  fresh:{ name:'Новые за 7 дней', note:'первое сообщение за последнюю неделю', sql:() => `${FIRST} >= ${Math.floor(Date.now() / 1000) - 7 * 86400}` },
+  sleeping:{ name:'Остыли', note:'были тёплыми или горячими, молчат 14+ дней', sql:() => `stage IN ('warm','hot') AND last_client_at < ${Math.floor(Date.now() / 1000) - 14 * 86400}` },
+  material:{ name:'Только за материалом', note:'1–2 сообщения, балл ниже 20', sql:() => `client_count BETWEEN 1 AND 2 AND COALESCE(lead_score, 0) < 20` },
+  lost:{ name:'Потеряны', note:'отказались или пропали после цены', sql:() => `stage = 'lost'` },
+};
 const CLIENT = "('client','user','contact')";
 
 export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn = null, status = null, model = '', secure = false, log = console.log }) {
@@ -31,6 +43,8 @@ export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn 
     if (v === 'queue') where.push(`client_count > 0 AND reviewed_upto < last_client_at AND (priority IN ('hot','human') OR (last_side IN ${CLIENT} AND last_client_at < ?))`), args.push(now() - 600);
     if (v === 'mine') where.push('handled_by = ?'), args.push(q.get('user') || '');
     if (v === 'taken') where.push('handled_by IS NOT NULL');
+    const seg = SEGMENTS[q.get('segment')];
+    if (seg) where.push(`(${seg.sql()})`);
     const stage = q.get('stage');
     if (stage && STAGES.includes(stage)) where.push('stage = ?'), args.push(stage);
     const pr = q.get('priority');
@@ -58,6 +72,61 @@ export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn 
       SUM(client_count > 0 AND reviewed_upto < last_client_at AND (priority IN ('hot','human') OR (last_side IN ${CLIENT} AND last_client_at < ?))) queue,
       SUM(handled_by IS NOT NULL) taken, COUNT(*) total FROM chats`).get(now() - 600);
     return Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v || 0]));
+  }
+
+  /* the dashboard: touches by day and by who, when people write, chains with their response, segments, the most active */
+  function dashboard(days) {
+    const from = now() - days * 86400, prev = from - days * 86400;
+    const kind = `CASE WHEN side IN ${CLIENT} THEN 'people' WHEN by_user IS NOT NULL OR side IN ('operator','manager','admin') THEN 'managers' ELSE 'ai' END`;
+    const sum = (a, b) => db.prepare(`SELECT ${kind} k, COUNT(*) n, COUNT(DISTINCT chat_id) chats FROM messages WHERE created_at >= ? AND created_at < ? GROUP BY k`).all(a, b);
+    const cur = Object.fromEntries(sum(from, now() + 60).map(r => [r.k, r])), was = Object.fromEntries(sum(prev, from).map(r => [r.k, r]));
+    const touches = k => ({ now:cur[k]?.n || 0, before:was[k]?.n || 0 });
+    // by day (Moscow), three series
+    const daily = db.prepare(`SELECT date(created_at, 'unixepoch', '+3 hours') day, ${kind} k, COUNT(*) n FROM messages WHERE created_at >= ? GROUP BY day, k ORDER BY day`).all(from);
+    const dayMap = new Map();
+    for (let t = from; t <= now(); t += 86400) dayMap.set(new Date((t + 3 * 3600) * 1000).toISOString().slice(0, 10), { people:0, ai:0, managers:0 });
+    for (const r of daily) { const d = dayMap.get(r.day) || dayMap.set(r.day, { people:0, ai:0, managers:0 }).get(r.day); d[r.k] = r.n; }
+    // when people write: weekday × hour (Moscow), only people's messages
+    const heat = db.prepare(`SELECT CAST(strftime('%w', created_at, 'unixepoch', '+3 hours') AS INTEGER) wd, CAST(strftime('%H', created_at, 'unixepoch', '+3 hours') AS INTEGER) h, COUNT(*) n
+      FROM messages WHERE created_at >= ? AND side IN ${CLIENT} GROUP BY wd, h`).all(from);
+    // response: of the people the AI / bot wrote to, how many answered after it
+    const resp = db.prepare(`SELECT COUNT(*) n, SUM(EXISTS(SELECT 1 FROM messages c WHERE c.chat_id = b.chat_id AND c.side IN ${CLIENT} AND c.created_at > b.first)) answered FROM
+      (SELECT chat_id, MIN(created_at) first FROM messages WHERE created_at >= ? AND side NOT IN ${CLIENT} GROUP BY chat_id) b`).get(from);
+    const people = db.prepare(`SELECT COUNT(DISTINCT chat_id) n FROM messages WHERE created_at >= ? AND side IN ${CLIENT}`).get(from).n;
+    const newPeople = db.prepare(`SELECT COUNT(*) n FROM (SELECT chat_id FROM messages WHERE side IN ${CLIENT} GROUP BY chat_id HAVING MIN(created_at) >= ?)`).get(from).n;
+    // chains: launches in the period from the chats (code words), totals and buttons from ChatPlace
+    const launches = new Map(), presses = new Map();
+    if (catalog) for (const m of db.prepare(`SELECT chat_id, side, text FROM messages WHERE created_at >= ? AND side IN ${CLIENT}`).all(from)) {
+      const k = catalog.mark(m); if (!k) continue;
+      const map = k.kind === 'codeword' ? launches : presses;
+      const e = map.get(k.automation) || map.set(k.automation, { n:0, people:new Set() }).get(k.automation);
+      e.n++; e.people.add(m.chat_id);
+    }
+    const chains = funnels(db, days).map(f => {
+      const first = f.steps.find(s => s.first), firstBtn = first?.buttons.find(b => b.clicks != null);
+      const url = f.steps.flatMap(s => s.buttons).filter(b => b.url && b.clicks != null);
+      return { id:f.id, name:f.name, status:f.status, bot:f.bot, words:f.words, entered:f.entered, enteredDelta:f.enteredDelta,
+        firstClick:firstBtn ? { text:firstBtn.text, clicks:firstBtn.clicks, ctr:firstBtn.ctr } : null,
+        links:url.reduce((n, b) => n + b.clicks, 0), linkRate:f.entered ? Math.round(url.reduce((n, b) => n + b.clicks, 0) / f.entered * 1000) / 10 : null,
+        topLink:url.sort((a, b) => b.clicks - a.clicks)[0] || null,
+        launches:launches.get(f.id)?.n || 0, launchPeople:launches.get(f.id)?.people.size || 0, presses:presses.get(f.id)?.n || 0 };
+    }).sort((a, b) => (b.launches - a.launches) || (b.entered - a.entered));
+    // segments
+    const segments = Object.entries(SEGMENTS).map(([key, sg]) => {
+      const r = db.prepare(`SELECT COUNT(*) n, ROUND(AVG(lead_score)) score FROM chats WHERE client_count > 0 AND (${sg.sql()})`).get();
+      return { key, name:sg.name, note:sg.note, n:r.n, score:r.score };
+    });
+    const audience = db.prepare('SELECT COUNT(*) n FROM chats WHERE client_count > 0').get().n;
+    const interests = db.prepare(`SELECT interest, COUNT(*) n, ROUND(AVG(lead_score)) score FROM chats WHERE interest <> '' GROUP BY lower(interest) ORDER BY n DESC LIMIT 10`).all();
+    // the most active people of the period
+    const top = db.prepare(`SELECT c.*, t.n touches, t.last FROM (SELECT chat_id, COUNT(*) n, MAX(created_at) last FROM messages WHERE created_at >= ? AND side IN ${CLIENT} GROUP BY chat_id ORDER BY n DESC LIMIT 25) t
+      JOIN chats c ON c.id = t.chat_id ORDER BY t.n DESC, t.last DESC`).all(from).map(c => {
+      const words = new Set();
+      if (catalog) for (const m of msgs.all(c.id)) { const k = ['client', 'user', 'contact'].includes(m.side) && catalog.mark(m); if (k) words.add(k.name); }
+      return { ...view(c), touches:c.touches, lastTouch:c.last, chains:[...words] };
+    });
+    return { days, from, people, newPeople, audience, touches:{ people:touches('people'), ai:touches('ai'), managers:touches('managers') },
+      response:{ reached:resp.n || 0, answered:resp.answered || 0 }, byDay:[...dayMap].map(([day, v]) => ({ day, ...v })), heat, chains, segments, interests, top };
   }
 
   function stats(days) {
@@ -145,6 +214,7 @@ export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn 
       return json(res, 200, { chats:list(q), counts:counts() });
     }
     if (p === '/api/stats') return json(res, 200, stats(Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))));
+    if (p === '/api/dashboard') return json(res, 200, dashboard(Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))));
     if (p === '/api/funnels') return json(res, 200, { funnels:funnels(db, Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))) });
     if (p === '/api/learn' && req.method === 'GET') {
       const bots = Object.fromEntries(db.prepare('SELECT id, username, name FROM bots').all().map(b => [b.id, b.username || b.name]));
