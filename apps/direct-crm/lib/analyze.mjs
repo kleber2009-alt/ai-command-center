@@ -70,7 +70,33 @@ export function transcript(messages, max = 60) {
   }).join('\n');
 }
 
-export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90, batch = 12, log = console.log }) {
+/* A real conversation is a chat where the person wrote something of their own — not only a code word, button presses
+   or a bare «готово / да / спасибо». Only such chats go to Claude; the rest are marked «только за материалом» at once,
+   for free, so thousands of code-word chats cost nothing and the folders stay right. */
+const TRIVIAL = new Set(['да', 'нет', 'ок', 'окей', 'ok', 'спасибо', 'спс', 'благодарю', 'готово', 'хорошо', 'привет', 'здравствуйте',
+  'добрый день', 'проверить подписку', 'подписалась', 'подписался', 'получил', 'получила', 'хочу', 'круто', 'супер', 'класс', 'ага', 'угу']);
+const norm = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
+export function talkCount(list, mark) {
+  let n = 0;
+  for (const m of list) {
+    if (!['client', 'user', 'contact'].includes(m.side)) continue;
+    const t = norm(m.text);
+    if ((t.match(/\p{L}/gu) || []).length < 3 || TRIVIAL.has(t)) continue;
+    if (mark && mark(m)) continue;   // a code word or a button of an automation
+    if (/^\p{Lu}[\p{Lu}\p{N}-]{1,24}$/u.test(String(m.text || '').trim().replace(/[^\p{L}\p{N}-]+$/u, ''))) continue;   // one word in capitals — a code word not in the catalog yet
+    n++;
+  }
+  return n;
+}
+
+export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90, batch = 12, catalog = null, log = console.log }) {
+  const mark = m => catalog?.mark(m) || null;
+  const setTalk = db.prepare('UPDATE chats SET talk_count = ? WHERE id = ?');
+  // only for code words and buttons: no Claude, a fixed verdict
+  const saveMaterial = db.prepare(`UPDATE chats SET talk_count = 0, priority = 'low', priority_reason = 'только кодовое слово и кнопки — вопросов нет',
+    stage = CASE WHEN stage_manual = 1 THEN stage ELSE 'new' END, intent = 'за материалом', source = CASE WHEN ? <> '' THEN ? ELSE source END,
+    summary = ?, next_step = 'ничего — ИИ и цепочка справились', lead_score = COALESCE(lead_score, 5), analyzed_upto = ?, analyzed_at = ? WHERE id = ?`);
+  const untalked = db.prepare('SELECT id FROM chats WHERE talk_count IS NULL AND client_count > 0 LIMIT 1000');
   const due = db.prepare(`SELECT * FROM chats WHERE client_count > 0 AND last_message_at > analyzed_upto AND last_message_at <= ?
     ORDER BY last_client_at DESC LIMIT ?`);
   const msgs = db.prepare('SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at, rowid');
@@ -104,11 +130,19 @@ export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90
   }
 
   async function pass() {
-    if (!claude) return { analyzed:0, off:true };
-    let analyzed = 0, failed = 0, lastError = null;
-    for (const chat of due.all(now() - quietSec, batch + backoff.size)) {
+    // chats kept before this rule: count their own words once (database only)
+    for (const r of untalked.all()) setTalk.run(talkCount(msgs.all(r.id), mark), r.id);
+    let analyzed = 0, failed = 0, material = 0, lastError = null;
+    for (const chat of due.all(now() - quietSec, 400)) {
       if ((backoff.get(chat.id) || 0) > now()) continue;
-      if (analyzed + failed >= batch) break;
+      const list = msgs.all(chat.id), talk = talkCount(list, mark);
+      if (!talk) {
+        const word = list.map(mark).find(k => k?.kind === 'codeword');
+        saveMaterial.run(word?.label?.toUpperCase() || '', word?.label?.toUpperCase() || '', `Забрал материал${word ? ' по слову «' + word.label + '»' : ''}, своих вопросов не писал.`, chat.last_message_at, now(), chat.id);
+        material++; continue;
+      }
+      setTalk.run(talk, chat.id);
+      if (!claude || analyzed + failed >= batch) continue;
       try { await analyzeChat(chat); analyzed++; backoff.delete(chat.id); }
       catch (e) {
         failed++; lastError = e.message; backoff.set(chat.id, now() + 1800);  // a chat that fails is not retried for 30 min
@@ -116,7 +150,7 @@ export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90
         if (e.status === 429 || e.status === 401) break;
       }
     }
-    return { analyzed, failed, lastError };
+    return { analyzed, failed, material, lastError };
   }
 
   return { on:!!claude, run() { return running ||= pass().finally(() => { running = null; }); }, analyzeChat };

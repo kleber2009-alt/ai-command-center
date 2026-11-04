@@ -131,14 +131,25 @@ assert.equal(db.prepare("SELECT username FROM chats WHERE id = 'c-hot'").get().u
 const st = db.prepare("SELECT * FROM chats WHERE id = 'c-hot'").get();
 assert.equal(st.last_side, 'client'); assert.equal(st.client_count, 2);
 
-// 2. analysis: both chats, unknown issue types dropped; nothing new → no second call
+// 2. analysis: the real conversation goes to Claude (unknown issue types dropped), «ГАЙД» alone is only for the material;
+// nothing new → no second call
 let a = await analyzer.run();
-assert.equal(a.analyzed, 2);
-assert.equal(claudeCalls, 2);
+assert.equal(a.analyzed, 1); assert.equal(a.material, 1);
+assert.equal(claudeCalls, 1);
+assert.equal(db.prepare("SELECT intent FROM chats WHERE id = 'c-ok'").get().intent, 'за материалом');
 const hot = db.prepare("SELECT * FROM chats WHERE id = 'c-hot'").get();
 assert.equal(hot.priority, 'hot'); assert.equal(hot.stage, 'hot'); assert.equal(hot.source, 'МОНТАЖ'); assert.equal(hot.ai_score, 2);
 assert.equal(JSON.parse(hot.ai_issues).length, 1);
-await analyzer.run(); assert.equal(claudeCalls, 2);
+await analyzer.run(); assert.equal(claudeCalls, 1);
+// 2b. only a code word and «готово» — no Claude, marked «за материалом», out of the waiting queue, in its folder
+db.prepare("INSERT INTO chats(id, client_name, last_message_at, synced_upto, last_client_at, last_side, msg_count, client_count) VALUES('c-mat', 'Вера', ?, ?, ?, 'client', 3, 2)").run(T - 1500, T - 1500, T - 1500);
+for (const [id, side, text, at] of [['v1', 'client', 'МОНТАЖ', 1600], ['v2', 'bot', 'Держите скилл', 1590], ['v3', 'client', 'Готово ✅', 1500]])
+  db.prepare('INSERT INTO messages(id, chat_id, side, text, created_at) VALUES(?, ?, ?, ?, ?)').run(id, 'c-mat', side, text, T - at);
+a = await analyzer.run();
+assert.equal(a.material, 1); assert.equal(claudeCalls, 1, 'no Claude for code words');
+const mat = db.prepare("SELECT * FROM chats WHERE id = 'c-mat'").get();
+assert.equal(mat.talk_count, 0); assert.equal(mat.intent, 'за материалом'); assert.equal(mat.priority, 'low');
+assert.ok(db.prepare("SELECT talk_count FROM chats WHERE id = 'c-hot'").get().talk_count >= 1);
 s = await sync.run(); assert.equal(s.chats, 0, 'nothing new on the second pass');
 
 // 3. login
@@ -153,6 +164,11 @@ r = await call('/chats?view=queue');
 assert.deepEqual(r.body.chats.map(c => c.id), ['c-hot']);
 assert.equal(r.body.counts.hot, 1);
 assert.ok(r.body.chats[0].waiting >= 900);
+r = await call('/chats?view=all');
+const folder = k => r.body.folders.find(f => f.key === k).n;
+assert.equal(folder(''), 3); assert.equal(folder('material'), 2); assert.equal(folder('talk'), 1);
+assert.deepEqual((await call('/chats?view=all&segment=material')).body.chats.map(c => c.id), ['c-ok', 'c-mat']);
+db.exec("DELETE FROM messages WHERE chat_id = 'c-mat'; DELETE FROM chats WHERE id = 'c-mat'");   // the rest counts the two synced chats
 r = await call('/chats?view=all&q=гайд');
 assert.deepEqual(r.body.chats.map(c => c.id), ['c-ok']);
 r = await call('/chats/c-ok');
@@ -219,9 +235,9 @@ r = await call('/chats?view=all&segment=material'); assert.ok(!r.body.chats.some
 // 7. stats: funnel, sources, AI grades, manual answers
 r = await call('/stats?days=7');
 assert.equal(r.body.chats, 2);
-assert.equal(r.body.funnel.customer, 1); assert.equal(r.body.funnel.warm, 1);
+assert.equal(r.body.funnel.customer, 1); assert.equal(r.body.funnel.new, 1, 'only the code word → stays new');
 assert.equal(r.body.sources.find(x => x.source === 'МОНТАЖ').customer, 1);
-assert.equal(r.body.ai.graded, 2); assert.equal(r.body.ai.issues.ignored_question, 1);
+assert.equal(r.body.ai.graded, 1); assert.equal(r.body.ai.issues.ignored_question, 1);
 assert.equal(r.body.manual.replies, 1);
 assert.equal(r.body.qualification.l80, 1); assert.equal(r.body.qualification.contacts, 1);
 assert.equal(r.body.qualification.objections[0].objection, 'цена');

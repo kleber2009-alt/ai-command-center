@@ -58,7 +58,7 @@ export function openDb(dir) {
   `);
   // columns added after the first release
   const have = new Set(db.prepare('PRAGMA table_info(chats)').all().map(c => c.name));
-  for (const [c, t] of [['lead_score', 'INTEGER'], ['interest', 'TEXT'], ['objection', 'TEXT'], ['contact', 'TEXT']]) if (!have.has(c)) db.exec(`ALTER TABLE chats ADD COLUMN ${c} ${t}`);
+  for (const [c, t] of [['lead_score', 'INTEGER'], ['interest', 'TEXT'], ['objection', 'TEXT'], ['contact', 'TEXT'], ['talk_count', 'INTEGER']]) if (!have.has(c)) db.exec(`ALTER TABLE chats ADD COLUMN ${c} ${t}`);
   return db;
 }
 

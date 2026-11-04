@@ -44,9 +44,9 @@ const FALLBACK = /^claude-(opus-5|fable-5|sonnet-5-5)/.test(MODEL) ? { betas:['s
 const status = { sync:{ phase:'idle', since:0, done:0, total:0, passes:0, pending:null, pausedUntil:null, lastError:null }, analyze:{ phase:'idle', since:0, analyzed:0, failed:0, lastError:null } };
 const progress = p => Object.assign(status.sync, p);
 const sync = cp ? createSync({ db, cp, backfillDays:Number(env.BACKFILL_DAYS) || 14, log, progress }) : { run:async () => ({ off:true }), pullMessages:async () => 0 };
-const analyzer = createAnalyzer({ db, claude, model:MODEL, fallback:FALLBACK, batch:Number(env.CRM_ANALYZE_BATCH) || 12, log });
 // both work from what the database already keeps; they ask ChatPlace / Claude only when those are connected
 const catalog = createCatalog({ db, cp, log });
+const analyzer = createAnalyzer({ db, claude, model:MODEL, fallback:FALLBACK, batch:Number(env.CRM_ANALYZE_BATCH) || 12, catalog, log });
 const learn = createLearn({ db, claude, model:MODEL, fallback:FALLBACK });
 const auth = createAuth({ db, users, secret:env.CRM_SESSION_SECRET });
 const api = createApi({ db, cp, auth, sync, analyzer, catalog, learn, status, model:MODEL, secure:/^https:/.test(env.PUBLIC_URL || ''), log });
@@ -106,7 +106,7 @@ async function analyzeLoop() {
     a = await analyzer.run();
     status.analyze.analyzed += a.analyzed || 0; status.analyze.failed += a.failed || 0;
     if (a.lastError) status.analyze.lastError = `${new Date().toISOString()} ${a.lastError}`.slice(0, 300);
-    if (a.analyzed || a.failed) log(`analyze: ${a.analyzed} chats${a.failed ? `, ${a.failed} failed` : ''}`);
+    if (a.analyzed || a.failed || a.material) log(`analyze: ${a.analyzed} conversations by Claude${a.material ? `, ${a.material} only for the material (no Claude)` : ''}${a.failed ? `, ${a.failed} failed` : ''}`);
   } catch (e) { status.analyze.lastError = `${new Date().toISOString()} ${e.message}`.slice(0, 300); log('analyze:', e.message); }
   Object.assign(status.analyze, { phase:'idle', since:now() });
   timers.analyze = setTimeout(analyzeLoop, a.analyzed ? 5000 : 30000);
