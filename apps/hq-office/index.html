@@ -1312,7 +1312,8 @@ const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
-const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.05, 160);
+// near 0.1: с 0.05 у большого этажа не хватало точности глубины на дальних планах
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 160);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
@@ -1683,8 +1684,9 @@ function findPath(ax, az, bx, bz) {
 // пол, плита, стены
 const floor = plane(building, FX1 - FX0, FZ1 - FZ0, M.floor, [0, 0, (FZ0 + FZ1) / 2], [-Math.PI / 2, 0, 0]);
 floor.userData.keep = true;
-boxMM(building, FX0 - 0.25, FX1 + 0.25, -0.35, -0.002, FZ0 - 0.25, FZ1 + 0.06, M.slab, false);
-boxMM(building, FX0 - 0.25, FX1 + 0.25, -0.02, 0.0, FZ1, FZ1 + 0.06, M.wallTop, false);
+// плита этажа на 8 см ниже пола: верх в 2 мм под полом давал мерцающие полосы (z-fighting) при приближении и отдалении
+boxMM(building, FX0 - 0.25, FX1 + 0.25, -0.35, -0.08, FZ0 - 0.25, FZ1 + 0.06, M.slab, false);
+boxMM(building, FX0 - 0.25, FX1 + 0.25, -0.08, 0.0, FZ1, FZ1 + 0.06, M.wallTop, false);
 boxMM(building, FX0 - 0.2, FX1 + 0.2, 0, WALL_H, FZ0 - 0.2, FZ0, M.wall);
 boxMM(building, FX0 - 0.2, FX1 + 0.2, WALL_H, WALL_H + 0.012, FZ0 - 0.2, FZ0, M.wallTop);
 boxMM(building, FX0 - 0.2, FX0, 0, WALL_H, FZ0, FZ1, M.wall);
@@ -2106,9 +2108,9 @@ function glassRoom(z) {
   wall('n', x0, z0, x1, z0); wall('s', x0, z1, x1, z1);
   wall('w', x0, z0, x0, z1); wall('e', x1, z0, x1, z1);
   // пол комнаты чуть теплее коридора, по краю — тонкая линия цвета комнаты
-  const fl = plane(building, x1 - x0 - 0.1, z1 - z0 - 0.1, M.roomFloor, [(x0 + x1) / 2, 0.003, (z0 + z1) / 2], [-Math.PI / 2, 0, 0]); fl.receiveShadow = true;
+  const fl = plane(building, x1 - x0 - 0.1, z1 - z0 - 0.1, M.roomFloor, [(x0 + x1) / 2, 0.02, (z0 + z1) / 2], [-Math.PI / 2, 0, 0]); fl.receiveShadow = true;
   const ez = corridor === 's' ? z1 - 0.12 : z0 + 0.12;
-  plane(building, x1 - x0 - 0.3, 0.05, accentOf(z.accent), [(x0 + x1) / 2, 0.006, ez], [-Math.PI / 2, 0, 0]);
+  plane(building, x1 - x0 - 0.3, 0.05, accentOf(z.accent), [(x0 + x1) / 2, 0.025, ez], [-Math.PI / 2, 0, 0]);
   return { door:{ x:z.door ?? (x0 + x1) / 2, z:corridor === 's' ? z1 : z0 } };
 }
 
@@ -2214,7 +2216,7 @@ function hookah(x, z) {
 }
 {
   const L = LOUNGE;
-  const rug = plane(building, 5.4, 5.4, M.rug, [L.x, 0.006, L.z], [-Math.PI / 2, 0, 0]); rug.receiveShadow = true;
+  const rug = plane(building, 5.4, 5.4, M.rug, [L.x, 0.015, L.z], [-Math.PI / 2, 0, 0]); rug.receiveShadow = true;
   const a0 = Math.PI - 1.25, a1 = Math.PI + 1.25;
   mesh(sectorGeo(L.x, L.z, 1.5, 2.15, a0, a1, 0.3, 0.05), M.sofa).position.y = 0.08;
   mesh(sectorGeo(L.x, L.z, 2.0, 2.3, a0 + 0.04, a1 - 0.04, 0.58, 0.05), M.sofa).position.y = 0.08;
@@ -2847,7 +2849,7 @@ if (COUNCIL) {
   boxMM(building, R.x0, R.x1, H - 0.05, H, R.z0 - 0.03, R.z0 + 0.03, M.frame); boxMM(building, R.x0, R.x1, H - 0.05, H, R.z1 - 0.03, R.z1 + 0.03, M.frame);
   boxMM(building, R.x1 - 0.03, R.x1 + 0.03, H - 0.05, H, R.z0, R.z1, M.frame); boxMM(building, R.x0 - 0.03, R.x0 + 0.03, H - 0.05, H, R.z0, R.z1, M.frame);
   // ковёр и стол
-  const rug = mesh(new THREE.PlaneGeometry(R.x1 - R.x0 - 0.4, R.z1 - R.z0 - 0.4), M.rug, building, false); rug.rotation.x = -Math.PI / 2; rug.position.set(cx, 0.006, cz);
+  const rug = mesh(new THREE.PlaneGeometry(R.x1 - R.x0 - 0.4, R.z1 - R.z0 - 0.4), M.rug, building, false); rug.rotation.x = -Math.PI / 2; rug.position.set(cx, 0.015, cz);
   const tw = 3.3, td = 0.95;
   const top = mesh(new RoundedBoxGeometry(tw, 0.05, td, 2, 0.02), M.desk); top.position.set(cx, 1.02, cz);
   for (const sx of [-1, 1]) { const leg = mesh(new THREE.CylinderGeometry(0.06, 0.09, 1.0, 16), M.chrome); leg.position.set(cx + sx * (tw / 2 - 0.4), 0.5, cz); }
@@ -5139,7 +5141,10 @@ renderer.setAnimationLoop(() => {
     const d = camera.position.distanceTo(tmpV.set(a.x, 1.2, a.z)), s = a.sceneStatus();
     a.label.visible = labelsOn && (d < 15 || selectedId === a.id || a.live || s === 'presenting' || (s === 'carrying' && d < 30));
   }
-  for (const z of WAVE_ROOMS) z.chip.visible = labelsOn && (mode === 'plan' || (mode === 'overview' && !portrait()));
+  // таблички комнат: в «Плане» и «Обзоре»; при сильном отдалении прячутся, чтобы не налезать друг на друга
+  const camFar = camera.position.distanceTo(controls.target) > (mode === 'plan' ? 80 : 58);
+  for (const z of WAVE_ROOMS) z.chip.visible = labelsOn && !camFar && (mode === 'plan' || (mode === 'overview' && !portrait()));
+  if (COUNCIL?.chip) COUNCIL.chip.visible = labelsOn && !camFar;
   if (HB.holo) { holoTick(t); HB.holo.update(dt, camera); }
   composer.render();
   labelRenderer.render(scene, camera);
