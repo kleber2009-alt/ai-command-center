@@ -256,7 +256,9 @@ ANTHROPIC_API_KEY=… ELEVENLABS_API_KEY=… HQ_ASSISTANT_PASSWORD=… npm run d
 Когда задаче нужен ваш ответ, готов результат или что-то сломалось, офис пишет в Telegram: отчёт, затраты и ссылка «Открыть
 в офисе». Чтобы работать прямо из чата, нужен **свой бот офиса**:
 
-1. В Telegram откройте @BotFather → `/newbot` → имя, например «AICEX Офис» → скопируйте токен.
+Бот офиса — **@AI_Growth_Office_Bot** (вебхук старого мини-аппа AI Growth Office снят, описание и команды — офисные).
+
+1. Токен бота — у @BotFather (`/mybots` → бот → API Token); для нового бота — `/newbot`.
 2. Напишите своему боту `/start` (иначе он не сможет вам писать).
 3. GitHub → Settings → Secrets and variables → Actions: секрет `HQ_NOTIFY_TG_BOT_TOKEN` — токен; переменная `HQ_NOTIFY_TG_CHAT_ID` —
    ваш id в Telegram (узнать — у @userinfobot).
