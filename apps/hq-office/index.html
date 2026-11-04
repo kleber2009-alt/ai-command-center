@@ -53,8 +53,7 @@
   .fold svg{width:16px;height:16px;transition:transform .25s;transform:rotate(180deg)}
   .brand.open .fold svg{transform:none}
   .themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
-  /* один стиль — «Волна»; «Ночной Сити» — в архиве (?theme=night), переключателя нет */
-  .themes,.theme-note,#brandFold{display:none!important}
+  /* два стиля офиса — «Волна» и «Ночной Сити»: переключатель в шапке и в «Ещё» на телефоне */
   .brand-lede{margin:8px 0 2px;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:320px}
   .brand-lede b{color:var(--ink)}
   body.app .brand-lede{display:none}
@@ -900,7 +899,7 @@
 </div>
 <div class="modal" id="teamAdm" hidden role="dialog" aria-modal="true" aria-labelledby="taTitle">
   <div class="dlg">
-    <div class="dh"><div><span class="eyebrow">Только для владельца</span><h2 id="taTitle">Команда и доступы</h2></div><button class="x" id="taClose" aria-label="Закрыть">×</button></div>
+    <div class="dh"><div><span class="eyebrow">Админка · только для владельца</span><h2 id="taTitle">Команда и доступы</h2></div><button class="x" id="taClose" aria-label="Закрыть">×</button></div>
     <div class="db" id="taBody"></div>
   </div>
 </div>
@@ -930,6 +929,7 @@
 <div class="toast glass" id="toast" hidden role="status"><span id="toastText"></span><button class="btn-go" id="toastGo">Открыть</button></div>
 
 <nav class="dock glass" id="dock" aria-label="Вид">
+  <button data-cmd="admin" id="dAdmin" hidden title="Админка: кто входит в офис, каким агентам руководит, ссылки-приглашения"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>Админка</button>
   <button data-cmd="login" class="login" id="dLogin" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Войти</button>
   <button data-cmd="newtask" class="go" id="dNew" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Задача агенту</button>
   <button data-cmd="overview" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Обзор</button>
@@ -1052,6 +1052,7 @@ const $ = id => document.getElementById(id);
 // Стиль офиса: «Галерея» — сцена этого модуля, «Ночной Сити» — сцена из night.js поверх той же симуляции,
 // задач, рабочего стола и панелей. Переключение перезагружает страницу: каждый стиль собирается заново.
 let STYLE = 'wave';
+try { STYLE = localStorage.getItem('hq:theme') || 'wave'; } catch (e) {}
 if (params.get('theme')) STYLE = params.get('theme');
 if (!['wave', 'night'].includes(STYLE)) STYLE = 'wave';
 let night = STYLE === 'night', NIGHT = null;
@@ -5124,10 +5125,10 @@ function select(id, flyCam = false) {
   agents.forEach(paintLabel);
   renderPanel(); $('pbody').scrollTop = 0;
 }
-function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
+function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo', 'admin', 'login', 'newtask'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`)?.classList.toggle('on', on); }
 function cmd(k) {
-  if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo'].includes(k)) stopTour();
+  if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo', 'admin'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
   if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 96, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 50, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
@@ -5143,6 +5144,7 @@ function cmd(k) {
   if (k === 'newtask') openDeskNew();
   if (k === 'holo') holoSummon();
   if (k === 'login') openLogin();
+  if (k === 'admin') openTeamAdmin();
 }
 // вход владельца с любого экрана: ассистент открывается сразу с полем пароля
 async function openLogin() {
@@ -5170,6 +5172,7 @@ function appShell() {
   st.innerHTML = own ? (need ? `<b>${need}</b> ждут вас` : '') + (work ? `${need ? ' · ' : '<i></i>'}${work} в работе` : need ? '' : '<i></i>Агенты свободны')
     : lock ? 'Войти' : `${TASKS.length} ${word(TASKS.length, 'задача', 'задачи', 'задач')}`;
   $('dLogin').hidden = !lock;
+  $('dAdmin').hidden = role() !== 'owner';
 }
 function mOpen(k) {
   $('msheet').hidden = true;
@@ -5188,6 +5191,8 @@ function moreSheet() {
   const views = [['desk', 'Мой стол', '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'], ['plan', 'План', '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>'],
     ['tour', 'Экскурсия', '<path d="m8 5 11 7-11 7z"/>'], ['holo', 'Голограмма', '<ellipse cx="12" cy="20" rx="6" ry="1.6"/><circle cx="12" cy="8" r="4"/>'], ['labels', 'Подписи', '<path d="M4 6h16M4 12h10M4 18h7"/>']];
   $('msh').innerHTML = `<i class="grip"></i><h3>Вид офиса</h3><div class="row">${views.map(([k, l, p]) => `<button data-mc="${k}"${k === 'labels' && labelsOn ? ' class="on"' : ''}>${ic(p)}${l}</button>`).join('')}</div>
+    <h3>Оформление</h3><div class="row">${Object.entries(THEMES).map(([id, T]) => `<button data-th="${id}"${id === STYLE ? ' class="on"' : ''}><span class="sw">${T.sw.map(c => `<i style="--c:${c}"></i>`).join('')}</span>${esc(T.name)}</button>`).join('')}</div>
+    ${role() === 'owner' ? `<h3>Админка</h3><div class="row"><button data-mc="admin">${ic('<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}Команда и доступы</button></div>` : ''}
     <h3>Аккаунт</h3><div class="acct">${s?.owner ? `<span>Вы вошли как владелец</span><button class="btn-go" data-mc="logout">Выйти</button>`
       : s?.configured?.login ? `<span>Войдите, чтобы ставить задачи и видеть, что в работе</span><button class="btn-go" data-mc="login">Войти</button>` : '<span>Демо для гостей</span>'}</div>`;
   $('msheet').hidden = false;
