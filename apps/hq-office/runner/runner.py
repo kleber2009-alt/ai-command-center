@@ -46,7 +46,7 @@ LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
 QA_TOOLS = ["Bash", "Read", "Glob", "Grep", "WebFetch"]
-VERSION = "7"
+VERSION = "8"
 MCP_FILE = Path(os.environ.get("HQ_MCP_CONFIG") or HOME / "hq-runner/mcp.json")
 MCP_CLAUDE = HOME / "hq-runner/mcp.claude.json"
 READ_RE = re.compile(r"(^|[_-])(get|list|search|query|read|fetch|status|analytics|report|reports|stats|estimate|predict|balance|describe|show|find|lookup|explore|view|count|check|whoami|me|options|fields|connectors|dashboard)([_-]|$)", re.I)
@@ -171,7 +171,8 @@ def _rpc(url, headers, method, params=None, sid="", rid=1):
     body = {"jsonrpc": "2.0", "method": method, "params": params or {}}
     if rid is not None:
         body["id"] = rid
-    h = {"content-type": "application/json", "accept": "application/json, text/event-stream", **headers}
+    # своё имя клиента: часть серверов (ChatPlace) отвечает 403 на стандартный User-Agent Python-urllib
+    h = {"content-type": "application/json", "accept": "application/json, text/event-stream", "user-agent": f"hq-runner/{VERSION}", **headers}
     if sid:
         h["mcp-session-id"] = sid
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=h, method="POST")
