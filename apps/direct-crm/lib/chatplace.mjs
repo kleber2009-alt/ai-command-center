@@ -5,7 +5,8 @@
 
 const VERSION = '1';
 
-export function createChatPlace({ url, headers = {}, fetchImpl = fetch, gapMs = 120 }) {
+// ChatPlace sits behind Cloudflare, which bans a client that asks too fast (HTTP 429, error 1015): one request per gapMs
+export function createChatPlace({ url, headers = {}, fetchImpl = fetch, gapMs = 1500 }) {
   if (!url) throw new Error('ChatPlace: no MCP url');
   let sid = '', rid = 0, ready = null, last = 0;
 
@@ -20,6 +21,9 @@ export function createChatPlace({ url, headers = {}, fetchImpl = fetch, gapMs = 
     sid = r.headers.get('mcp-session-id') || sid;
     const raw = await r.text();
     if (r.status === 404 && sid && method !== 'initialize') { sid = ''; ready = null; throw Object.assign(new Error('session expired'), { retry:true }); }
+    if (r.status === 429 || /error 1015|rate.?limit/i.test(raw.slice(0, 400)) && !r.ok) {
+      throw Object.assign(new Error(`ChatPlace ${method}: HTTP ${r.status} — rate limited`), { rateLimited:true, status:429 });
+    }
     if (!r.ok) throw new Error(`ChatPlace ${method}: HTTP ${r.status} ${raw.slice(0, 160)}`);
     if (notify) return null;
     let msgs = [];

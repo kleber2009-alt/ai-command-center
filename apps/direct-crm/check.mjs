@@ -33,9 +33,11 @@ const msgs = {
   'c-old':[{ id:'o1', side:'client', message:'привет', createdAt:T - 40 * 86400, mediaFiles:[] }],
 };
 const calls = [];
+let rateLimit = false;
 const mcp = http.createServer(async (req, res) => {
   let s = ''; for await (const c of req) s += c;
   const b = JSON.parse(s);
+  if (rateLimit && b.method === 'tools/call') { calls.push('429'); res.writeHead(429, { 'content-type':'application/json' }); return res.end('{"title":"Error 1015: You are being rate limited"}'); }
   assert.equal(req.headers.authorization, 'Bearer cp-token');
   if (b.id == null) { res.writeHead(202); return res.end(); }
   let result = {};
@@ -179,13 +181,23 @@ const saved = chats.splice(0);
 for (let i = 0; i < 120; i++) { chats.push({ id:'h' + i, clientId:'x' + i, clientName:'К' + i, status:1, type:2, lastMessageAt:T - 3600 - i * 600 }); msgs['h' + i] = [{ id:'hm' + i, side:'client', message:'слово ' + i, createdAt:T - 3600 - i * 600, mediaFiles:[] }]; }
 chats.push({ id:'h-old', clientId:'xo', clientName:'Старый', status:1, type:2, lastMessageAt:T - 30 * 86400 }); msgs['h-old'] = [];
 const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'dcrm-')), db2 = openDb(dir2);
-const sync2 = createSync({ db:db2, cp, backfillDays:14, maxPages:1, backfillPages:1, log:() => {} });
-const count = () => db2.prepare('SELECT COUNT(*) n FROM chats').get().n;
+const sync2 = createSync({ db:db2, cp, backfillDays:14, maxPages:1, backfillPages:1, pullsPerPass:40, log:() => {} });
+const count = () => db2.prepare('SELECT COUNT(*) n FROM chats').get().n, nmsg = () => db2.prepare('SELECT COUNT(*) n FROM messages').get().n;
 let p = await sync2.run(); assert.equal(count(), 100, 'first pass: one page + one backfill page'); assert.notEqual(p.backfill, 'done');
+assert.equal(nmsg(), 40, 'messages of at most pullsPerPass chats per pass'); assert.equal(p.pending, 60);
 p = await sync2.run(); assert.equal(count(), 120); assert.equal(p.backfill, 'done');
-assert.equal(db2.prepare('SELECT COUNT(*) n FROM messages').get().n, 120);
+p = await sync2.run(); p = await sync2.run();
+assert.equal(nmsg(), 120, 'the queue in the database brings every chat'); assert.equal(p.pending, 0);
 assert.equal(db2.prepare("SELECT COUNT(*) n FROM chats WHERE id = 'h-old'").get().n, 0, 'older than BACKFILL_DAYS stays out');
 p = await sync2.run(); assert.equal(p.chats, 0);
+
+// 9. ChatPlace answers 429 (Cloudflare 1015): the pass stops at once with rateLimited, and goes on later
+chats.push({ id:'h-new', clientId:'xn', clientName:'Новый', status:1, type:2, lastMessageAt:T + 10 }); msgs['h-new'] = [{ id:'hn', side:'client', message:'цена?', createdAt:T + 10, mediaFiles:[] }];
+rateLimit = true; const before = calls.length;
+await assert.rejects(sync2.run(), e => e.rateLimited === true);
+assert.ok(calls.length - before <= 1, 'no more requests after a rate-limit answer');
+rateLimit = false;
+p = await sync2.run(); assert.equal(p.messages, 1);
 db2.close(); fs.rmSync(dir2, { recursive:true, force:true });
 chats.splice(0, chats.length, ...saved);
 

@@ -39,7 +39,7 @@ const MODEL = env.CRM_MODEL || 'claude-opus-5-5';
 const FALLBACK = /^claude-(opus-5|fable-5|sonnet-5-5)/.test(MODEL) ? { betas:['server-side-fallback-2026-07-01'], fallbacks:'default' } : {};
 
 // what the CRM is doing right now — shown by /api/health
-const status = { sync:{ phase:'idle', since:0, done:0, total:0, passes:0, lastError:null }, analyze:{ phase:'idle', since:0, analyzed:0, failed:0, lastError:null } };
+const status = { sync:{ phase:'idle', since:0, done:0, total:0, passes:0, pending:null, pausedUntil:null, lastError:null }, analyze:{ phase:'idle', since:0, analyzed:0, failed:0, lastError:null } };
 const progress = p => Object.assign(status.sync, p);
 const sync = cp ? createSync({ db, cp, backfillDays:Number(env.BACKFILL_DAYS) || 14, log, progress }) : { run:async () => ({ off:true }), pullMessages:async () => 0 };
 const analyzer = createAnalyzer({ db, claude, model:MODEL, fallback:FALLBACK, batch:Number(env.CRM_ANALYZE_BATCH) || 12, log });
@@ -67,15 +67,27 @@ const server = http.createServer(async (req, res) => {
 // two loops: pulling chats never waits for Claude, and a slow analysis never delays new messages
 const timers = {};
 const now = () => Math.floor(Date.now() / 1000);
+// ChatPlace (Cloudflare) bans a client that asks too fast; every request during the ban prolongs it, so on a rate-limit
+// answer the loop goes quiet: 10 min, then twice as long each time up to 2 h, back to normal after a clean pass
+let pauseMin = 0;
 async function syncLoop() {
-  Object.assign(status.sync, { phase:'sync', since:now() });
+  Object.assign(status.sync, { phase:'sync', since:now(), pausedUntil:null });
+  let wait = (Number(env.SYNC_SEC) || 60) * 1000;
   try {
     const s = await sync.run();
-    status.sync.passes++;
-    if (s.chats || s.firstRun) log(`sync: ${s.chats} chats, ${s.messages} new messages${s.firstRun ? ' (first pass)' : ''}${s.backfill && s.backfill !== 'done' ? `, backfill +${s.backfill}` : ''}`);
-  } catch (e) { status.sync.lastError = `${new Date().toISOString()} ${e.message}`.slice(0, 300); log('sync:', e.message); }
-  Object.assign(status.sync, { phase:'idle', since:now() });
-  timers.sync = setTimeout(syncLoop, (Number(env.SYNC_SEC) || 60) * 1000);
+    status.sync.passes++; status.sync.pending = s.pending ?? null; pauseMin = 0;
+    if (s.chats || s.listed || s.firstRun) log(`sync: listed ${s.listed ?? 0}, messages of ${s.chats} chats (+${s.messages}), ${s.pending ?? 0} chats still to fetch${s.firstRun ? ' (first pass)' : ''}${s.backfill && s.backfill !== 'done' ? `, backfill +${s.backfill}` : ''}`);
+  } catch (e) {
+    status.sync.lastError = `${new Date().toISOString()} ${e.message}`.slice(0, 300); log('sync:', e.message);
+    if (e.rateLimited) {
+      pauseMin = Math.min(120, pauseMin ? pauseMin * 2 : 10);
+      wait = pauseMin * 60_000;
+      status.sync.pausedUntil = now() + pauseMin * 60;
+      log(`sync: ChatPlace rate limit — pause ${pauseMin} min`);
+    }
+  }
+  Object.assign(status.sync, { phase:status.sync.pausedUntil ? 'paused' : 'idle', since:now() });
+  timers.sync = setTimeout(syncLoop, wait);
 }
 async function analyzeLoop() {
   let a = {};
