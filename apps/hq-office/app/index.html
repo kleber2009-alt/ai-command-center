@@ -67,8 +67,8 @@
   .step .c.p{background:var(--btn);color:var(--ink2);border:1px dashed var(--ink3)}
   .ctl{display:flex;flex-wrap:wrap;gap:8px} .ctl .b{flex:1 1 calc(50% - 4px)}
   .chip{font-size:12px;color:var(--ink2);background:var(--btn);padding:4px 9px;border-radius:999px}
-  .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--card);border-radius:14px;padding:4px;border:1px solid var(--line)}
-  .seg button{height:40px;border:0;border-radius:10px;background:transparent;font-size:13px;font-weight:700;color:var(--ink2)}
+  .seg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;background:var(--card);border-radius:14px;padding:4px;border:1px solid var(--line)}
+  .seg button{height:40px;border:0;border-radius:10px;background:transparent;font-size:12.5px;padding:0 2px;font-weight:700;color:var(--ink2)}
   .seg button.on{background:var(--btn);color:var(--ink)}
   .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .stats b{display:block;font-size:20px;font-weight:800} .stats span{font-size:12px;color:var(--ink2)}
@@ -124,7 +124,7 @@
 'use strict';
 const API = '/api/assistant', DESK = API + '/desk';
 const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
-const S = { later:'', auth:'', owner:false, tasks:[], agents:[], pipelines:[], runner:null, stats:null, filter:'need', how:'', agent:'', rate:{}, uploads:[], text:'', busy:false, revise:'' };
+const S = { one:{}, hist:null, histN:30, later:'', auth:'', owner:false, tasks:[], agents:[], pipelines:[], runner:null, stats:null, filter:'need', how:'', agent:'', rate:{}, uploads:[], text:'', busy:false, revise:'' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const word = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? b : c;
@@ -228,7 +228,10 @@ function lastStep(t) { const s = t.steps?.[t.steps.length - 1]?.text || ''; retu
 /* ---------- router ---------- */
 function route() {
   const h = location.hash.slice(1);
-  if (h.startsWith('t=')) return { s:'detail', id:h.slice(2) };
+  // Telegram adds its launch params to the hash (#t=<id>&tgWebAppData=…) — the id ends at the first & or ?
+  if (h.startsWith('t=')) return { s:'detail', id:decodeURIComponent(h.slice(2).split(/[&?]/)[0]) };
+  if (h.startsWith('h=')) return { s:'hist', id:decodeURIComponent(h.slice(2).split(/[&?]/)[0]) };
+  if (/^tasks&|^tgWebApp/.test(h)) return { s:h.startsWith('tasks') ? 'tasks' : 'home' };
   return { s:['tasks', 'new', 'team', 'more'].includes(h) ? h : 'home' };
 }
 function go(h) { if (location.hash.slice(1) !== h) location.hash = h; else render(); }
@@ -274,6 +277,7 @@ function home() {
     ${need.length ? `<span class="lbl a">Ждут вашего решения</span>${need.map(needCard).join('')}` : ''}
     <span class="lbl g">Сейчас работают</span>
     ${work.length + queue.length ? [...work, ...queue].slice(0, 6).map(workCard).join('') : '<p class="empty" style="margin:6px 0">Агенты свободны — поставьте задачу кнопкой «＋».</p>'}
+    ${(histLoad(), S.hist?.length) ? `<span class="lbl">Последнее в офисе</span>${S.hist.slice(0, 3).map(histCard).join('')}<button class="b" data-a="filter" data-f="office">Вся работа офиса</button>` : ''}
     <span class="lbl">Сегодня</span>
     <div class="card stats"><div><b>${doneToday}</b><span>принято</span></div><div><b>${fmtDur(runs.reduce((a, r) => a + (r.ms || 0), 0))}</b><span>работа агентов</span></div><div><b>${fmtUsd(runs.reduce((a, r) => a + (r.cost || 0), 0))}</b><span>Claude</span></div></div>
     <div class="list">
@@ -282,15 +286,55 @@ function home() {
     </div></main>`;
 }
 function tasksScreen() {
-  const G = { need:S.tasks.filter(needOf), work:S.tasks.filter(t => ['work', 'queued', 'routing', 'paused'].includes(t.status)), done:S.tasks.filter(t => t.status === 'done' || t.status === 'cancelled'), all:S.tasks };
-  const F = [['need', 'Ждут'], ['work', 'Работа'], ['done', 'Готово'], ['all', 'Все']];
+  if (S.filter === 'office') histLoad();
+  const G = { office:S.hist || [], need:S.tasks.filter(needOf), work:S.tasks.filter(t => ['work', 'queued', 'routing', 'paused'].includes(t.status)), done:S.tasks.filter(t => t.status === 'done' || t.status === 'cancelled'), all:S.tasks };
+  const F = [['need', 'Ждут'], ['work', 'Работа'], ['done', 'Готово'], ['all', 'Все'], ['office', 'Офис']];
   const list = G[S.filter] || G.all;
-  return header('Рабочий стол', 'Задачи') + `<main><div class="seg">${F.map(([k, l]) => `<button class="${S.filter === k ? 'on' : ''}" data-a="seg" data-f="${k}">${l} <span style="opacity:.75">${G[k].length}</span></button>`).join('')}</div>
+  const seg = `<div class="seg">${F.map(([k, l]) => `<button class="${S.filter === k ? 'on' : ''}" data-a="seg" data-f="${k}">${l}${k === 'office' && !S.hist ? '' : ` <span style="opacity:.75">${G[k].length}</span>`}</button>`).join('')}</div>`;
+  if (S.filter === 'office') return header('Вся работа офиса', 'Задачи') + `<main>${seg}
+    <span class="sub">Всё, что офис сделал: задачи рабочего стола, PR на GitHub, артефакты Claude, сайты — новые сверху, обновляется само.</span>
+    ${!S.hist ? '<p class="empty">Загружаю историю офиса…</p>' : S.hist.length ? S.hist.slice(0, S.histN).map(histCard).join('') + (S.hist.length > S.histN ? `<button class="b" data-a="hist-more">Показать ещё</button>` : '') : '<p class="empty">История пока пуста.</p>'}</main>`;
+  return header('Рабочий стол', 'Задачи') + `<main>${seg}
     ${list.length ? list.map(t => { const k = statusKey(t); return `<button class="card" style="text-align:left" data-a="open" data-id="${t.id}">
       <span style="display:flex;align-items:center;gap:8px"><span class="pill ${k}">${esc(t.status === 'cancelled' ? 'отменена' : k === 'paused' ? pausedNote(t) : STATUS[k] || t.statusText)}</span>${t.urgent && !['done', 'cancelled'].includes(t.status) ? '<span class="pill urgent">срочно</span>' : ''}<span class="sub" style="margin-left:auto">${esc(ago(t.updated))}</span></span>
       <span class="tt">${esc(t.route?.title || t.text)}</span>
       <span style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${esc(colorOf(t.agent?.id || t.route?.agent))}"></span><span class="sub" style="flex:1">${esc(t.agent?.name || 'Диспетчер')}${t.pipeline ? ' · ' + esc(t.pipeline.label) : ''}</span>
       <span class="sub" style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${t.usage ? fmtDur(t.usage.ms) + (t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : '') : ''}</span></span>${bars(t)}</button>`; }).join('') : '<p class="empty">Здесь пусто — всё разобрано.</p>'}</main>`;
+}
+/* ---------- the office history: the same real tasks the 3D office shows (tasks.js + tasks.auto.js + accepted desk tasks) ---------- */
+let histT = 0;
+function histLoad(force) {
+  if (!force && (S.hist && Date.now() - histT < 60e3 || histLoad.busy)) return;
+  histLoad.busy = true; histT = Date.now();
+  const v = Date.now(), one = src => new Promise(ok => { const sc = document.createElement('script'); sc.src = src + (src.includes('?') ? '&' : '?') + 'v=' + v; sc.onload = sc.onerror = () => { sc.remove(); ok(); }; document.head.appendChild(sc); });
+  Promise.all([one('../tasks.js'), one('../tasks.auto.js'), one(DESK + '/history.js')]).then(() => {
+    const manual = window.OFFICE_TASKS || [], seen = new Set(manual.map(t => t.id));
+    const all = [...manual, ...[...(window.OFFICE_TASKS_AUTO?.tasks || []), ...(window.OFFICE_TASKS_DESK || [])].filter(t => !seen.has(t.id) && seen.add(t.id))];
+    S.hist = all.filter(t => t && t.id && t.title).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  }).finally(() => { histLoad.busy = false; const r = route(); if (r.s === 'home' || r.s === 'hist' || r.s === 'tasks' && S.filter === 'office') render(); });
+}
+const absUrl = u => { try { return new URL(u, location.origin + '/').href; } catch { return u; } };
+const histDate = d => { const t = new Date(d); return isNaN(t) ? String(d || '') : t.toLocaleDateString('ru', { day:'numeric', month:'long', year:t.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); };
+function histCard(h) {
+  const desk = String(h.id).startsWith('desk-');
+  return `<button class="card" style="text-align:left" data-a="hist" data-id="${esc(h.id)}">
+    <span style="display:flex;align-items:center;gap:8px"><span class="pill done">${esc(h.kind || (desk ? 'Рабочий стол' : 'Задача'))}</span><span class="sub" style="margin-left:auto">${esc(histDate(h.date))}</span></span>
+    <span class="tt">${esc(h.title)}</span>${h.summary ? `<span class="sub">${esc(String(h.summary).slice(0, 160))}${String(h.summary).length > 160 ? '…' : ''}</span>` : ''}</button>`;
+}
+function histDetail(id) {
+  if (!S.hist) { histLoad(); return header('Офис', 'Загружаю…', true) + '<main><p class="empty">Загружаю историю офиса…</p></main>'; }
+  const h = S.hist.find(x => String(x.id) === id);
+  if (!h) return header('Офис', 'Не найдено', true) + '<main><p class="empty">Такой работы нет в истории офиса.</p></main>';
+  const deskId = String(h.id).startsWith('desk-') ? String(h.id).slice(5) : '';
+  const media = (h.media || []).map(m => m.type === 'video' ? `<video src="${esc(absUrl(m.src))}" ${m.poster ? `poster="${esc(absUrl(m.poster))}"` : ''} controls playsinline preload="metadata"></video>`
+    : m.type === 'img' ? `<img src="${esc(absUrl(m.src))}" alt="${esc(m.title || '')}" loading="lazy">` : m.type === 'page' ? `<a class="b" href="${esc(absUrl(m.src))}" target="_blank" rel="noopener">${esc(m.title || 'Открыть страницу')}</a>` : '').join('');
+  return header(histDate(h.date) + (h.dateNote ? ' · ' + h.dateNote : ''), h.kind || 'Работа офиса', true) + `<main>
+    <span style="font-size:20px;font-weight:800;line-height:1.25">${esc(h.title)}</span>
+    ${h.summary ? `<div class="card"><div class="rep"><p>${esc(h.summary)}</p></div></div>` : ''}
+    ${media ? `<div class="card"><div class="media">${media}</div></div>` : ''}
+    ${deskId ? `<button class="b pri" data-a="open" data-id="${esc(deskId)}">Открыть задачу рабочего стола</button>` : ''}
+    ${(h.proof || []).length ? `<span class="lbl">Доказательства</span><div class="list">${h.proof.map(p => `<a href="${esc(p.url)}" target="_blank" rel="noopener"><span class="dot" style="background:var(--green)"></span><span style="flex:1">${esc(p.label || p.url)}</span></a>`).join('')}</div>` : ''}
+  </main>`;
 }
 function plainSummary(md, max) {
   const s = String(md || '').split(/^#{1,4}\s*Материал.*$/m)[0].split('\n').filter(l => l.trim() && !/^#/.test(l)).map(l => l.replace(/^\s*[-*•]\s*/, '').replace(/\*\*(.+?)\*\*/g, '$1')).join(' ');
@@ -324,8 +368,13 @@ function resultBlock(t) {
     <div class="files">${files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener" data-dl="${esc(f.path.split('/').pop())}" download="${esc(f.path.split('/').pop())}"><span style="flex:1">${esc(f.path)}</span><span class="sub">${f.size >= 1e6 ? (f.size / 1e6).toFixed(1) + ' МБ' : Math.max(1, Math.round(f.size / 1e3)) + ' КБ'}</span></a>`).join('')}</div></div>`;
 }
 function detail(id) {
-  const t = S.tasks.find(x => x.id === id);
-  if (!t) return header('Задача', 'Не найдена', true) + '<main><p class="empty">Задачи нет в последних 60 — откройте её в офисе.</p></main>';
+  const t = S.tasks.find(x => x.id === id) || S.one[id];
+  if (!t) {
+    // not among the last 60 (or the list is not loaded yet) — ask the desk for this one task
+    if (S.one[id] === undefined) { S.one[id] = null; api(DESK + '/tasks/' + encodeURIComponent(id)).then(j => { S.one[id] = j?.task || false; render(); }).catch(() => { S.one[id] = false; render(); }); }
+    return S.one[id] === false ? header('Задача', 'Не найдена', true) + '<main><p class="empty">Такой задачи нет — возможно, она удалена. Откройте список задач.</p></main>'
+      : header('Задача', 'Загружаю…', true) + '<main><p class="empty">Загружаю задачу…</p></main>';
+  }
   const k = statusKey(t), rate = S.rate[t.id] || '';
   let body = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill ${k}">${esc(k === 'paused' ? pausedNote(t) : STATUS[k] || t.statusText)}</span>${t.urgent && !['done', 'cancelled'].includes(t.status) ? '<span class="pill urgent">срочно</span>' : ''}
       ${t.source ? `<span class="chip">${esc({ office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' }[t.source] || t.source)}</span>` : ''}
@@ -419,9 +468,9 @@ function tabs(active) {
 function render() {
   if (!S.owner) return;
   const r = route();
-  const html = r.s === 'detail' ? detail(r.id) : r.s === 'tasks' ? tasksScreen() : r.s === 'new' ? newTask() : r.s === 'team' ? team() : r.s === 'more' ? more() : home();
-  $('app').innerHTML = html + tabs(r.s === 'detail' ? 'tasks' : r.s);
-  if (TG) { if (r.s === 'detail' || r.s === 'new') TG.BackButton.show(); else TG.BackButton.hide(); }
+  const html = r.s === 'hist' ? histDetail(r.id) : r.s === 'detail' ? detail(r.id) : r.s === 'tasks' ? tasksScreen() : r.s === 'new' ? newTask() : r.s === 'team' ? team() : r.s === 'more' ? more() : home();
+  $('app').innerHTML = html + tabs(r.s === 'detail' || r.s === 'hist' ? 'tasks' : r.s);
+  if (TG) { if (r.s === 'detail' || r.s === 'hist' || r.s === 'new') TG.BackButton.show(); else TG.BackButton.hide(); }
   const fi = $('files'); if (fi) fi.onchange = e => { [...e.target.files].forEach(upload); e.target.value = ''; };
   const nt = $('nt'); if (nt) nt.oninput = () => { S.text = nt.value; };
   const who = $('who'); if (who) who.onchange = () => { S.agent = who.value; };
@@ -490,6 +539,8 @@ document.addEventListener('click', e => {
   if (a === 'resume') return act(() => post(`/tasks/${id}/resume`), 'Продолжаем — задача снова в очереди');
   if (a === 'urgent') return act(() => post(`/tasks/${id}/urgent`, { on:v === 'on' }), v === 'on' ? 'Срочно — пойдёт первой' : 'Пометка «срочно» снята');
   if (a === 'send-files') return act(() => post(`/tasks/${id}/send-files`), 'Отправляю в Telegram — каждый файл отдельно');
+  if (a === 'hist') return go('h=' + id);
+  if (a === 'hist-more') { S.histN += 30; return render(); }
   if (a === 'later') { S.later = S.later === id ? '' : id; return render(); }
   if (a === 'later-at') { S.later = ''; return act(() => post(`/tasks/${id}/snooze`, { until:v }), `Отложено до ${dayHm(v)}`); }
   if (a === 'cancel') { if (!confirm('Отменить задачу?')) return; return act(() => post(`/tasks/${id}/cancel`), 'Задача отменена'); }
