@@ -539,12 +539,14 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
 
   /* ----- start ----- */
 
-  let running = true;
+  let running = true, conflicts = 0;
   const off = desk.onChange(t => { sync(t.id); pultLater(); });
   async function loop() {
     try {
       const me = await tg('getMe'); st.me = me.username || ''; save();
-      await quiet(tg('deleteWebhook', {}));
+      // a token with a webhook belongs to another bot (Office Worker, ai-hub…): polling it would take that bot down — stop
+      const hook = await tg('getWebhookInfo', {});
+      if (hook.url) { console.error(`telegram: @${st.me} has a webhook (${hook.url.replace(/\/\/([^/]+).*/, '//$1')}) — it is another bot; give the office its own bot (HQ_TG_BOT_TOKEN). Off.`); running = false; off(); return; }
       await quiet(tg('setMyCommands', { commands:[{ command:'pult', description:'Пульт офиса' }, { command:'inbox', description:'Что ждёт меня' }, { command:'work', description:'Что в работе' },
         { command:'new', description:'Новая задача' }, { command:'bind', description:'Привязать группу с ветками' }, { command:'help', description:'Как пользоваться' }] }));
       if (site) for (const o of owners) await quiet(tg('setChatMenuButton', { chat_id:Number(o), menu_button:{ type:'web_app', text:'Офис', web_app:{ url:`${site}/?tg=1` } } }));
@@ -560,6 +562,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
         }
       } catch (e) {
         console.error('telegram poll:', e.message);
+        if (/Conflict/.test(e.message) && ++conflicts >= 10) { console.error('telegram: another process polls this bot — give the office its own bot (HQ_TG_BOT_TOKEN). Off.'); running = false; off(); return; }
         await new Promise(r => setTimeout(r, /Conflict/.test(e.message) ? 30e3 : 5e3));
       }
     }
