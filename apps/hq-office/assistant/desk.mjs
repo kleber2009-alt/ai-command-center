@@ -809,6 +809,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   const canManage = (head, t) => t.by?.id === head.id || head.agents.includes(t.route?.agent || t.agent)
     || Boolean(t.pipeline?.stages.some(s => head.agents.includes(s.agent)));
   async function handle(req, res, rest, who) {
+    if (typeof who === 'boolean') who = who ? { owner:true } : null;   // the old call: isOwner
     const isOwner = Boolean(who?.owner), head = who?.head || null;
     const seg = rest.split('/').filter(Boolean), M = req.method;
     const url = new URL(req.url, 'http://x');
