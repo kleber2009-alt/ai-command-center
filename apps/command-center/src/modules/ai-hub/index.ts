@@ -6,7 +6,7 @@ const aiHub: ModuleEntry = {
   tagline:
     'SaaS-агрегатор нейросетевых инструментов с токен-кошельком, BullMQ-очередями и провайдерами (Replicate / ElevenLabs / OpenAI).',
   status: 'dev',
-  baseUrl: 'https://aihub-app.46-62-215-11.nip.io',
+  baseUrl: 'https://aihub-app.aicex.club',
   docsPath: 'apps/ai-hub/CLAUDE.md',
   capabilities: [
     'Wallet через SECURITY DEFINER функции Postgres',
@@ -20,8 +20,8 @@ const aiHub: ModuleEntry = {
     { label: 'Worker (BullMQ)', path: 'apps/ai-hub/src/worker' },
   ],
   ui: [
-    { label: 'Web app', path: 'aihub-app.46-62-215-11.nip.io' },
-    { label: 'Marketing', path: 'aihub.46-62-215-11.nip.io' },
+    { label: 'Web app', path: 'aihub-app.aicex.club' },
+    { label: 'Marketing', path: 'aihub.aicex.club' },
     { label: 'TMA', path: '@aicex_one_bot' },
   ],
   notes:

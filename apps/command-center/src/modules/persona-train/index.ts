@@ -4,9 +4,9 @@ const personaTrain: ModuleEntry = {
   slug: 'persona-train',
   name: 'Persona Train',
   tagline:
-    'Voice clone (ElevenLabs IVC) + avatar-семплы для дообучения. Отдельная ветка persona-train.46-62-215-11.nip.io.',
+    'Voice clone (ElevenLabs IVC) + avatar-семплы для дообучения. Отдельная ветка persona-train.aicex.club.',
   status: 'dev',
-  baseUrl: 'https://persona-train.46-62-215-11.nip.io',
+  baseUrl: 'https://persona-train.aicex.club',
   docsPath: 'apps/persona-train/CLAUDE.md',
   capabilities: [
     'Сбор voice-семплов в Telegram-боте',
@@ -19,7 +19,7 @@ const personaTrain: ModuleEntry = {
     { label: 'Web :3030', path: 'persona-train-web' },
   ],
   ui: [
-    { label: 'Web', path: 'persona-train.46-62-215-11.nip.io' },
+    { label: 'Web', path: 'persona-train.aicex.club' },
     { label: 'Telegram bot', path: '@ilia_pali0_bot' },
   ],
   notes:

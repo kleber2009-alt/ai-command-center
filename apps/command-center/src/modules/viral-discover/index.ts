@@ -6,7 +6,7 @@ const viralDiscover: ModuleEntry = {
   tagline:
     'Парсер вирусных рилз по нишам, доставка лучших в Telegram. Кабинет landings/viral-discover/cabinet/.',
   status: 'production',
-  baseUrl: 'https://parser.46-62-215-11.nip.io',
+  baseUrl: 'https://parser.aicex.club',
   docsPath: 'apps/infra-worker/handlers/viral_discover.js',
   capabilities: [
     'Поиск вирусных reels по тегам/нишам',
