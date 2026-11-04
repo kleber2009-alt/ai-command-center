@@ -109,6 +109,15 @@ jobs:
           # tests of the working desk with a fake runner and a fake Claude (desk.test.mjs): the task's state machine
           npm test
 
+      # a full disk stops the upload and crashes the runner («No space left on device»): free space first if needed
+      - name: Free disk space
+        run: |
+          rc=0; $SSH bash -s -- 8 < apps/hq-office/deploy/free-disk.sh || rc=$?
+          if [ "$rc" = 3 ]; then
+            echo "== montage jobs of the bots not changed for 2 days (routine cleanup)"
+            $SSH bash -s -- 2 older keep < apps/studio-kadrik/deploy/cleanup.sh || true
+          elif [ "$rc" != 0 ]; then echo "::warning::free-disk.sh exited $rc"; fi
+
       - name: Upload release
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
