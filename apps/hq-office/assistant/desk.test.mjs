@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
 import { createTelegram } from './tg.mjs';
+import { createCosts, parsePrice } from './costs.mjs';
 
 process.env.HQ_ROUTINES = 'off';
 const OFFICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -320,6 +321,67 @@ test('правка владельца становится уроком в сл�
   const st = (await d.call('GET', 'stats')).j;
   assert.equal(st.total.runs, 2); assert.ok(st.agents.some(a => a.id === 'slides' && a.lessons === 1));
   assert.match(d.desk.summary(), /За этот месяц/);
+});
+
+test('расходы: подписки из HQ_SUBSCRIPTIONS_JSON, месяц целиком, день и неделя долей, «с» и «до», курс', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'costs-test-')); dirs.push(dir);
+  assert.deepEqual(parsePrice('1 500 ₽'), { amount:1500, currency:'RUB' });
+  assert.deepEqual(parsePrice('€120/год'), { amount:120, currency:'EUR', period:'year' });
+  const c = createCosts({ dataDir:dir, usdRub:'', subscriptionsJson:JSON.stringify([{ name:'Claude Max', price:'$200', renews:15 }, { name:'Notion', price:'$10' }]) });
+  let g = c.get();
+  // the seed: the known services, Claude filled from the variable, an unknown one added
+  assert.equal(g.items.find(x => x.id === 'claude').amount, 200);
+  assert.ok(g.items.some(x => x.name === 'Notion' && x.amount === 10));
+  assert.ok(g.items.some(x => x.id === 'chatplace' && x.amount === null));
+  c.save({ items:[
+    { name:'Claude Max', amount:200, currency:'USD' },
+    { name:'ChatPlace', amount:'3000', currency:'RUB', since:'2026-11' },
+    { name:'Домены', amount:120, currency:'USD', period:'year' },
+    { name:'HeyGen', amount:'', currency:'USD', until:'2026-10' },
+  ] });
+  // October: Claude + domains (1/12) + HeyGen without a price; ChatPlace starts in November
+  let rows = c.period({ kind:'month', month:'2026-10' });
+  assert.deepEqual(rows.map(r => [r.name, r.share]), [['Claude Max', 200], ['Домены', 10], ['HeyGen', 0]]);
+  let T = c.totals(rows, 5);
+  assert.equal(T.USD, 215); assert.equal(T.usd, 215); assert.equal(T.missing, 1);
+  // November: rubles without the rate — no single sum; with the rate — one in $ and ₽
+  rows = c.period({ kind:'month', month:'2026-11' });
+  assert.ok(!rows.some(r => r.name === 'HeyGen'));
+  assert.equal(c.totals(rows).usd, null); assert.equal(c.totals(rows).RUB, 3000);
+  c.save({ settings:{ usdRub:'100' } });
+  T = c.totals(rows); assert.equal(T.usd, 240); assert.equal(T.rub, 24000);
+  // a day of November is the monthly price / 30
+  rows = c.period({ kind:'days', days:['2026-11-04'] });
+  assert.equal(rows.find(r => r.name === 'Claude Max').share, 6.67);
+  assert.equal(rows.find(r => r.name === 'ChatPlace').share, 100);
+  // the file survives a restart
+  g = createCosts({ dataDir:dir }).get();
+  assert.equal(g.items.length, 4); assert.equal(g.settings.usdRub, 100);
+});
+
+test('статистика: сегодня, 7 дней и отчётный месяц с подписками; цены меняет только владелец', async () => {
+  const d = setup();
+  const id = await d.toReview();
+  const ym = new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(new Date()).slice(0, 7);
+  let r = await d.call('PUT', 'costs', { items:[{ name:'Claude Max', amount:200, currency:'USD' }, { name:'ChatPlace', amount:null }], settings:{ runs:'yes' } });
+  assert.equal(r.status, 200); assert.equal(r.j.items.length, 2);
+  const st = (await d.call('GET', 'stats')).j;
+  assert.equal(st.month, ym); assert.ok(st.months.includes(ym));
+  for (const p of ['today', 'week', 'month']) assert.ok(st.periods[p].runs.runs >= 1, p);
+  assert.equal(st.periods.month.totals.USD, Math.round((200 + st.periods.month.runs.cost) * 100) / 100);
+  assert.equal(st.periods.month.totals.missing, 1);
+  assert.ok(st.periods.today.totals.USD < st.periods.week.totals.USD);
+  assert.equal(st.runsBilled, true);
+  assert.match(d.desk.summary(), /Все расходы офиса за месяц/);
+  // a previous month has no runs of today
+  const old = (await d.call('GET', 'stats?month=2020-01')).j;
+  assert.equal(old.month, '2020-01'); assert.equal(old.periods.month.runs.runs, 0);
+  // a department head sees the work, not the money
+  r = await d.call('PUT', 'costs', { items:[] }, FIRUZA);
+  assert.equal(r.status, 403);
+  const sh = (await d.call('GET', 'stats', null, FIRUZA)).j;
+  assert.equal(sh.costs, undefined); assert.equal(sh.periods.month.totals, null); assert.deepEqual(sh.periods.month.subs, []);
+  assert.ok(id);
 });
 
 /* ---------- department heads: their agents only, the rest read-only ---------- */

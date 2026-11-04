@@ -41,6 +41,7 @@ import { Transform } from 'node:stream';
 import Anthropic from '@anthropic-ai/sdk';
 import { officeWindow, moscowDate } from './office.mjs';
 import { createTelegram } from './tg.mjs';
+import { createCosts } from './costs.mjs';
 
 const FILE_LIMIT = 300e6;
 const STEPS_KEPT = 80;
@@ -163,6 +164,8 @@ process.once('SIGTERM', () => { for (const f of FLUSH) try { f(); } catch {} pro
 export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken, telegram, isHidden = () => false, heads = () => [] }) {
   const DIR = path.join(dataDir, 'desk');
   fs.mkdirSync(path.join(DIR, 'uploads'), { recursive:true });
+  // expenses of the office: subscriptions and services with prices (costs.mjs) + the Claude Code runs below
+  const costs = createCosts({ dataDir:DIR });
   const STORE = path.join(DIR, 'tasks.json');
   let tasks = [];
   try { tasks = JSON.parse(fs.readFileSync(STORE, 'utf8')); } catch {}
@@ -299,14 +302,14 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const s = t.usage ||= { cost:0, ms:0, turns:0, runs:0 };
     s.cost = Math.round((s.cost + r.cost) * 1e4) / 1e4; s.ms += r.ms; s.turns += r.turns; s.runs += 1;
   }
-  // totals of a month (Moscow date of each run) by agent: for the office panel and the assistant
-  function stats(month = moscowDate().slice(0, 7)) {
-    const by = new Map(), months = new Set(), total = { cost:0, ms:0, runs:0, tasks:0, done:0 };
+  // totals of the runs whose Moscow date passes `inside` (a month, a day, a week) by agent
+  function runsOf(inside, months = new Set()) {
+    const by = new Map(), total = { cost:0, ms:0, runs:0, tasks:0, done:0 };
     for (const t of tasks) {
       let touched = false;
       for (const r of t.runs || []) {
-        const m = moscowDate(new Date(r.at)).slice(0, 7); months.add(m);
-        if (m !== month) continue;
+        const d = moscowDate(new Date(r.at)); months.add(d.slice(0, 7));
+        if (!inside(d)) continue;
         touched = true;
         const a = by.get(r.agent) || { id:r.agent, name:agentOf(r.agent)?.name || r.agent, cost:0, ms:0, runs:0, tasks:new Set() };
         a.cost += r.cost; a.ms += r.ms; a.runs += 1; a.tasks.add(t.id); by.set(r.agent, a);
@@ -314,10 +317,33 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       }
       if (touched) { total.tasks += 1; if (t.status === 'done') total.done += 1; }
     }
-    const L = lessonsAll();
-    return { month, months:[...months].sort().reverse(), total:{ ...total, cost:Math.round(total.cost * 100) / 100 },
+    return { total:{ ...total, cost:Math.round(total.cost * 100) / 100 }, by };
+  }
+  // the Claude Code runs are a real expense with an API key; with the Claude subscription they are only an estimate
+  const runsBilled = () => {
+    const how = costs.settings().runs;
+    return how === 'yes' || how === 'auto' && !/OAUTH/i.test(runner.claude?.auth || '');
+  };
+  // the office panel and the assistant: the month by agent + today, the last 7 days and the month with every expense
+  function stats(month = moscowDate().slice(0, 7), { owner = true } = {}) {
+    const months = new Set([moscowDate().slice(0, 7)]), today = moscowDate();
+    const week = Array.from({ length:7 }, (_, i) => moscowDate(new Date(Date.now() - i * 864e5)));
+    const { total, by } = runsOf(d => d.slice(0, 7) === month, months);
+    for (const x of costs.get().items) if (x.since) months.add(x.since);
+    const L = lessonsAll(), billed = runsBilled();
+    const period = (label, inside, p) => {
+      const r = runsOf(inside).total, subs = owner ? costs.period(p) : [];
+      return { label, runs:r, subs, totals:owner ? costs.totals(subs, billed ? r.cost : 0) : null };
+    };
+    return { month, months:[...months].filter(m => m <= today.slice(0, 7)).sort().reverse(), total,
       agents:[...by.values()].map(a => ({ ...a, cost:Math.round(a.cost * 100) / 100, tasks:a.tasks.size, lessons:(L[a.id]?.rules.length || 0) + (L[a.id]?.items.length || 0) }))
-        .sort((x, y) => y.cost - x.cost || y.ms - x.ms) };
+        .sort((x, y) => y.cost - x.cost || y.ms - x.ms),
+      periods:{
+        today:period('Сегодня', d => d === today, { kind:'days', days:[today] }),
+        week:period('7 дней', d => week.includes(d), { kind:'days', days:week }),
+        month:period(month, d => d.slice(0, 7) === month, { kind:'month', month }),
+      },
+      runsBilled:billed, claudeAuth:runner.claude?.auth || '', ...(owner ? { costs:costs.get() } : {}) };
   }
 
   /* ---------- lessons: what the owner corrected and how he rated, per agent — goes into its next tasks ---------- */
@@ -796,7 +822,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   // a short status block for the assistant: what is on the desk right now
   function summary() {
     const open = tasks.filter(t => OPEN.includes(t.status)).slice(0, 8), st = stats();
-    const month = st.total.runs ? ` За этот месяц: ${st.total.tasks} задач, работа агентов ${Math.round(st.total.ms / 60000)} мин, $${st.total.cost}${st.agents[0] ? `; дороже всех — «${st.agents[0].name}» ($${st.agents[0].cost})` : ''}.` : '';
+    const T = st.periods.month.totals, money = T ? (T.usd != null ? `$${T.usd}${T.rub ? ` (≈${T.rub} ₽)` : ''}` : [T.USD && `$${T.USD}`, T.RUB && `${T.RUB} ₽`, T.EUR && `€${T.EUR}`].filter(Boolean).join(' + ')) : '';
+    const month = (st.total.runs ? ` За этот месяц: ${st.total.tasks} задач, работа агентов ${Math.round(st.total.ms / 60000)} мин, Claude Code $${st.total.cost}${st.runsBilled ? '' : ' по расчёту (оплачено подпиской)'}${st.agents[0] ? `; дороже всех — «${st.agents[0].name}» ($${st.agents[0].cost})` : ''}.` : '')
+      + (money ? ` Все расходы офиса за месяц (подписки и сервисы${st.runsBilled ? ' + запуски Claude Code' : ''}): ${money}${T.missing ? `, у ${T.missing} сервисов цена не указана` : ''}.` : '');
     if (!open.length) return 'Задач в работе у агентов сейчас нет.' + month;
     return 'Задачи на рабочем столе офиса: ' + open.map(t => `«${t.route?.title || t.text.slice(0, 60)}» — ${t.route ? (agentOf(t.route.agent)?.name || '') + ', ' : ''}${STATUS[t.status]}${t.question ? ` (вопрос: ${t.question.text}${t.question.options ? ' Варианты: ' + t.question.options.map(o => o.label).join(', ') : ''})` : ''}`).join('; ') + '.' + month;
   }
@@ -1175,7 +1203,12 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     /* owner */
     if (!isOwner && !head) return json(res, 403, { error:'Ставить задачи агентам могут владелец и руководители отделов — войдите.' });
     if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.filter(t => !(head && t.control)).slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, deptName:a.deptName, role:a.role, color:a.color })), pipelines:pipelinesView() });
-    if (M === 'GET' && rest === 'stats') { const m = url.searchParams.get('month') || ''; return json(res, 200, stats(/^\d{4}-\d{2}$/.test(m) ? m : undefined)); }
+    if (M === 'GET' && rest === 'stats') { const m = url.searchParams.get('month') || ''; return json(res, 200, stats(/^\d{4}-\d{2}$/.test(m) ? m : undefined, { owner:isOwner })); }
+    // subscriptions and services of the office with prices, the rates — only the owner
+    if (rest === 'costs' && (M === 'GET' || M === 'PUT')) {
+      if (!isOwner) return json(res, 403, { error:'Расходы офиса видит и меняет только владелец.' });
+      return json(res, 200, M === 'GET' ? costs.get() : costs.save(await readJson(req)));
+    }
     if (M === 'GET' && rest === 'lessons') {
       const id = url.searchParams.get('agent') || '';
       return json(res, 200, id ? { agent:id, ...lessonsOf(id) } : { agents:lessonsAll() });

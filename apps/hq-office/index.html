@@ -681,6 +681,41 @@
   .dk-ag li em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12px}
   .dk-ag li i{grid-column:1/-1;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
   .dk-ag li i::after{content:"";display:block;height:100%;width:var(--w);background:#7cb4ff;border-radius:2px}
+  .dk-fin{border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:12px 13px;margin:0 0 10px;display:grid;gap:10px}
+  .dk-fin-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .dk-fin-h button{white-space:nowrap;flex:none;font-size:12px;font-weight:700;color:var(--ink-2);padding:5px 10px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)}
+  .dk-per{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-bottom:1px}
+  .dk-per::-webkit-scrollbar{display:none}
+  .dk-per button{flex:none;padding:6px 11px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink-2);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+  .dk-per button.on{color:var(--ink);background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.18)}
+  .dk-sum{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+  .dk-sum b{font-size:26px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+  .dk-sum span{font-size:12.5px;color:var(--ink-2)}
+  .dk-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
+  .dk-kpi div{padding:8px 10px;border-radius:11px;background:rgba(255,255,255,.035)}
+  .dk-kpi b{display:block;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .dk-kpi small{font-size:11px;color:var(--ink-2);line-height:1.3;display:block}
+  .dk-fin .warn-l{font-size:12px;color:#ffcf6e;line-height:1.4}
+  .dk-fin details summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--ink-2)}
+  .dk-subs{display:grid;gap:5px;margin:6px 0 0;padding:0;list-style:none}
+  .dk-subs li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:12.5px;align-items:center}
+  .dk-subs li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dk-subs li em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12px}
+  .dk-subs li.miss em{color:#ffcf6e}
+  .dk-subs li i{grid-column:1/-1;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+  .dk-subs li i::after{content:"";display:block;height:100%;width:var(--w);background:#3ddc97;border-radius:2px}
+  .cs-add{padding:8px 13px;border-radius:10px;font-size:13px;font-weight:700;color:var(--ink);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+  .cs-lnk{color:#7cb4ff;font:inherit;font-weight:700;text-decoration:underline;padding:0}
+  .cs-rows{display:grid;gap:8px}
+  .cs-row{display:grid;grid-template-columns:minmax(140px,1fr) 100px 64px 108px 140px 140px 30px;gap:6px;align-items:center}
+  .cs-row input,.cs-row select,.cs-set input,.cs-set select{width:100%;min-width:0;padding:7px 8px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--ink);font:inherit;font-size:13px}
+  .cs-row.head{font-size:11px;color:var(--ink-3);font-weight:700}
+  .cs-row small{grid-column:1/-1;font-size:11px;color:var(--ink-3);margin-top:-4px}
+  .cs-row .x{font-size:18px;color:var(--ink-3)}
+  .cs-set{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
+  .cs-set label{display:grid;gap:4px;font-size:12px;color:var(--ink-2)}
+  .cs-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+  @media (max-width:700px){ .cs-row{grid-template-columns:1fr 1fr 1fr;} .cs-row.head{display:none} .cs-row input[data-k=name]{grid-column:1/-1} .cs-row{padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)} }
   .dk-sys{font-size:12px;color:var(--ink-2);line-height:1.45}
   .dk-sys b{color:var(--ink)} .dk-sys .err{color:#ff9a9a}
   .dkc-cost{font:500 11px var(--f-mono);color:var(--ink-3)}
@@ -914,6 +949,12 @@
     <div class="dh"><div id="tHead"></div><button class="x" id="tClose" aria-label="Закрыть">×</button></div>
     <div class="db" id="tBody"></div>
     <div class="df"><button id="tPrev" aria-label="Предыдущая задача">←<span class="wide"> Предыдущая</span></button><span id="tCount"></span><button id="tCopy">Ссылка на задачу</button><button id="tNext" aria-label="Следующая задача"><span class="wide">Следующая </span>→</button></div>
+  </div>
+</div>
+<div class="modal" id="costsModal" hidden role="dialog" aria-modal="true" aria-labelledby="csTitle">
+  <div class="dlg">
+    <div class="dh"><div><span class="eyebrow">Только для владельца</span><h2 id="csTitle">Подписки и сервисы офиса</h2></div><button class="x" id="csClose" aria-label="Закрыть">×</button></div>
+    <div class="db" id="csBody"></div>
   </div>
 </div>
 <div class="modal" id="teamAdm" hidden role="dialog" aria-modal="true" aria-labelledby="taTitle">
@@ -3497,6 +3538,8 @@ $('pbody').addEventListener('click', e => {
   if (k === 'live') { ptab = 'live'; renderPanel(); $('pbody').scrollTop = 0; }
   if (k === 'login') openLogin();
   if (k === 'team-admin') openTeamAdmin();
+  if (k === 'fin') { desk.fin = b.dataset.p; if (b.dataset.m) { desk.finMonth = b.dataset.m; deskStats(); } renderPanel(); }
+  if (k === 'costs') openCosts();
   if (k === 'mydept') { const d = deptById(HEAD()?.dept); if (d) flyToDept(d); }
   if (k === 'logout') fetch(ASST_API + '/logout', { method:'POST' }).catch(() => {}).then(() => asstLoad());
 });
@@ -3719,7 +3762,7 @@ function routeHash() {
   else if (h.startsWith('desk-')) { if (desk.on) openDeskTask(h.slice(5)); else desk.hash = h.slice(5); }
 }
 addEventListener('hashchange', routeHash);
-const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden || !$('teamAdm').hidden;
+const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden || !$('teamAdm').hidden || !$('costsModal').hidden;
 
 
 /* ======================= ЛИЧНЫЙ АССИСТЕНТ =======================
@@ -4236,6 +4279,9 @@ async function deskInit() {
   const j = await r.json().catch(() => null);
   if (!j) return;
   desk.pipelines = j.pipelines || [];
+  // вошёл владелец (или руководитель) — первой открывается «В работе» со статистикой и расходами офиса, если вкладку ещё не выбирали
+  if (!desk.first && ptab === 'tasks' && !selectedId) ptab = 'live';
+  desk.first = true;
   deskSnapshot(j.tasks, j.runner);
   deskStream();
   deskStats();
@@ -4246,7 +4292,7 @@ function deskStats(later = false) {
   clearTimeout(deskStatsT);
   deskStatsT = setTimeout(async () => {
     try {
-      const r = await fetch(DESK_API + '/stats', { cache:'no-store' });
+      const r = await fetch(DESK_API + '/stats' + (desk.finMonth ? '?month=' + desk.finMonth : ''), { cache:'no-store' });
       if (!r.ok) return;
       desk.stats = await r.json();
       if (!$('team').hidden && ptab === 'live' && !modalOpen()) renderPanel();
@@ -4382,11 +4428,11 @@ function liveHTML() {
     ['Закрыто недавно', '#9aa3b5', list.filter(t => t.status === 'done' || t.status === 'cancelled').slice(0, 15)],
   ];
   const n = i => G[i][2].length;
-  return `<div class="dk-top"><button class="btn-go" data-do="newtask" data-id="">＋ Новая задача агенту</button></div>
+  return `${deskFinHTML()}<div class="dk-top"><button class="btn-go" data-do="newtask" data-id="">＋ Новая задача агенту</button></div>
     ${desk.runner && !desk.runner.online ? '<p class="note warn">Исполнитель на сервере сейчас не на связи — задачи подождут в очереди и начнутся, когда он вернётся.</p>'
       : desk.runner?.claude && !desk.runner.claude.ok ? `<p class="note warn">Исполнитель не может запустить Claude Code: ${esc(desk.runner.claude.error)}${desk.runner.claude.auth ? ` · вход: ${esc(desk.runner.claude.auth)}` : ''}</p>` : ''}
     <div class="dk-hero"><div class="w"><b>${n(0)}</b><small>ждут вас</small></div><div class="r"><b>${n(1) + n(2)}</b><small>в работе и очереди</small></div><div class="d"><b>${n(3)}</b><small>закрыто</small></div></div>
-    ${deskMonthHTML()}
+    ${desk.stats?.periods ? deskSysHTML() : deskMonthHTML()}
     ${list.length ? `<div class="dk-groups">${G.filter(g => g[2].length).map(([h, c, l]) => `<h3 class="dk-gh" style="--g:${c}"><i></i>${h}<span>${l.length}</span></h3><ol class="tasks">${l.map(deskCardHTML).join('')}</ol>`).join('')}</div>`
       : `<p class="empty">${desk.tasks.length ? 'Задач с такими условиями нет.' : 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите двойнику: «поставь задачу…».'}</p>`}`;
 }
@@ -4401,6 +4447,121 @@ function deskMonthHTML() {
   return `<details class="dk-month"${desk.monthOpen ? ' open' : ''}><summary><span class="eyebrow">Затраты за ${mon}</span><span><b>${T.tasks}</b> ${word(T.tasks, 'задача', 'задачи', 'задач')}</span><span>работа агентов <b>${fmtDur(T.ms)}</b></span><span>Claude <b>${fmtUsd(T.cost)}</b></span>${T.done ? `<span>принято <b>${T.done}</b></span>` : ''}</summary>
     <ol class="dk-ag">${st.agents.map(a => `<li title="${esc(`${a.runs} запусков, ${a.tasks} задач${a.lessons ? `, уроков: ${a.lessons}` : ''}`)}"><span>${esc(a.name)}${a.lessons ? ` <small class="dkc-cost">· уроков ${a.lessons}</small>` : ''}</span><em>${fmtDur(a.ms)}${a.cost ? ' · ' + fmtUsd(a.cost) : ''}</em><i style="--w:${Math.max(3, Math.round((a.cost || a.ms / 6e5) / max * 100))}%"></i></li>`).join('')}</ol>${sysHTML}</details>`;
 }
+/* ---------- статистика и расходы офиса: сегодня, 7 дней, отчётный месяц (каждый отдельно) ---------- */
+const MONTHS_IN = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
+const monName = (ym, f = MONTHS) => { const n = f[Number(ym.slice(5)) - 1] || ym; return ym.slice(0, 4) === String(new Date().getFullYear()) ? n : `${n} ${ym.slice(0, 4)}`; };
+const fmtCur = (v, c) => { const n = Math.abs(v) >= 100 ? Math.round(v).toLocaleString('ru-RU') : (Math.round(v * 100) / 100).toLocaleString('ru-RU', { minimumFractionDigits:v % 1 ? 2 : 0, maximumFractionDigits:2 }); return c === 'RUB' ? `${n} ₽` : c === 'EUR' ? `€${n}` : `$${n}`; };
+// сумма периода: одна цифра в $ (и ≈ ₽), если курс задан; иначе по валютам
+function finTotal(T) {
+  if (!T) return '';
+  if (T.usd != null) return `<b>${fmtCur(T.usd, 'USD')}</b>${T.rub ? `<span>≈ ${fmtCur(T.rub, 'RUB')}</span>` : ''}`;
+  return `<b>${['USD', 'RUB', 'EUR'].filter(c => T[c]).map(c => fmtCur(T[c], c)).join(' + ') || '$0'}</b><span>курс не задан — суммы по валютам</span>`;
+}
+function deskFinHTML() {
+  const st = desk.stats;
+  if (!st?.periods) return '';
+  const per = desk.fin || 'month', P = st.periods[per] || st.periods.month, R = P.runs, owner = role() === 'owner';
+  const months = st.months?.length ? st.months : [st.month];
+  const chips = [['today', 'Сегодня'], ['week', '7 дней']].map(([p, l]) => `<button data-do="fin" data-p="${p}" class="${per === p ? 'on' : ''}">${l}</button>`).join('')
+    + months.map(m => `<button data-do="fin" data-p="month" data-m="${m}" class="${per === 'month' && st.month === m ? 'on' : ''}">${esc(monName(m))[0].toUpperCase() + esc(monName(m)).slice(1)}</button>`).join('');
+  const subsBy = ['USD', 'RUB', 'EUR'].map(c => [c, (P.subs || []).filter(x => x.currency === c).reduce((a, x) => a + x.share, 0)]).filter(x => x[1]);
+  const claude = `${fmtUsd(R.cost)}${st.runsBilled ? '' : ' · по расчёту'}`;
+  const label = per === 'today' ? 'сегодня' : per === 'week' ? 'за 7 дней' : `в ${monName(st.month, MONTHS_IN)}`;
+  const kpi = `<div class="dk-kpi">
+      ${owner ? `<div><b>${subsBy.length ? subsBy.map(([c, v]) => fmtCur(v, c)).join(' + ') : '—'}</b><small>подписки и сервисы${per === 'month' ? '' : ' (доля дней)'}</small></div>` : ''}
+      <div><b>${claude}</b><small>Claude Code${st.runsBilled ? '' : ' — оплачено подпиской Claude'}</small></div>
+      <div><b>${R.tasks}</b><small>${word(R.tasks, 'задача', 'задачи', 'задач')} в работе</small></div>
+      <div><b>${R.done}</b><small>принято</small></div>
+      <div><b>${R.ms ? fmtDur(R.ms) : '—'}</b><small>работа агентов · ${R.runs} ${word(R.runs, 'запуск', 'запуска', 'запусков')}</small></div>
+    </div>`;
+  const maxS = Math.max(...(P.subs || []).map(x => x.share), 1e-9);
+  const subs = owner && P.subs?.length ? `<details${desk.finSubs ? ' open' : ''} data-fin-subs><summary>Из чего складывается · ${P.subs.length} ${word(P.subs.length, 'сервис', 'сервиса', 'сервисов')}</summary>
+      <ol class="dk-subs">${[...P.subs].sort((a, b) => b.share - a.share).map(x => `<li class="${x.missing ? 'miss' : ''}"><span>${esc(x.name)}</span><em>${x.missing ? 'цена не указана' : `${fmtCur(x.share, x.currency)}${per === 'month' && x.period === 'year' ? ' · 1/12 годовой' : per !== 'month' ? ` из ${fmtCur(x.period === 'year' ? x.amount / 12 : x.amount, x.currency)}/мес` : ''}`}</em><i style="--w:${Math.max(2, Math.round(x.share / maxS * 100))}%"></i></li>`).join('')}
+      ${R.cost ? `<li><span>Claude Code — запуски агентов${st.runsBilled ? '' : ' (не входит в сумму: оплачено подпиской)'}</span><em>${fmtUsd(R.cost)}</em></li>` : ''}</ol></details>` : '';
+  const agents = per === 'month' && st.agents?.length ? `<details${desk.monthOpen ? ' open' : ''} data-fin-ag><summary>По агентам · ${st.agents.length}</summary>
+      <ol class="dk-ag">${(() => { const max = Math.max(...st.agents.map(a => a.cost || a.ms / 6e5), 1e-9); return st.agents.map(a => `<li title="${esc(`${a.runs} запусков, ${a.tasks} задач${a.lessons ? `, уроков: ${a.lessons}` : ''}`)}"><span>${esc(a.name)}${a.lessons ? ` <small class="dkc-cost">· уроков ${a.lessons}</small>` : ''}</span><em>${fmtDur(a.ms)}${a.cost ? ' · ' + fmtUsd(a.cost) : ''}</em><i style="--w:${Math.max(3, Math.round((a.cost || a.ms / 6e5) / max * 100))}%"></i></li>`).join(''); })()}</ol></details>` : '';
+  const T = P.totals;
+  return `<section class="dk-fin" aria-label="Статистика и расходы офиса">
+    <div class="dk-fin-h"><span class="eyebrow">Статистика и расходы офиса</span>${owner ? '<button data-do="costs">Подписки и цены</button>' : ''}</div>
+    <div class="dk-per" role="tablist">${chips}</div>
+    ${owner ? `<div class="dk-sum">${finTotal(T)}<span>все расходы ${label}${st.runsBilled ? ' — подписки, сервисы и запуски Claude Code' : ' — подписки и сервисы'}</span></div>` : ''}
+    ${kpi}
+    ${owner && T?.missing ? `<p class="warn-l">У ${T.missing} ${word(T.missing, 'сервиса', 'сервисов', 'сервисов')} не указана цена — сумма неполная. <button class="cs-lnk" data-do="costs">Указать цены</button></p>` : ''}
+    ${subs}${agents}
+  </section>`;
+}
+function deskSysHTML() {
+  const sys = desk.runner?.mcp || [];
+  return sys.length ? `<div class="dk-month"><p class="dk-sys">Системы исполнителя: ${sys.map(x => `<b>${esc(x.name)}</b> — ${x.error ? `<span class="err">не отвечает: ${esc(x.error)}</span>` : `чтение ${x.read}, действия ${x.write} по вашему разрешению`}`).join('; ')}</p></div>` : '';
+}
+document.addEventListener('toggle', e => { if (e.target.dataset?.finSubs != null) desk.finSubs = e.target.open; if (e.target.dataset?.finAg != null) desk.monthOpen = e.target.open; }, true);
+
+// окно «Подписки и сервисы»: цена, валюта, раз в месяц или в год, с какого и до какого месяца
+const CS = { items:[], settings:{}, busy:false, msg:'' };
+async function openCosts() {
+  $('costsModal').hidden = false; $('csBody').innerHTML = '<p class="note">Загружаю…</p>';
+  try {
+    const r = await fetch(DESK_API + '/costs', { cache:'no-store' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'нет доступа');
+    Object.assign(CS, j, { msg:'' });
+  } catch (e) { $('csBody').innerHTML = `<p class="note warn">Не получилось загрузить: ${esc(e.message)}</p>`; return; }
+  renderCosts();
+}
+function renderCosts() {
+  const opt = (v, list) => list.map(([k, l]) => `<option value="${k}"${v === k ? ' selected' : ''}>${l}</option>`).join('');
+  const row = (x, i) => `<div class="cs-row" data-i="${i}">
+      <input data-k="name" value="${esc(x.name)}" placeholder="Сервис" aria-label="Сервис">
+      <input data-k="amount" inputmode="decimal" value="${x.amount ?? ''}" placeholder="цена" aria-label="Цена">
+      <select data-k="currency" aria-label="Валюта">${opt(x.currency, [['USD', '$'], ['RUB', '₽'], ['EUR', '€']])}</select>
+      <select data-k="period" aria-label="Период">${opt(x.period, [['month', 'в месяц'], ['year', 'в год']])}</select>
+      <input data-k="since" type="month" value="${esc(x.since || '')}" aria-label="С какого месяца">
+      <input data-k="until" type="month" value="${esc(x.until || '')}" aria-label="До какого месяца">
+      <button class="x" data-cs="del" data-i="${i}" aria-label="Убрать">×</button>
+      ${x.note || x.renews ? `<small>${esc(x.note || '')}${x.renews ? `${x.note ? ' · ' : ''}продление: ${esc(String(x.renews))}` : ''}</small>` : ''}
+    </div>`;
+  const S = CS.settings || {};
+  $('csBody').innerHTML = `<p class="note">Всё, на чём работает офис. Цена подписки входит в каждый месяц целиком (годовая — 1/12), в «Сегодня» и «7 дней» — долей дней. «С» и «до» — месяцы, когда сервис оплачивался: так октябрь и ноябрь считаются отдельно и честно. Пустая цена — сервис помечается «цена не указана».</p>
+    <div class="cs-rows">
+      <div class="cs-row head"><span>Сервис</span><span>Цена</span><span>Валюта</span><span>Период</span><span>С месяца</span><span>До месяца</span><span></span></div>
+      ${CS.items.map(row).join('')}
+    </div>
+    <div class="cs-acts"><button class="cs-add" data-cs="add">＋ Добавить сервис</button></div>
+    <div class="cs-set">
+      <label>Курс доллара, ₽<input data-s="usdRub" inputmode="decimal" value="${S.usdRub ?? ''}" placeholder="например 95"></label>
+      <label>Курс евро, ₽<input data-s="eurRub" inputmode="decimal" value="${S.eurRub ?? ''}" placeholder="если есть сервисы в €"></label>
+      <label>Запуски Claude Code в сумме<select data-s="runs">${opt(S.runs || 'auto', [['auto', 'сам: по входу исполнителя'], ['yes', 'считать (оплата по API)'], ['no', 'не считать (подписка Claude)']])}</select></label>
+    </div>
+    <div class="cs-acts"><button class="btn-go" data-cs="save"${CS.busy ? ' disabled' : ''}>${CS.busy ? 'Сохраняю…' : 'Сохранить'}</button>${CS.msg ? `<span class="note">${esc(CS.msg)}</span>` : ''}</div>`;
+}
+// поля → CS.items (перед любым действием, чтобы перерисовка не теряла ввод)
+function readCosts() {
+  for (const r of $('csBody').querySelectorAll('.cs-row[data-i]')) {
+    const x = CS.items[Number(r.dataset.i)]; if (!x) continue;
+    for (const el of r.querySelectorAll('[data-k]')) x[el.dataset.k] = el.value.trim();
+  }
+  for (const el of $('csBody').querySelectorAll('[data-s]')) CS.settings[el.dataset.s] = el.value.trim();
+}
+$('csBody').addEventListener('click', async e => {
+  const b = e.target.closest('[data-cs]'); if (!b) return;
+  readCosts();
+  const k = b.dataset.cs;
+  if (k === 'add') { CS.items.push({ name:'', amount:null, currency:'USD', period:'month', since:'', until:'' }); renderCosts(); $('csBody').querySelector('.cs-row[data-i]:last-of-type input')?.focus(); return; }
+  if (k === 'del') { CS.items.splice(Number(b.dataset.i), 1); renderCosts(); return; }
+  if (k === 'save') {
+    CS.busy = true; renderCosts();
+    try {
+      const r = await fetch(DESK_API + '/costs', { method:'PUT', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ items:CS.items.filter(x => String(x.name || '').trim()), settings:CS.settings }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || r.status);
+      Object.assign(CS, j); CS.msg = 'Сохранено — суммы пересчитаны.';
+      deskStats();
+    } catch (err) { CS.msg = 'Не сохранилось: ' + err.message; }
+    CS.busy = false; renderCosts();
+  }
+});
+$('csClose').onclick = () => { $('costsModal').hidden = true; if (ptab === 'live') renderPanel(); };
+
 // на карточке «Ваш стол»: что ждёт решения владельца
 function deskWaitingHTML() {
   const need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t));
@@ -5435,6 +5596,7 @@ addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') stepTask(-1);
     return;
   }
+  if (!$('costsModal').hidden) { if (e.key === 'Escape') $('costsModal').hidden = true; return; }
   if (!$('teamAdm').hidden) { if (e.key === 'Escape') $('teamAdm').hidden = true; return; }
   if (!$('dossier').hidden) { if (e.key === 'Escape') closeDossier(); return; }
   if (!$('asst').hidden && e.key === 'Escape' && $('asst').contains(document.activeElement)) return asstOpen(false);
