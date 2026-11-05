@@ -1,0 +1,68 @@
+name: deploy-neuro-landing
+
+# Selling site of «Нейроворонка» (landings/neuro-funnel) → https://neuro.aicex.club on the aicex box
+# (vars.HETZNER_HOST, where *.aicex.club points). Each run uploads a release to /opt/neuro-landing/releases/<id>,
+# switches /opt/neuro-landing/current and keeps the static container + edge Caddy site in place
+# (landings/neuro-funnel/deploy/server.sh). Prices, payment and bot links — the block `var NF` in index.html.
+#
+# Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, NEURO_LANDING_DOMAIN (default neuro.aicex.club).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landings/neuro-funnel/**'
+      - '.github/workflows/deploy-neuro-landing.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-neuro-landing
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      DOMAIN: ${{ vars.NEURO_LANDING_DOMAIN || 'neuro.aicex.club' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check the site
+        run: |
+          D=landings/neuro-funnel
+          for f in $(grep -oh 'img/[A-Za-z0-9_.-]*' $D/*.html | sort -u); do [ -f "$D/$f" ] || { echo "::error::missing $D/$f"; exit 1; }; done
+          for f in index.html oferta.html soglasie.html privacy.html; do [ -f "$D/$f" ] || { echo "::error::missing $D/$f"; exit 1; }; done
+          mkdir -p dist && cp -r $D/index.html $D/oferta.html $D/soglasie.html $D/privacy.html $D/img dist/
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          tar -C dist -czf - . | $SSH "mkdir -p /opt/neuro-landing/releases/$REL && tar -xzf - -C /opt/neuro-landing/releases/$REL"
+
+      - name: Activate
+        run: $SSH bash -s -- "$DOMAIN" "$REL" < landings/neuro-funnel/deploy/server.sh
+
+      - name: Smoke test
+        run: |
+          for path in / /oferta.html /img/hero.webp; do
+            url="https://$DOMAIN$path"
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "$url" || echo 000)
+            echo "$code $url"
+            [ "$code" = 200 ] || exit 1
+          done

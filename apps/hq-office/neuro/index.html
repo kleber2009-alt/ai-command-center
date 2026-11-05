@@ -98,6 +98,10 @@
   .link{display:flex;gap:6px;align-items:center;font:500 12px 'JetBrains Mono',monospace;color:var(--ink2);min-width:0}
   .link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   .gate{max-width:420px;margin:12vh auto 0}
+  .mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .mat{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--card2);min-width:0}
+  .mat img,.mat video{width:100%;max-width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;background:var(--bar);display:block}
+  .mat .tt a{color:var(--ink);text-decoration:none} .mat .tt a:hover{text-decoration:underline}
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
   .log{font-size:12.5px;color:var(--ink2);display:flex;flex-direction:column;gap:4px}
   .log time{font:500 11.5px 'JetBrains Mono',monospace;color:var(--ink3);margin-right:6px}
@@ -157,13 +161,13 @@ function gate(msg) {
   };
 }
 
-const TABS = [['today', 'Сегодня'], ['plan', 'План'], ['contours', 'Команда и регламент'], ['content', 'Контент'], ['findings', 'Находки'], ['funnel', 'Воронка'], ['campaign', 'Кампания']];
+const TABS = [['today', 'Сегодня'], ['plan', 'План'], ['materials', 'Материалы'], ['contours', 'Команда и регламент'], ['content', 'Контент'], ['findings', 'Находки'], ['funnel', 'Воронка'], ['campaign', 'Кампания']];
 function render() {
   $('title').textContent = S.campaign.product || 'Нейроворонка';
   document.title = `Кабинет ${S.campaign.product || 'Нейроворонки'}`;
   const badge = { findings:S.counts.overdue };
   $('root').innerHTML = `<nav class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}${badge[k] ? `<span class="n">${badge[k]}</span>` : ''}</button>`).join('')}</nav><div id="view"></div>`;
-  const V = { today:vToday, plan:vPlan, contours:vContours, content:vContent, findings:vFindings, funnel:vFunnel, campaign:vCampaign }[tab] || vToday;
+  const V = { today:vToday, plan:vPlan, materials:vMaterials, contours:vContours, content:vContent, findings:vFindings, funnel:vFunnel, campaign:vCampaign }[tab] || vToday;
   $('view').innerHTML = V();
   wire();
   const h = location.hash.match(/^#f-(\w+)/);
@@ -199,7 +203,8 @@ function vToday() {
       <div class="row">${g.pace ? `<span class="chip ${g.pace.ahead ? 'g' : 'r'}">${g.pace.ahead ? 'Идём в плане' : 'Отстаём от плана'} · на сегодня ${fmt(g.pace.due)}</span><span class="chip">Осталось ${g.pace.daysLeft} дн.</span>` : '<span class="sub">Темп появится, когда заданы цель и дата конца кампании.</span>'}
         <span class="chip b">Выручка ${rub(g.revenue)}</span>
         ${S.roadmap.daysToStart > 0 ? `<span class="chip test">До старта продаж ${S.roadmap.daysToStart} дн.</span>` : S.roadmap.start ? '<span class="chip g">Продажи идут</span>' : ''}
-        <button class="chip" data-go="plan">План: ${S.planCount.done} из ${S.planCount.all} готово</button></div>
+        <button class="chip" data-go="plan">План: ${S.planCount.done} из ${S.planCount.all} готово · ${S.planCount.work} в работе</button>
+        <button class="chip" data-go="materials">Материалы: ${S.materialsCount.all}</button></div>
       <div class="row"><button class="btn pri" data-brief>Разбор дня → Штаб</button><span class="sub">${S.auto?.daily ? `Офис работает сам: разбор дня каждое утро в ${esc(S.auto.at)} МСК${S.auto.send && S.auto.max ? `, до ${S.auto.max} находок Штаба сразу уходят агентам` : ', находки ждут вашего «В работу»'}. Кнопка — разобрать ещё раз сейчас.` : 'Штаб соберёт один экран дня и находки. Результат придёт на ваш стол в офисе.'}</span></div>
     </div>
     <div class="card${alerts.length ? ' warn' : ''}">
@@ -254,8 +259,21 @@ function vPlan() {
     <div class="sub">Блоки системы, девять элементов, обязательства оферты и решения из плана «Нейроворонка — план реализации». У каждого пункта ответственный агент и критерий «готово, когда». «В работу» отдаёт пункт агенту с этим критерием. Когда вы принимаете результат, пункт закрывается сам.</div></div>
   ${S.plan.map(g => `<div class="card" style="margin-top:12px"><h2>${esc(g.group)}</h2>${g.items.map(i => `<div class="it"><div class="col">
       <div class="tt">${esc(i.name)}</div><div class="sub">Готово, когда: ${esc(i.done)}</div>
-      <div class="row sub"><span class="chip ${PST[i.status][1]}">${PST[i.status][0]}</span><span>${esc(i.ownerName)}</span>${i.task ? `<span>· ${taskLink(i.task)}</span>` : ''}</div></div>
-    <div class="row">${i.status !== 'done' ? `<button class="btn sm${i.status === 'todo' ? ' pri' : ''}" data-ptask="${esc(i.id)}">${i.status === 'work' ? 'Ещё раз' : 'В работу'}</button><button class="btn sm" data-pdone="${esc(i.id)}">Готово</button>` : `<button class="btn sm" data-preopen="${esc(i.id)}">Открыть снова</button>`}</div></div>`).join('')}</div>`).join('')}`;
+      <div class="row sub"><span class="chip ${PST[i.status][1]}">${PST[i.status][0]}</span><span>${esc(i.ownerName)}</span>${i.task ? `<span>· ${taskLink(i.task)}</span>` : ''}</div>
+      ${i.materials?.length ? `<div class="row sub">Уже есть: ${i.materials.map(m => `<button class="chip" data-mat="${esc(m.id)}">${esc(m.title)}</button>`).join('')}</div>` : ''}</div>
+    <div class="row">${i.status !== 'done' ? `<button class="btn sm${i.status === 'todo' ? ' pri' : ''}" data-ptask="${esc(i.id)}">${i.task ? 'Ещё раз' : 'В работу'}</button><button class="btn sm" data-pdone="${esc(i.id)}">Готово</button>` : `<button class="btn sm" data-preopen="${esc(i.id)}">Открыть снова</button>`}</div></div>`).join('')}</div>`).join('')}`;
+}
+// ready materials of the project: sites, videos, the course, the bot, lead magnets, content, documents
+const matUrl = u => /^media\//.test(u) ? '../' + u : u;
+const MST = { ready:['Готово', 'g'], draft:['Черновик', 'test'] };
+function vMaterials() {
+  return `<div class="card"><div class="row"><h2>Готовые материалы проекта</h2><span class="sp"></span><span class="chip">${S.materialsCount.all} · готово ${S.materialsCount.ready}</span></div>
+    <div class="sub">Всё, что уже сделано по Нейроворонке: сайты, видео, курс, бот, лид-магниты, контент и документы. Каждый материал привязан к пункту плана. Агенты офиса видят этот список в каждой задаче и опираются на него, а не делают заново.</div></div>
+  ${S.materials.map(g => `<div class="card" style="margin-top:12px"><h2>${esc(g.name)}</h2><div class="mats">${g.items.map(m => `<div class="mat" id="m-${esc(m.id)}">
+      ${m.kind === 'video' ? `<video src="${esc(matUrl(m.url))}" ${m.preview ? `poster="${esc(matUrl(m.preview))}"` : ''} controls preload="none" playsinline></video>` : m.preview ? `<a href="${esc(matUrl(m.url))}" target="_blank" rel="noopener"><img src="${esc(matUrl(m.preview))}" alt="${esc(m.title)}" loading="lazy"></a>` : ''}
+      <div class="tt"><a href="${esc(matUrl(m.url))}" target="_blank" rel="noopener">${esc(m.title)}</a></div>
+      <div class="row sub"><span class="chip ${MST[m.status][1]}">${MST[m.status][0]}</span>${m.planNames.map(n => `<span class="chip">${esc(n)}</span>`).join('')}</div>
+      <div class="sub">${esc(m.note)}</div></div>`).join('')}</div></div>`).join('')}`;
 }
 const DOW = ['', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
 function routinesHTML() {
@@ -379,6 +397,7 @@ function wire() {
   document.querySelectorAll('[data-fdone]').forEach(b => b.onclick = () => act({ action:'finding-done', id:b.dataset.fdone }, 'Находка закрыта'));
   document.querySelectorAll('[data-freopen]').forEach(b => b.onclick = () => act({ action:'finding-reopen', id:b.dataset.freopen }, 'Находка снова открыта'));
   document.querySelectorAll('[data-newf]').forEach(b => b.onclick = () => { findF.contour = b.dataset.newf; tab = 'findings'; render(); $('findF').text.focus(); });
+  document.querySelectorAll('[data-mat]').forEach(b => b.onclick = () => { tab = 'materials'; render(); document.getElementById('m-' + b.dataset.mat)?.scrollIntoView({ block:'center' }); });
   document.querySelectorAll('[data-ptask]').forEach(b => b.onclick = () => act({ action:'plan-task', id:b.dataset.ptask }, 'Пункт плана отдан агенту'));
   document.querySelectorAll('[data-pdone]').forEach(b => b.onclick = () => act({ action:'plan-done', id:b.dataset.pdone }, 'Пункт плана готов'));
   document.querySelectorAll('[data-preopen]').forEach(b => b.onclick = () => act({ action:'plan-reopen', id:b.dataset.preopen }, 'Пункт снова открыт'));

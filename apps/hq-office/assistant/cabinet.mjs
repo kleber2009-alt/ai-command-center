@@ -28,6 +28,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { MATERIALS, MATERIAL_KINDS, PLAN_STARTED } from './neuro-materials.mjs';
 
 // the funnel of the plan (neuro-plan.md → «Метрики и экономика»): content → code word → bot → VSL → landing → payment → lessons → upsell
 export const STEPS = [
@@ -119,7 +120,7 @@ export const ROUTINES = [
 const CONTOUR_IDS = CONTOURS.map(c => c.id);
 export const ESCALATE_MS = 2 * 864e5;
 const PUBLIC_URL = (process.env.HQ_PUBLIC_URL || 'https://hq2.aicex.club').replace(/\/$/, '');
-export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf', name:'Нейроворонка — первый поток', start:'2026-11-10', end:'2026-11-30' } };
+export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf', name:'Нейроворонка — первый поток', start:'2026-11-10', end:'2026-11-30', landing:'https://neuro.aicex.club/' } };
 
 const msk = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(d);
 const str = (v, n = 300) => String(v ?? '').trim().slice(0, n);
@@ -142,7 +143,7 @@ export function linksOf(cab, u) {
   const out = {};
   const bot = cab.campaign.botUrl;
   if (bot) out.bot = bot.replace(/[?#].*$/, '') + '?start=' + u.tag;
-  const land = cab.campaign.landingUrl;
+  const land = cab.campaign.landingUrl || CABINETS[cab.id]?.landing || '';
   if (land) {
     const q = new URLSearchParams({ utm_source:u.type, utm_medium:'content', utm_campaign:cab.id, utm_content:u.tag });
     out.landing = land + (land.includes('?') ? '&' : '?') + q;
@@ -208,7 +209,11 @@ export function screen(cab, { desk, agents = {}, nowMs = Date.now() } = {}) {
   const tasks = cab.tasks.map(taskOf).filter(Boolean).slice(0, 30);
   // the plan: every block, element, obligation and decision with its owner, status and task
   const plan = PLAN.map(g => ({ group:g.group, items:g.items.map(i => { const st = cab.plan?.[i.id] || {};
-    return { ...i, ownerName:agents[i.owner]?.name || i.owner, status:st.status || 'todo', task:taskOf(st.taskId), doneAt:st.doneAt || '' }; }) }));
+    return { ...i, ownerName:agents[i.owner]?.name || i.owner, status:st.status || (PLAN_STARTED.includes(i.id) ? 'work' : 'todo'), task:taskOf(st.taskId), doneAt:st.doneAt || '',
+      materials:MATERIALS.filter(m => m.plan.includes(i.id)).map(m => ({ id:m.id, title:m.title, status:m.status })) }; }) }));
+  // ready materials of the project (neuro-materials.mjs) by kind
+  const materials = Object.entries(MATERIAL_KINDS).map(([kind, name]) => ({ kind, name, items:MATERIALS.filter(m => m.kind === kind).map(m => ({ ...m,
+    planNames:m.plan.map(id => PLAN_ITEMS.find(x => x.id === id)?.name).filter(Boolean) })) })).filter(g => g.items.length);
   const planCount = { all:PLAN_ITEMS.length, done:plan.flatMap(g => g.items).filter(i => i.status === 'done').length, work:plan.flatMap(g => g.items).filter(i => i.status === 'work').length };
   // the revenue formula of the plan: reach × CR(word) × CR(bot) × CR(VSL) × CR(landing) × CR(payment) × check
   const T = Object.fromEntries(total.steps.map(x => [x.id, x]));
@@ -216,7 +221,7 @@ export function screen(cab, { desk, agents = {}, nowMs = Date.now() } = {}) {
     check:paid ? Math.round(total.revenue / paid) : null, revenue:total.revenue };
   const startAt = cab.campaign.start, daysToStart = isDate(startAt) ? Math.ceil((Date.parse(startAt) - Date.parse(today)) / 864e5) : null;
   return {
-    plan, planCount, formula, roadmap:{ start:startAt, end:cab.campaign.end, daysToStart },
+    plan, planCount, formula, materials, materialsCount:{ all:MATERIALS.length, ready:MATERIALS.filter(m => m.status === 'ready').length }, roadmap:{ start:startAt, end:cab.campaign.end, daysToStart },
     routines:ROUTINES.map(r => ({ id:r.id, agent:r.agent, agentName:agents[r.agent]?.name || r.agent, at:r.at, dow:r.dow, after:r.after || '', name:r.name, about:r.about, last:cab.runs?.[r.id] || '' })),
     today, campaign:cab.campaign, goal:{ paid, target:target || null, revenue:total.revenue, pace },
     week:w, total, yesterday:yesterday.steps.map(s => ({ id:s.id, n:s.n, has:s.has })), contours, units, findings, tasks,
@@ -243,6 +248,8 @@ export function snapshotText(cab, s) {
     s.formula.check ? `Средний чек: ${s.formula.check}.` : '',
     s.units.length ? 'Контент по меткам (лучшие сверху): ' + s.units.slice(0, 12).map(u => `${u.tag} ${u.typeName} «${u.title}» — кодовое слово ${u.stats.word || 0}, бот ${u.stats.bot || 0}, лендинг ${u.stats.landing || 0}, оплат ${u.stats.paid || 0}`).join('; ') + '.' : 'Контента с метками пока нет.',
     s.findings.filter(f => f.status !== 'done').length ? 'Открытые находки: ' + s.findings.filter(f => f.status !== 'done').map(f => `«${f.text}» — ${f.contourName}, ответственный ${f.ownerName || 'не назначен'}, ${f.ageDays} дн.${f.overdue ? ', ПРОСРОЧЕНА' : ''}`).join('; ') + '.' : 'Открытых находок нет.',
+    `## Готовые материалы (${s.materialsCount.all}, готово ${s.materialsCount.ready}) — опирайся на них, не переделывай с нуля`,
+    ...s.materials.flatMap(g => [`${g.name}:`, ...g.items.map(m => `- ${m.title} — ${m.status === 'ready' ? 'готово' : 'черновик'}: ${/^media\//.test(m.url) ? PUBLIC_URL + '/' + m.url : m.url}. ${m.note}`)]),
     `## План (${s.planCount.done} из ${s.planCount.all} готово, ${s.planCount.work} в работе)`,
     ...s.plan.flatMap(g => [`${g.group}:`, ...g.items.map(i => `- ${i.name} — ${st[i.status]}; ответственный ${i.ownerName} (${i.owner}); готово, когда: ${i.done}`)]),
   ].filter(x => x !== '').join('\n');
