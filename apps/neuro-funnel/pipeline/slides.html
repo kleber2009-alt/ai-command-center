@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Нейроворонка — слайды урока</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+/* Slide 1920x1080. Avatar circle is composited later by build_lesson.py at AV_X/AV_Y/AV_D — keep content out of it. */
+:root{
+  --bg:#0b0b0b; --card:#1a1c1a; --line:#2c302c;
+  --fg:#f3f4f1; --muted:#a6aaa3; --dim:#767b74;
+  --green:#3fa35e; --green-hi:#90ffb4; --green-lo:#173d29;
+  --display:"Oswald","Arial Narrow",Impact,sans-serif;
+  --body:"Manrope",Arial,sans-serif;
+  --mono:"JetBrains Mono",monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{background:#000;font-family:var(--body);color:var(--fg);-webkit-font-smoothing:antialiased}
+.slide{position:relative;width:1920px;height:1080px;overflow:hidden;background:
+  radial-gradient(900px 700px at 1610px 790px,rgba(63,163,94,.22),transparent 70%),
+  radial-gradient(1200px 800px at -200px -200px,rgba(63,163,94,.10),transparent 70%),var(--bg);
+  padding:110px 120px 0;display:flex;flex-direction:column;gap:36px}
+.kicker{font-family:var(--mono);font-size:26px;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+h1{font-family:var(--display);font-weight:700;text-transform:uppercase;line-height:1.06;font-size:96px;max-width:1300px;letter-spacing:-.005em}
+.sub{font-size:36px;color:var(--muted);max-width:1180px;line-height:1.35;font-weight:500}
+.foot{position:absolute;left:120px;bottom:64px;display:flex;gap:28px;font-family:var(--mono);font-size:22px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.foot b{color:var(--green);font-weight:500}
+/* avatar placeholder ring: same geometry as build_lesson.py */
+.av{position:absolute;left:1410px;top:590px;width:400px;height:400px;border-radius:50%;background:var(--green-lo);box-shadow:0 0 0 8px var(--green),0 30px 80px rgba(0,0,0,.6)}
+
+/* title */
+.l-title{justify-content:center;padding-top:0;padding-bottom:120px}
+.l-title h1{font-size:150px;max-width:1250px}
+.l-title h1 em{font-style:normal;color:var(--green-hi)}
+/* big */
+.big{font-family:var(--display);font-weight:700;text-transform:uppercase;font-size:230px;line-height:1;color:var(--green-hi);letter-spacing:-.01em;max-width:1300px}
+.l-big h1{font-size:80px}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(3,400px);gap:28px 44px;margin-top:20px}
+.st{position:relative;background:var(--card);border:2px solid var(--line);border-radius:28px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;min-height:190px}
+.st .n{font-family:var(--mono);font-size:22px;color:var(--dim)}
+.st b{font-family:var(--display);font-size:50px;text-transform:uppercase;font-weight:700;line-height:1}
+.st span{font-size:27px;color:var(--muted);line-height:1.3}
+.st:not(:nth-child(3n))::after{content:"";position:absolute;right:-36px;top:50%;width:22px;height:22px;border-top:5px solid var(--green);border-right:5px solid var(--green);transform:translateY(-50%) rotate(45deg)}
+.st.last{background:var(--green);border-color:var(--green)}
+.st.last b,.st.last span,.st.last .n{color:#0b0b0b}
+/* compare */
+.cmp{display:grid;grid-template-columns:600px 640px;gap:40px;margin-top:6px}
+.col{border-radius:30px;padding:36px 40px;display:flex;flex-direction:column;gap:20px}
+.col h3{font-family:var(--display);font-size:46px;text-transform:uppercase;font-weight:700}
+.col li{list-style:none;font-size:32px;line-height:1.25;display:flex;gap:16px;align-items:baseline}
+.col ul{padding:0;display:flex;flex-direction:column;gap:18px}
+.col.old{background:var(--card);color:var(--muted)}
+.col.old li::before{content:"";flex:0 0 14px;height:14px;border-radius:50%;background:var(--dim)}
+.col.new{background:var(--green-lo);border:2px solid var(--green)}
+.col.new h3{color:var(--green-hi)}
+.col.new li::before{content:"";flex:0 0 14px;height:14px;border-radius:50%;background:var(--green-hi)}
+/* points */
+.pts{display:grid;grid-template-columns:repeat(2,600px);gap:28px 40px;margin-top:10px}
+.pt{background:var(--card);border-radius:28px;padding:34px 38px;display:grid;grid-template-columns:70px 1fr;gap:4px 18px;align-items:baseline}
+.pt i{font-style:normal;font-family:var(--display);font-size:58px;color:var(--green-hi);grid-row:span 2;line-height:1}
+.pt b{font-family:var(--display);font-size:46px;text-transform:uppercase;line-height:1.05}
+.pt span{font-size:29px;color:var(--muted);line-height:1.3}
+/* formula */
+.fx{display:flex;flex-wrap:wrap;align-items:center;gap:18px;max-width:1280px;margin-top:20px}
+.fx .term{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:22px 30px;font-family:var(--display);font-size:54px;text-transform:uppercase;font-weight:700}
+.fx .term.goal{background:var(--green);border-color:var(--green);color:#0b0b0b}
+.fx .op{font-family:var(--display);font-size:64px;color:var(--green-hi)}
+.ex{max-width:1230px;font-size:34px;line-height:1.4;color:var(--fg);background:rgba(255,255,255,.04);border:2px dashed var(--line);border-radius:24px;padding:28px 34px}
+/* proof */
+.stats{display:flex;flex-direction:column;gap:22px;margin-top:6px}
+.sx{display:grid;grid-template-columns:520px 1fr;gap:30px;align-items:baseline;max-width:1240px;border-bottom:2px solid var(--line);padding-bottom:20px}
+.sx b{font-family:var(--display);font-size:120px;line-height:.95;color:var(--green-hi);font-weight:700}
+.sx span{font-size:34px;color:var(--fg);line-height:1.3}
+.note{font-size:20px;color:var(--dim);max-width:900px}
+/* tool */
+.fields{display:grid;grid-template-columns:repeat(2,600px);gap:20px 40px}
+.fd{display:flex;align-items:center;gap:22px;background:var(--card);border-radius:22px;padding:26px 30px;font-size:34px;font-weight:700}
+.fd i{flex:0 0 36px;height:36px;border-radius:10px;border:3px solid var(--green)}
+/* task */
+.tsk{display:flex;flex-direction:column;gap:18px;max-width:1200px}
+.tk{display:flex;gap:28px;align-items:center;font-size:40px;font-weight:700}
+.tk i{font-style:normal;flex:0 0 76px;height:76px;border-radius:50%;background:var(--green);color:#0b0b0b;font-family:var(--display);font-size:42px;display:grid;place-items:center}
+.time{align-self:flex-start;font-family:var(--mono);font-size:26px;color:var(--green-hi);border:2px solid var(--green);border-radius:999px;padding:10px 26px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const L = {
+  title: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p>`,
+  big: s => `<div class="kicker">${esc(s.kicker)}</div><div class="big">${esc(s.big)}</div><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p>`,
+  flow: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="flow">${s.steps.map((x,i)=>`<div class="st${i===s.steps.length-1?' last':''}"><span class="n">0${i+1}</span><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('')}</div>`,
+  compare: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="cmp"><div class="col old"><h3>${esc(s.left.h)}</h3><ul>${s.left.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="col new"><h3>${esc(s.right.h)}</h3><ul>${s.right.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>`,
+  points: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="pts">${s.points.map((x,i)=>`<div class="pt"><i>${i+1}</i><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('')}</div>`,
+  formula: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="fx">${s.formula.map(x=>['÷','=','×'].includes(x)?`<span class="op">${x}</span>`:`<span class="term${x===s.formula[s.formula.length-1]?' goal':''}">${esc(x)}</span>`).join('')}</div><p class="ex">${esc(s.example)}</p>`,
+  proof: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="stats">${s.stats.map(x=>`<div class="sx"><b>${esc(x.b)}</b><span>${esc(x.d)}</span></div>`).join('')}</div><p class="note">${esc(s.note)}</p>`,
+  tool: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="fields">${s.fields.map(x=>`<div class="fd"><i></i>${esc(x)}</div>`).join('')}</div>`,
+  task: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="tsk">${s.steps.map((x,i)=>`<div class="tk"><i>${i+1}</i>${esc(x)}</div>`).join('')}</div><span class="time">${esc(s.time)}</span>`,
+};
+window.renderLesson = (lesson) => {
+  const total = lesson.slides.length;
+  document.getElementById('root').innerHTML = lesson.slides.map((s, i) =>
+    `<section class="slide l-${s.layout}" data-i="${i+1}">${(L[s.layout]||L.title)(s)}
+      <div class="foot"><b>Нейроворонка</b><span>Урок ${lesson.n} · ${esc(lesson.title)}</span><span>${i+1} / ${total}</span></div>
+      <div class="av"></div></section>`).join('');
+  return document.fonts.ready.then(() => total);
+};
+</script>
+</body>
+</html>
