@@ -80,6 +80,61 @@ h1{font-family:var(--display);font-weight:700;text-transform:uppercase;line-heig
 .tk{display:flex;gap:24px;align-items:center;font-size:36px;font-weight:700}
 .tk i{font-style:normal;flex:0 0 76px;height:76px;border-radius:50%;background:var(--green);color:#0b0b0b;font-family:var(--display);font-size:42px;display:grid;place-items:center}
 .time{align-self:flex-start;font-family:var(--mono);font-size:26px;color:var(--green-hi);border:2px solid var(--green);border-radius:999px;padding:10px 26px}
+/* full-frame cutaway (montage skill: перебивка на весь кадр, avatar voice continues) */
+.slide.full{width:1920px;padding:96px 120px 0}
+.slide.full h1{max-width:1600px}
+/* screenshots */
+.frame{flex:1;min-height:0;margin-bottom:120px;border-radius:26px;overflow:hidden;border:3px solid var(--line);background:#111;box-shadow:0 30px 80px rgba(0,0,0,.55);display:flex}
+.frame img{width:100%;height:100%;object-fit:cover;object-position:top}
+.need{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:40px;border:4px dashed #ffb35c;border-radius:24px;background:repeating-linear-gradient(135deg,rgba(255,179,92,.06) 0 22px,transparent 22px 44px);color:#ffd9a8;font-size:32px;line-height:1.3;font-weight:600}
+.need b{font-family:var(--mono);font-size:24px;letter-spacing:.14em;color:#ffb35c}
+.need.inline{flex:none;margin-top:24px;padding:22px 28px;font-size:24px}
+.trip{flex:1;min-height:0;margin-bottom:120px;display:grid;gap:28px}
+.trip.n1{grid-template-columns:1fr}.trip.n2{grid-template-columns:1fr 1fr}.trip.n3{grid-template-columns:1fr 1fr 1fr}
+.trip figure{margin:0;min-height:0;display:flex;flex-direction:column;gap:14px}
+.trip figure img,.trip figure .need{flex:1;min-height:0;width:100%;object-fit:cover;object-position:top;border-radius:24px;border:3px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.trip figure.fit img{object-fit:contain;background:#fff}
+.trip figcaption{font-family:var(--display);font-size:36px;text-transform:uppercase;font-weight:600;color:var(--green-hi);line-height:1.1}
+.slide.full .trip figure.fit img{object-fit:contain;background:#fff}
+.trip figcaption{font-size:42px}
+/* hook */
+.l-hook{padding:0;justify-content:flex-end}
+.hookbg{position:absolute;inset:0;display:flex}
+.hookbg img{width:100%;height:100%;object-fit:cover;filter:brightness(.38) saturate(1.1);transform:scale(1.12)}
+.hookfg{position:relative;padding:0 120px 130px;display:flex;flex-direction:column;gap:18px}
+.l-hook .big{font-size:300px}
+.l-hook h1{font-size:84px;max-width:1500px}
+/* team */
+.team{position:relative;flex:1;margin-bottom:110px}
+.team .me{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:220px;height:220px;border-radius:50%;background:var(--green);color:#0b0b0b;display:grid;place-items:center;font-family:var(--display);font-size:64px;font-weight:700;text-transform:uppercase;box-shadow:0 0 0 18px rgba(63,163,94,.18)}
+.team .role{position:absolute;background:var(--card);border:2px solid var(--line);border-radius:999px;padding:16px 30px;font-size:30px;font-weight:700;white-space:nowrap}
+.r0{left:4%;top:6%}.r1{left:40%;top:0}.r2{right:2%;top:10%}.r3{left:0;bottom:12%}.r4{left:34%;bottom:0}.r5{right:4%;bottom:14%}
+/* steps + screenshot */
+.ss{flex:1;min-height:0;margin-bottom:120px;display:grid;grid-template-columns:400px 1fr;gap:30px}
+.ss ol{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:16px}
+.ss li{counter-increment:s;background:var(--card);border-radius:20px;padding:22px 24px;font-size:28px;font-weight:700;line-height:1.2;display:flex;gap:16px;align-items:center}
+.ss li::before{content:counter(s);flex:0 0 52px;height:52px;border-radius:50%;background:var(--green);color:#0b0b0b;display:grid;place-items:center;font-family:var(--display);font-size:30px}
+.ss .frame{margin:0}
+/* author */
+.au{flex:1;display:grid;grid-template-columns:420px 1fr;gap:44px;margin-bottom:110px;min-height:0}
+.aup{display:flex;border-radius:26px;overflow:hidden;background:radial-gradient(90% 70% at 55% 35%,#2a6d43,#11261a 55%,#0c0c0c)}
+.aup img{width:100%;height:100%;object-fit:contain;object-position:bottom}
+.aut{display:flex;flex-direction:column;gap:22px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.facts div{background:var(--card);border-radius:20px;padding:20px 22px;font-size:24px;color:var(--muted);line-height:1.3}
+.facts b{display:block;font-family:var(--display);font-size:46px;color:var(--fg);line-height:1;margin-bottom:8px}
+/* price */
+.pr{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:22px;padding-bottom:100px}
+.pr h1{font-size:120px;color:var(--green-hi)}
+.pv{font-family:var(--display);font-size:200px;font-weight:700;line-height:1}
+.pr ul{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;font-size:32px;font-weight:600;text-align:left}
+.pr li::before{content:"";display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--green-hi);margin-right:14px}
+/* cta */
+.l-cta{justify-content:center;align-items:center;text-align:center}
+.ctaw{display:flex;flex-direction:column;align-items:center;gap:26px}
+.l-cta h1{font-size:150px;max-width:1600px}
+.l-cta .sub{font-size:48px}
+.arrow{width:90px;height:90px;border-right:12px solid var(--green-hi);border-bottom:12px solid var(--green-hi);transform:rotate(45deg);margin-top:30px}
 </style>
 </head>
 <body>
@@ -96,13 +151,28 @@ const L = {
   proof: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="stats">${s.stats.map(x=>`<div class="sx"><b>${esc(x.b)}</b><span>${esc(x.d)}</span></div>`).join('')}</div><p class="note">${esc(s.note)}</p>`,
   tool: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="fields">${s.fields.map(x=>`<div class="fd"><i></i>${esc(x)}</div>`).join('')}</div>`,
   task: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="tsk">${s.steps.map((x,i)=>`<div class="tk"><i>${i+1}</i>${esc(x)}</div>`).join('')}</div><span class="time">${esc(s.time)}</span>`,
+  // --- VSL / screenshot layouts ---
+  hook: s => `<div class="hookbg">${pic(s.img, s.need)}</div><div class="hookfg"><div class="big">${esc(s.big)}</div><h1>${esc(s.title)}</h1></div>`,
+  shot: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p><div class="frame">${pic(s.img, s.need)}</div>`,
+  shots: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="trip n${(s.imgs||[]).length}">${(s.imgs||[]).map(x=>`<figure${x.fit?' class="fit"':''}>${pic(x.src, x.need)}<figcaption>${esc(x.cap)}</figcaption></figure>`).join('')}</div>${s.note?`<p class="note">${esc(s.note)}</p>`:''}`,
+  team: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="team"><div class="me">Ты</div>${s.roles.map((r,i)=>`<span class="role r${i}">${esc(r)}</span>`).join('')}</div>`,
+  'steps-shot': s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="ss"><ol>${s.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol><div class="frame">${pic(s.img, s.need)}</div></div>`,
+  chain: s => L.flow(s),
+  author: s => `<div class="au"><div class="aup">${pic(s.img, s.need)}</div><div class="aut"><div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p><div class="facts">${s.facts.map(x=>`<div><b>${esc(x.b)}</b><span>${esc(x.d)}</span></div>`).join('')}</div></div></div>`,
+  tools: s => `<div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="fields">${s.items.map(x=>`<div class="fd"><i></i>${esc(x)}</div>`).join('')}</div>`,
+  price: s => `<div class="pr"><div class="kicker">${esc(s.kicker)}</div><h1>${esc(s.title)}</h1><div class="pv">${esc(s.price)}</div><ul>${s.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${s.need?`<div class="need inline"><b>НУЖЕН МАТЕРИАЛ</b>${esc(s.need)}</div>`:''}</div>`,
+  cta: s => `<div class="ctaw"><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p><div class="arrow"></div></div>`,
 };
+const pic = (src, need) => src
+  ? `<img src="${esc(src)}" alt="">`
+  : `<div class="need"><b>НУЖЕН МАТЕРИАЛ</b>${esc(need || 'скриншот')}</div>`;
 window.renderLesson = (lesson) => {
   const total = lesson.slides.length;
   document.getElementById('root').innerHTML = lesson.slides.map((s, i) =>
-    `<section class="slide l-${s.layout}" data-i="${i+1}">${(L[s.layout]||L.title)(s)}
-      <div class="foot"><b>Нейроворонка</b><span>Урок ${lesson.n} · ${esc(lesson.title)}</span><span>${i+1} / ${total}</span></div></section>`).join('');
-  return document.fonts.ready.then(() => total);
+    `<section class="slide l-${s.layout}${s.full?' full':''}" data-i="${i+1}">${(L[s.layout]||L.title)(s)}
+      ${s.layout==='hook'||s.layout==='cta'?'':`<div class="foot"><b>Нейроворонка</b><span>${lesson.n?`Урок ${lesson.n} · `:''}${esc(lesson.title)}</span><span>${i+1} / ${total}</span></div>`}</section>`).join('');
+  return Promise.all([...document.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; })))
+    .then(() => document.fonts.ready).then(() => total);
 };
 </script>
 </body>

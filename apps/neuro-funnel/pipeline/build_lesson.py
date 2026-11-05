@@ -3,7 +3,8 @@
 
 Берёт <урок>/build/slides/NN.png (render_slides.mjs) и <урок>/build/avatar/NN.mp4 (HeyGen, 9:16) и собирает
 <урок>/build/lesson-NN.mp4 1920x1080: экран делится 35/65 — слева аватар (AV_W x 1080, кадр 9:16 по ширине,
-обрезка по высоте с отступом CROP_TOP), справа слайд 1248x1080; пауза PAUSE после сегмента, громкость по EBU R128.
+обрезка по высоте с отступом CROP_TOP), справа слайд 1248x1080; слайд с "full": true — перебивка на весь кадр
+(медленный наезд 1.04→1.10, как в скилле монтажа), звучит голос аватара; пауза PAUSE после сегмента, громкость по EBU R128.
 Субтитры — lesson-NN.srt (время по долям текста внутри сегмента, написание — словарь `spell` урока);
 --burn прожигает их в видео. --only собирает часть слайдов (пилот).
 """
@@ -76,9 +77,12 @@ def main():
                 sys.exit(f"нет {f}")
         out = seg_dir / f"{nn}.mp4"
         speak = duration(av)
-        fc = (f"[1:v]fps={FPS},scale={AV_W}:-2,crop={AV_W}:{H}:0:(ih-{H})*{CROP_TOP}[a];"
-              f"[0:v]fps={FPS},scale={SLIDE_W}:{H}[s];[a][s]hstack=inputs=2:shortest=1,"
-              f"tpad=stop_mode=clone:stop_duration={PAUSE},format=yuv420p[v];"
+        full = lesson["slides"][i - 1].get("full")  # cutaway: slide on the whole frame, avatar voice only
+        vid = (f"[0:v]fps={FPS},scale=1920:{H},zoompan=z='1.04+0.06*on/({FPS}*{speak + PAUSE:.2f})':d=1:s=1920x{H}:fps={FPS}[st];[st]"
+               if full else
+               f"[1:v]fps={FPS},scale={AV_W}:-2,crop={AV_W}:{H}:0:(ih-{H})*{CROP_TOP}[a];"
+               f"[0:v]fps={FPS},scale={SLIDE_W}:{H}[s];[a][s]hstack=inputs=2:shortest=1,")
+        fc = (vid + f"tpad=stop_mode=clone:stop_duration={PAUSE},format=yuv420p[v];"
               f"[1:a]aresample=48000,apad=pad_dur={PAUSE}[aout]")
         run("ffmpeg", "-y", "-loop", "1", "-i", str(slide), "-i", str(av),
             "-filter_complex", fc, "-map", "[v]", "-map", "[aout]", "-t", f"{speak + PAUSE:.3f}",
