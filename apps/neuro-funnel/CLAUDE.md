@@ -27,7 +27,9 @@ python3 pipeline/check_script.py lessons/01        # суфлёр: длина, �
 node pipeline/render_slides.mjs lessons/01         # слайды → build/slides/NN.png (Playwright, шрифты локально в pipeline/fonts)
 # аватар: по одному видео HeyGen на слайд — create_video_from_avatar(look из avatars.json, voice, script = say,
 #   engine avatar_v, 9:16, 1080p), video_url → build/avatar/NN.mp4
-python3 pipeline/build_lesson.py lessons/01        # склейка → build/lesson-01.mp4 + .srt (--only 1,2 — пилот, --burn — субтитры в кадре)
+python3 pipeline/build_lesson.py lessons/01        # склейка → build/lesson-01.mp4 (--only 1,2 — пилот)
+python3 pipeline/subtitles.py lessons/01          # субтитры по речи аватара → .ass/.srt рядом с видео
+# Субтитры в кадр НЕ вшиваем (решение Ильи 05.11): видео уходит на монтаж чистым, .srt/.ass — отдельно
 ```
 
 Правила текста `say` — как у аватара в `.claude/skills/remake-top-reel/references/script-rules.md`: короткие фразы,
