@@ -118,6 +118,7 @@ export const ROUTINES = [
 ];
 const CONTOUR_IDS = CONTOURS.map(c => c.id);
 export const ESCALATE_MS = 2 * 864e5;
+const PUBLIC_URL = (process.env.HQ_PUBLIC_URL || 'https://hq2.aicex.club').replace(/\/$/, '');
 export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf', name:'Нейроворонка — первый поток', start:'2026-11-10', end:'2026-11-30' } };
 
 const msk = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(d);
@@ -516,13 +517,22 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
     return json(res, 404, { error:'not found' });
   }
 
+  // how agents wire events into the cabinet: a ChatPlace step «http_request» (Pro) in the automations of Нейроворонка, the payment system.
+  // The token only adds numbers to the funnel of this cabinet (no reads), so the agents of the office may know it.
+  const hookNote = () => token ? `\n\n## Как отдавать события в кабинет
+Каждый шаг воронки Нейроворонки должен считаться сам. В автоматизациях ChatPlace Нейроворонки (только её, не практикума и не материалов) добавляй действие http_request на ключевых шагах, в платёжке — уведомление об оплате:
+- POST ${PUBLIC_URL}/api/assistant/cabinet/neuro/hook
+- заголовок x-cabinet-token: ${token}
+- тело JSON: {"tag":"<метка nf-… или пусто>","step":"<${STEP_IDS.join(' | ')}>","n":1,"amount":<сумма для paid>}
+Метка — из start-параметра бота или utm_content. Изменения в ChatPlace и платёжке — только после разрешения владельца (APPROVE).` : '';
+
   // what every agent of the office «Нейроворонка» gets with a task (desk.mjs → setContext): the plan of the project, the state of the
   // cabinet and the knowledge of the main office
   function contextFiles() {
     const cab = load('neuro');
     return [
       { name:'neuro-plan.md', text:plan() || '' },
-      { name:'neuro-cabinet.md', text:snapshotText(cab, screen(cab, { desk, agents:agents() })) },
+      { name:'neuro-cabinet.md', text:snapshotText(cab, screen(cab, { desk, agents:agents() })) + hookNote() },
       { name:'main-office.md', text:office() || '' },
     ].filter(f => f.text);
   }

@@ -151,8 +151,9 @@ test('the plan: an item goes to its owner with the criterion and is done when th
 
 test('the context for the agents of the office: the plan, the cabinet, the main office', () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cab-test-')); dirs.push(dataDir);
-  const cab = initCabinet({ dataDir, agents:() => ({}), plan:() => '# План', office:() => '# Главный офис' });
+  const cab = initCabinet({ dataDir, agents:() => ({}), plan:() => '# План', office:() => '# Главный офис', token:'tk-1' });
   const files = cab.contextFiles();
   assert.deepEqual(files.map(f => f.name), ['neuro-plan.md', 'neuro-cabinet.md', 'main-office.md']);
   assert.match(files[1].text, /Блоки системы/);
+  assert.match(files[1].text, /x-cabinet-token: tk-1/);           // the agents wire ChatPlace and payments into the cabinet themselves
 });
