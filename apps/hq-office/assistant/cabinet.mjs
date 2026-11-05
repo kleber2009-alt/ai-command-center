@@ -120,7 +120,7 @@ export const ROUTINES = [
 const CONTOUR_IDS = CONTOURS.map(c => c.id);
 export const ESCALATE_MS = 2 * 864e5;
 const PUBLIC_URL = (process.env.HQ_PUBLIC_URL || 'https://hq2.aicex.club').replace(/\/$/, '');
-export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf', name:'Нейроворонка — первый поток', start:'2026-11-10', end:'2026-11-30' } };
+export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf', name:'Нейроворонка — первый поток', start:'2026-11-10', end:'2026-11-30', landing:'https://neuro.aicex.club/' } };
 
 const msk = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(d);
 const str = (v, n = 300) => String(v ?? '').trim().slice(0, n);
@@ -143,7 +143,7 @@ export function linksOf(cab, u) {
   const out = {};
   const bot = cab.campaign.botUrl;
   if (bot) out.bot = bot.replace(/[?#].*$/, '') + '?start=' + u.tag;
-  const land = cab.campaign.landingUrl;
+  const land = cab.campaign.landingUrl || CABINETS[cab.id]?.landing || '';
   if (land) {
     const q = new URLSearchParams({ utm_source:u.type, utm_medium:'content', utm_campaign:cab.id, utm_content:u.tag });
     out.landing = land + (land.includes('?') ? '&' : '?') + q;

@@ -8,12 +8,16 @@
 const ART = id => 'https://claude.ai/artifact/' + id;
 const MK = 'https://marketing.aicex.club/assets/';
 const GH = 'https://github.com/kleber2009-alt/ai-command-center/blob/claude/sleepy-hopper-1racwn/apps/neuro-funnel/';
+// results of the office «Нейроворонка» accepted on the desk (published files of the task)
+const DESK = (id, v = 1) => `https://hq2.aicex.club/api/assistant/desk/files/${id}/v${v}/index.html`;
 
 export const MATERIAL_KINDS = { site:'Сайт и лендинг', video:'Видео', course:'Продукт: курс и уроки', bot:'Бот и сообщения', magnet:'Лид-магниты',
   content:'Контент', doc:'Стратегия и документы' };
 
 export const MATERIALS = [
   // ── Сайт и лендинг ──
+  { id:'site', kind:'site', status:'draft', plan:['b4'], title:'Продающий сайт neuro.aicex.club', url:'https://neuro.aicex.club/', preview:'https://neuro.aicex.club/img/og.jpg',
+    note:'Сайт на своём домене (landings/neuro-funnel, собрал агент «Лендинг» 05.11): тарифы 14 900 / 34 900 ₽, окно потока 10–16.11, метки nf-… в ссылках. Кнопки оплаты и бота включаются после тестовой покупки и цепочки бота; оферта — заготовка.' },
   { id:'landing', kind:'site', status:'draft', plan:['b4'], title:'Лендинг «Нейроворонка»', url:ART('6z4UBbZhGNcCpVmJUp487P'),
     note:'Продающая страница курса (пока артефакт Claude). Осталось: оффер и тарифы, оплата, оферта, свой домен.' },
   { id:'landing-mock', kind:'site', status:'draft', plan:['b4'], title:'Макет лендинга Нейроворонки', url:ART('9xAM7woBmzLosiCnZt6uMe'), note:'Макет страницы.' },
@@ -26,7 +30,7 @@ export const MATERIALS = [
   // ── Видео ──
   { id:'vsl-v1', kind:'video', status:'draft', plan:['b3', 'd4'], title:'VSL «Нейроворонка» v1 · 6:20', url:'media/neuro/vsl-v1.mp4', preview:'media/neuro/vsl-v1.jpg', file:'media/neuro/vsl-v1.mp4',
     note:'Продающее видео для бота: аватар Ильи слева, слайды справа, хук «16 454 комментария». Без субтитров (решение 05.11, .srt отдельно). Ждут материалов слайды 12, 17, 20; второй вариант хука — ещё нет.' },
-  { id:'lesson-01-pilot', kind:'video', status:'draft', plan:['b5'], title:'Урок 1 «Логика нейроворонки» — пилот', url:'media/neuro/lesson-01-pilot.mp4', preview:'media/neuro/lesson-01-pilot.jpg', file:'media/neuro/lesson-01-pilot.mp4',
+  { id:'lesson-01-pilot', kind:'video', status:'draft', plan:['b5'], title:'Урок 1 «Логика нейроворонки» — пилот · 0:44', url:'media/neuro/lesson-01-pilot.mp4', preview:'media/neuro/lesson-01-pilot.jpg', file:'media/neuro/lesson-01-pilot.mp4',
     note:'Пилот урока: аватар HeyGen + слайды 1920×1080, сборка конвейером курса.' },
 
   // ── Продукт: курс и уроки ──
@@ -57,6 +61,15 @@ export const MATERIALS = [
   { id:'reels-10', kind:'content', status:'ready', plan:['b1'], title:'10 продающих рилсов Нейроворонки', url:ART('MfLyqeAaZGw62HSUwuCCZd'), note:'Сценарии по скелету блогера-ориентира. Не сняты и не смонтированы.' },
   { id:'reels-spec', kind:'content', status:'ready', plan:['b1', 'b0'], title:'ТЗ на продающие рилсы — разбор', url:ART('FmuSoMWs8iVphWcC9AYgPL'), note:'Как устроены продающие рилсы: скелет, хуки, кодовое слово.' },
   { id:'montage-skills', kind:'content', status:'ready', plan:['b1'], title:'Пакет скиллов монтажа (35+ стилей)', url:ART('8Sx4z7NmqWs6CnjieSbEHJ'), note:'Монтаж рилсов кодом — у агентов «Монтаж рилсов и VSL» и «Аватар HeyGen».' },
+
+  // ── Решения и работа офиса Нейроворонки (05.11) ──
+  { id:'offer', kind:'doc', status:'ready', plan:['d1'], title:'Оффер, цена и тарифы', url:DESK('e9e345d2', 2), note:'Уроки 14 900 ₽, Уроки + поддержка 34 900 ₽ (товары в ChatPlace), гарантия 14 дней, окно потока 10–16.11.' },
+  { id:'kb', kind:'doc', status:'ready', plan:['b0'], title:'База знаний: 3 сегмента ЦА, 36 хуков, голос бренда', url:DESK('0a6e6504'), note:'Продукт, сегменты с болями и возражениями, 9 тем кодовых слов, 12 форматов, инструкция сценаристу. Не хватает материалов под слова, живых вставок и кейсов.' },
+  { id:'critical-path', kind:'doc', status:'ready', plan:['d5'], title:'Критический путь к старту 10.11', url:DESK('8eb0ba4c', 2), note:'Минимальный старт: одна платёжка, один VSL, одно слово. Тестовая неделя 07–09.11. Стоп: без оплаты с чеком 54-ФЗ и оферты денег не берём.' },
+  { id:'pay-yookassa', kind:'bot', status:'draft', plan:['e4', 'b4'], title:'Оплата ЮKassa → бот → доступ → чек', url:DESK('9cf1072c', 3), note:'В ChatPlace собраны теги, переменные, вебхук ЮKassa и цепочка «после оплаты → доступ». Ждут 4 замены (ключ ЮKassa, токен бота, ID канала уроков) и тестовая покупка на 10 ₽.' },
+  { id:'word-voronka', kind:'bot', status:'draft', plan:['b2', 'e1', 'd3'], title:'Кодовое слово «ВОРОНКА»: цепочка и дожимы', url:DESK('52781e74', 2), note:'Цепочка в ChatPlace на паузе: 22 блока, 9 тегов, дожимы, события в кабинет. Ждала адреса лендинга — теперь это neuro.aicex.club.' },
+  { id:'bot-chain', kind:'bot', status:'draft', plan:['b3', 'e3'], title:'Цепочка бота: старт → согласие → VSL → лендинг', url:DESK('5249c22f'), note:'VSL из 3 частей с A/B-хуком, теги по шагам, перевод кодовых слов и /start с практикума — пакет действий на утверждение.' },
+  { id:'tracking', kind:'bot', status:'ready', plan:['e6', 'b6'], title:'Метки nf-… и теги этапов, оплата в кабинет', url:DESK('6b9b98be', 4), note:'Вебхук оплаты привязан к цепочке выдачи доступа, события идут в кабинет. Наборы тегов двух агентов надо свести к одному.' },
 
   // ── Стратегия и документы ──
   { id:'plan', kind:'doc', status:'ready', plan:[], title:'Нейроворонка — план реализации', url:ART('Qc9ehZN7mvMrUGin99JbYT'), note:'Блоки системы, дорожная карта, обязательства, риски — основа офиса.' },
