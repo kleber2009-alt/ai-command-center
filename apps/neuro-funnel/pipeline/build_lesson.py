@@ -2,16 +2,16 @@
 """Склеить урок:  python3 build_lesson.py ../lessons/01 [--only 1,2] [--burn]
 
 Берёт <урок>/build/slides/NN.png (render_slides.mjs) и <урок>/build/avatar/NN.mp4 (HeyGen, 9:16) и собирает
-<урок>/build/lesson-NN.mp4 1920x1080: слайд на всю длину своего сегмента, аватар в круге справа внизу
-(геометрия — как .av в slides.html), пауза PAUSE после сегмента, громкость по EBU R128.
+<урок>/build/lesson-NN.mp4 1920x1080: экран делится 35/65 — слева аватар (AV_W x 1080, кадр 9:16 по ширине,
+обрезка по высоте с отступом CROP_TOP), справа слайд 1248x1080; пауза PAUSE после сегмента, громкость по EBU R128.
 Субтитры — lesson-NN.srt (время по долям текста внутри сегмента, написание — словарь `spell` урока);
 --burn прожигает их в видео. --only собирает часть слайдов (пилот).
 """
 import argparse, json, re, subprocess, sys
 from pathlib import Path
 
-AV_X, AV_Y, AV_D = 1410, 590, 400   # same as .av in slides.html
-CROP_W, CROP_TOP = 0.72, 0.11         # square crop of the 9:16 avatar: side = CROP_W of its width, top at CROP_TOP of its height
+AV_W, SLIDE_W, H = 672, 1248, 1080   # 35 / 65 split of 1920x1080; slides.html renders SLIDE_W x H
+CROP_TOP = 0.08                       # share of the leftover height cut above the avatar (0 = keep top, 0.5 = center)
 PAUSE = 0.45
 FPS = 30
 
@@ -66,11 +66,6 @@ def main():
     seg_dir.mkdir(parents=True, exist_ok=True)
     idx = [int(x) for x in a.only.split(",")] if a.only else list(range(1, len(lesson["slides"]) + 1))
 
-    mask = b / "mask.png"
-    if not mask.exists():
-        r = AV_D / 2
-        run("ffmpeg", "-y", "-f", "lavfi", "-i", f"color=black:s={AV_D}x{AV_D}", "-vf",
-            f"format=gray,geq=lum='if(lte((X-{r})*(X-{r})+(Y-{r})*(Y-{r}),{(r-1)**2}),255,0)'", "-frames:v", "1", str(mask))
 
     segs, srt, t = [], [], 0.0
     for i in idx:
@@ -81,12 +76,11 @@ def main():
                 sys.exit(f"нет {f}")
         out = seg_dir / f"{nn}.mp4"
         speak = duration(av)
-        fc = (f"[1:v]fps={FPS},crop=iw*{CROP_W}:iw*{CROP_W}:iw*{(1-CROP_W)/2}:ih*{CROP_TOP},scale={AV_D}:{AV_D},format=rgba[a];"
-              f"[2:v]format=gray,scale={AV_D}:{AV_D}[m];[a][m]alphamerge[c];"
-              f"[0:v]fps={FPS},format=rgba[s];[s][c]overlay={AV_X}:{AV_Y}:shortest=1,"
+        fc = (f"[1:v]fps={FPS},scale={AV_W}:-2,crop={AV_W}:{H}:0:(ih-{H})*{CROP_TOP}[a];"
+              f"[0:v]fps={FPS},scale={SLIDE_W}:{H}[s];[a][s]hstack=inputs=2:shortest=1,"
               f"tpad=stop_mode=clone:stop_duration={PAUSE},format=yuv420p[v];"
               f"[1:a]aresample=48000,apad=pad_dur={PAUSE}[aout]")
-        run("ffmpeg", "-y", "-loop", "1", "-i", str(slide), "-i", str(av), "-loop", "1", "-i", str(mask),
+        run("ffmpeg", "-y", "-loop", "1", "-i", str(slide), "-i", str(av),
             "-filter_complex", fc, "-map", "[v]", "-map", "[aout]", "-t", f"{speak + PAUSE:.3f}",
             "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-r", str(FPS),
             "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", str(out))
@@ -100,7 +94,7 @@ def main():
     lst = b / "concat.txt"
     lst.write_text("".join(f"file '{s}'\n" for s in segs))
     final = b / f"{name}.mp4"
-    vf = ["-vf", f"subtitles={b / (name + '.srt')}:force_style='FontName=Manrope,FontSize=15,MarginV=40,MarginL=120,MarginR=560,Alignment=1,Outline=1,Shadow=0'"] if a.burn else []
+    vf = ["-vf", f"subtitles={b / (name + '.srt')}:force_style='FontName=Manrope,FontSize=15,MarginV=36,MarginL=440,MarginR=40,Alignment=2,Outline=1,Shadow=0'"] if a.burn else []
     run("ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), *vf,
         *(["-c:v", "libx264", "-crf", "20"] if a.burn else ["-c:v", "copy"]),
         "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(final))

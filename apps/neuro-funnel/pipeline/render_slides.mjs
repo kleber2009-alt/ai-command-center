@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Render lesson slides to PNG 1920x1080:  node render_slides.mjs ../lessons/01
+// Render lesson slides to PNG 1248x1080 (right 65% of the lesson frame):  node render_slides.mjs ../lessons/01
 // Reads <lesson>/lesson.json, writes <lesson>/build/slides/NN.png and a contact sheet build/slides/all.html.
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
@@ -14,7 +14,7 @@ const out = path.join(dir, 'build', 'slides');
 fs.mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: 1248, height: 1080 }, deviceScaleFactor: 1 });
 await page.goto(pathToFileURL(path.join(here, 'slides.html')).href);
 const total = await page.evaluate(l => window.renderLesson(l), lesson);
 for (let i = 1; i <= total; i++) {
