@@ -65,6 +65,14 @@ function buildOffice(W) {
       out.push(`- ${agentName(id)} (${id}): ${CAT[id]?.role || ''}. ${c.lead || ''} Задач в истории: ${n}.${skills ? ' Скиллы: ' + skills + '.' : ''}`);
     }
   }
+  // the office of «Нейроворонка» — the third style of the site: its own team of the campaign, subordinate to the main office
+  if (CFG.neuro && W.OFFICE_AGENTS?.ofContour) {
+    out.push('', `## ${CFG.neuro.name} — отдельный офис кампании Нейроворонки (стиль сайта ${SITE}/?theme=neuro, кабинет с цифрами — ${SITE}/${CFG.neuro.cabinet}). Своя команда в шести контурах, руководители те же, что в главном офисе; работает сам (каждое утро Штаб кампании разбирает цифры и раздаёт находки агентам) и подчиняется главному офису: задачи идут через общий рабочий стол, результат — на проверку Илье.`);
+    for (const c of CFG.neuro.contours) {
+      out.push(`### Контур «${c.name}» — ${c.about}`);
+      for (const id of W.OFFICE_AGENTS.ofContour(c.id)) out.push(`- ${agentName(id)} (${id}): ${CAT[id]?.role || ''}. ${AC[id]?.lead || ''}`);
+    }
+  }
   if (CFG.council?.agents?.length) {
     out.push('', `## ${CFG.council.name} — отдельная комната: ИИ-советники по методам легенд бизнеса (скилл «Команда 8 легенд»). Туда отправляют на собеседование и на исправление деталей — задачей через create_task.`);
     for (const id of [CFG.council.board, ...CFG.council.agents].filter(Boolean)) out.push(`- ${agentName(id)} (${id}): ${CAT[id]?.role || ''}. ${AC[id]?.lead || ''}`);

@@ -72,9 +72,12 @@ jobs:
               if (!/^https?:/.test(p) && !require("fs").existsSync("apps/hq-office/" + p)) throw new Error("missing preview " + p);
             console.log(t.length + " tasks ok");
             // the agents registry (agents.js): every agent has a dossier, a known department and handoffs to known agents
-            const R = window.OFFICE_AGENTS, depts = new Set([...window.OFFICE_CONFIG.depts.map(d => d.id), "council"]);
+            const R = window.OFFICE_AGENTS, N = window.OFFICE_CONFIG.neuro, depts = new Set([...window.OFFICE_CONFIG.depts.map(d => d.id), "council", ...(N ? ["neuro"] : [])]);
+            // the office of «Нейроворонка» (?theme=neuro): every agent of its team is in a known contour and a room of its building
+            const contours = new Set((N?.contours || []).map(c => c.id)), nrooms = new Set([...Object.keys(N?.rooms || {}), "lounge", "kitchen", "hub"]);
             for (const [id, a] of Object.entries(R.list)) {
               if (!depts.has(a.dept)) throw new Error("agent " + id + ": unknown dept " + a.dept);
+              if (a.dept === "neuro" && (!contours.has(a.contour) || !nrooms.has(a.night))) throw new Error("agent " + id + ": the office of Нейроворонка needs a known contour and night room");
               if (!a.name || !a.role || !/^#[0-9a-f]{6}$/i.test(a.color)) throw new Error("agent " + id + ": name, role, color");
               if (!window.AGENT_CONTENT[id]) throw new Error("agent " + id + ": no dossier in agent-content.js (AGENT_CONTENT)");
               if (a.figure !== false && (!a.screen || !a.tasks?.length)) throw new Error("agent " + id + ": screen and tasks");

@@ -110,13 +110,13 @@
 <div class="wrap">
   <header>
     <div class="t">
-      <div class="eb">Офис AICEX · кабинет продукта</div>
+      <div class="eb">Офис Нейроворонки · кабинет кампании</div>
       <h1 id="title">Нейроворонка</h1>
     </div>
-    <span class="chip test">Тестовый кабинет</span>
-    <a class="chip" href="../">← В офис</a>
+    <span class="chip test">Кабинет кампании</span>
+    <a class="chip" href="../?theme=neuro">← Офис Нейроворонки</a>
   </header>
-  <p class="lede">Новая модель маркетинга на одном продукте. В центре кампания и одна главная цифра. Шесть контуров, у каждого своя цифра. Каждая единица контента получает метку и прослеживается до оплаты. Находка сразу становится задачей с ответственным, а если висит больше 2 дней, уходит вам. Если модель приживётся, её перенесём на весь отдел.</p>
+  <p class="lede">Новая модель маркетинга на одном продукте. В центре кампания и одна главная цифра. Шесть контуров, у каждого своя цифра. Каждая единица контента получает метку и прослеживается до оплаты. Находка сразу становится задачей с ответственным, а если висит больше 2 дней, уходит вам. Офис Нейроворонки работает сам: каждое утро Штаб разбирает цифры, а найденное уходит агентам контуров. Подчиняется главному офису: результаты — на вашу проверку.</p>
   <div id="root"><div class="empty">Загружаю кабинет…</div></div>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -198,7 +198,7 @@ function vToday() {
       ${g.target ? `<div class="prog"><i style="width:${p}%"></i>${dueP != null ? `<b style="left:${dueP}%" title="план на сегодня"></b>` : ''}</div>` : ''}
       <div class="row">${g.pace ? `<span class="chip ${g.pace.ahead ? 'g' : 'r'}">${g.pace.ahead ? 'Идём в плане' : 'Отстаём от плана'} · на сегодня ${fmt(g.pace.due)}</span><span class="chip">Осталось ${g.pace.daysLeft} дн.</span>` : '<span class="sub">Темп появится, когда заданы цель и дата конца кампании.</span>'}
         <span class="chip b">Выручка ${rub(g.revenue)}</span></div>
-      <div class="row"><button class="btn pri" data-brief>Разбор дня → Штаб</button><span class="sub">Штаб соберёт один экран дня и находки. Результат придёт на ваш стол в офисе.</span></div>
+      <div class="row"><button class="btn pri" data-brief>Разбор дня → Штаб</button><span class="sub">${S.auto?.daily ? `Офис работает сам: разбор дня каждое утро в ${esc(S.auto.at)} МСК${S.auto.send && S.auto.max ? `, до ${S.auto.max} находок Штаба сразу уходят агентам` : ', находки ждут вашего «В работу»'}. Кнопка — разобрать ещё раз сейчас.` : 'Штаб соберёт один экран дня и находки. Результат придёт на ваш стол в офисе.'}</span></div>
     </div>
     <div class="card${alerts.length ? ' warn' : ''}">
       <div class="lbl">Что важно сегодня</div>
@@ -228,7 +228,7 @@ const contourVal = c => `${c.value == null ? '—' : fmt(c.value)}${c.unit && c.
 function findingRow(f) {
   return `<div class="it" data-fid="${esc(f.id)}"><div class="col"><div class="tt">${esc(f.text)}</div>
     <div class="row sub"><span>${esc(f.contourName)}</span><span>· ${f.ownerName ? esc(f.ownerName) : 'ответственный не назначен'}</span><span>· ${f.ageDays} дн.</span>
-    ${f.overdue ? '<span class="chip r">Больше 2 дней</span>' : ''}${f.status === 'done' ? '<span class="chip g">Закрыта</span>' : ''}${f.task ? `<span>· ${taskLink(f.task)}</span>` : ''}</div>
+    ${f.from === 'shtab' ? '<span class="chip b">нашёл Штаб</span>' : ''}${f.overdue ? '<span class="chip r">Больше 2 дней</span>' : ''}${f.status === 'done' ? '<span class="chip g">Закрыта</span>' : ''}${f.task ? `<span>· ${taskLink(f.task)}</span>` : ''}</div>
     ${f.detail ? `<div class="sub">${esc(f.detail)}</div>` : ''}</div>
     <div class="row">${f.status === 'open' ? `<button class="btn sm pri" data-ftask="${esc(f.id)}">В работу</button>` : ''}
       ${f.status !== 'done' ? `<button class="btn sm" data-fdone="${esc(f.id)}">Закрыть</button>` : `<button class="btn sm" data-freopen="${esc(f.id)}">Открыть снова</button>`}</div></div>`;

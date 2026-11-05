@@ -5,21 +5,21 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { initCabinet, funnelOf, linksOf, ESCALATE_MS } from './cabinet.mjs';
+import { initCabinet, funnelOf, linksOf, parseFindings, ESCALATE_MS } from './cabinet.mjs';
 
 const dirs = [];
 after(() => { for (const d of dirs) fs.rmSync(d, { recursive:true, force:true }); });
 
 function setup() {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cab-test-')); dirs.push(dataDir);
-  const made = [], status = {}, sent = [];
+  const made = [], status = {}, sent = [], results = {};
   const desk = {
     createTask:({ text, agent, source }) => { const task = { id:'t' + made.length, text }; made.push({ text, agent, source }); status[task.id] = 'queued'; return { task, routed:Promise.resolve() }; },
-    get:id => status[id] ? { id, status:status[id], statusText:status[id], text:made[Number(id.slice(1))].text, route:null, agent:null } : null,
+    get:id => status[id] ? { id, status:status[id], statusText:status[id], text:made[Number(id.slice(1))].text, route:null, agent:null, result:results[id] ? { summary:results[id] } : null } : null,
   };
-  const agents = { shtab:{ id:'shtab', name:'Штаб кампании' }, funnels:{ id:'funnels', name:'Воронки' } };
+  const agents = { shtab:{ id:'shtab', name:'Штаб кампании' }, funnels:{ id:'funnels', name:'Воронки' }, nfbot:{ id:'nfbot', name:'Бот и прогрев' }, nfmail:{ id:'nfmail', name:'Рассылки кампании' } };
   const cab = initCabinet({ dataDir, desk, agents:() => agents, notify:async t => { sent.push(t); }, token:'secret' });
-  return { cab, made, status, sent, dataDir };
+  return { cab, made, status, sent, results, dataDir };
 }
 
 test('the funnel shows where the data stops and the bottleneck', () => {
@@ -94,4 +94,38 @@ test('data survives a restart', () => {
   cab.act('neuro', { action:'unit', type:'carousel', title:'Карусель' });
   const again = initCabinet({ dataDir, agents:() => ({}) });
   assert.equal(again.load('neuro').units[0].tag, 'nf-001');
+});
+
+test('findings are read from the report of Штаб by id or by name', () => {
+  const A = { nfbot:{ id:'nfbot', name:'Бот и прогрев' } };
+  const f = parseFindings('## Что сделано\n…\nНАХОДКА: Цепочка зовёт на прошедший эфир | funnels | nfbot\n- **НАХОДКА: Нет данных об оплатах | Штаб | **\nНАХОДКА: Цепочка зовёт на прошедший эфир | funnels | nfbot', A);
+  assert.equal(f.length, 2);
+  assert.deepEqual(f[0], { text:'Цепочка зовёт на прошедший эфир', contour:'funnels', owner:'nfbot' });
+  assert.equal(f[1].contour, 'hq');
+  assert.equal(f[1].owner, '');
+});
+
+test('the office works on its own: the morning brief, then the findings of Штаб go to the agents', async () => {
+  process.env.HQ_NEURO_AUTO_MAX = '1';
+  const { cab, made, status, results } = setup();
+  delete process.env.HQ_NEURO_AUTO_MAX;
+  cab.act('neuro', { action:'day', date:'2026-11-04', values:{ reach:5000, lead:60 } });
+  const morning = Date.parse('2026-11-05T06:45:00Z');          // 09:45 МСК
+  await cab.tick(Date.parse('2026-11-05T05:00:00Z'));           // 08:00 МСК — рано
+  assert.equal(made.length, 0);
+  await cab.tick(morning);
+  await cab.tick(morning + 60e3);                               // once a day
+  assert.equal(made.length, 1);
+  assert.equal(made[0].agent, 'shtab');
+  assert.match(made[0].text, /НАХОДКА:/);
+  status.t0 = 'review';
+  results.t0 = 'Экран дня\nНАХОДКА: Цепочка зовёт на прошедший эфир | funnels | nfbot\nНАХОДКА: Рассылки остались черновиками | launch | nfmail';
+  await cab.tick(morning + 120e3);
+  const s = cab.screen('neuro');
+  assert.equal(s.findings.length, 2);
+  assert.equal(made.length, 2);                                 // only the first one went at once (HQ_NEURO_AUTO_MAX=1)
+  assert.equal(made[1].agent, 'nfbot');
+  assert.equal(s.findings.filter(f => f.status === 'task').length, 1);
+  await cab.tick(morning + 180e3);                              // the report is read once
+  assert.equal(cab.screen('neuro').findings.length, 2);
 });

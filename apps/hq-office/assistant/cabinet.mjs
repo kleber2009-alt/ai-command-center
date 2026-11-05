@@ -10,7 +10,13 @@
      open more than 2 days — escalated: shown first and sent to the owner's Telegram (the notify bot);
    - one screen a day: «Разбор дня» gives the snapshot to the agent «Штаб» as a desk task.
 
-   Owner only (it is a test). Data — DATA_DIR/cabinet/<id>.json.
+   The office of «Нейроворонка» (the third style of the site, ?theme=neuro) works on its own through this module:
+   - every morning at HQ_NEURO_BRIEF_AT (09:40 МСК) the agent «Штаб кампании» gets «Разбор дня» (HQ_NEURO_DAILY=off — only by the button);
+   - the report of Штаб ends with lines «НАХОДКА: … | контур | агент»: when it comes for review, they become findings, and the first
+     HQ_NEURO_AUTO_MAX (3) of them go to their agents as desk tasks at once (HQ_NEURO_AUTO=off — they wait for «В работу»).
+   It answers to the main office: every task goes through the shared desk, the quality check and the owner's review.
+
+   Owner only. Data — DATA_DIR/cabinet/<id>.json.
      GET  cabinet/neuro                 state + the computed screen (today)
      POST cabinet/neuro {action, …}     campaign | contour | day | unit | unit-update | unit-remove | result |
                                         finding | finding-task | finding-done | finding-reopen | finding-remove | brief
@@ -37,17 +43,17 @@ export const UNIT_TYPES = { reel:'Рилс', carousel:'Карусель', thread
 
 export const CONTOURS = [
   { id:'hq', name:'Штаб', role:'Цель, приоритеты, один экран в день, находки → задачи', metric:'Оплаты к цели', kind:'goal',
-    agents:['shtab', 'analytics', 'socialstats', 'finance'] },
+    agents:['shtab', 'nfanalyst', 'nfliaison'] },
   { id:'strategy', name:'Стратегия и бренд', role:'Оффер, позиционирование, голос бренда, кейсы', metric:'Дошли до оффера → заявка', kind:'conv', from:'offer', to:'apply',
-    agents:['brandkeeper', 'cases', 'audience', 'market'] },
+    agents:['brandkeeper', 'cases', 'nfoffer', 'nfvoice'] },
   { id:'editorial', name:'Редакция', role:'Темы, контент-план, сценарии, залёты', metric:'Охват за 7 дней', kind:'sum', step:'reach',
-    agents:['publish', 'scripts', 'viral', 'threads'] },
+    agents:['nfplan', 'nfscripts', 'nfthreads'] },
   { id:'production', name:'Производство', role:'Монтаж, аватар, карусели, презентации, креативы', metric:'Единиц контента за 7 дней', kind:'units',
-    agents:['montage', 'avatar', 'carousel', 'remake', 'slides', 'creatives'] },
+    agents:['nfvideo', 'nfcarousel', 'nfcreatives'] },
   { id:'funnels', name:'Воронки', role:'Бот, прогрев, лид-магнит, лендинг, ответы на кодовые слова', metric:'Подписка → пришли', kind:'conv', from:'lead', to:'came',
-    agents:['funnels', 'leadmagnet', 'landings', 'comments'] },
+    agents:['nfbot', 'nfdirect', 'nflanding'] },
   { id:'launch', name:'Запуски и трафик', role:'Запуск, рассылки, реклама Meta', metric:'Подписки в бота за 7 дней', kind:'sum', step:'lead',
-    agents:['launch', 'mailings', 'metaads', 'adreports'] },
+    agents:['nflaunch', 'nfmail', 'nfads'] },
 ];
 const CONTOUR_IDS = CONTOURS.map(c => c.id);
 export const ESCALATE_MS = 2 * 864e5;
@@ -165,13 +171,33 @@ export function briefText(cab, s) {
     s.units.length ? 'Контент по меткам (лучшие сверху): ' + s.units.slice(0, 12).map(u => `${u.tag} ${u.typeName} «${u.title}» — касаний ${u.stats.touch || 0}, подписок ${u.stats.lead || 0}, заявок ${u.stats.apply || 0}, оплат ${u.stats.paid || 0}`).join('; ') + '.' : 'Контента с метками пока нет.',
     s.findings.filter(f => f.status !== 'done').length ? 'Открытые находки: ' + s.findings.filter(f => f.status !== 'done').map(f => `«${f.text}» — ${f.contourName}, ответственный ${f.ownerName || 'не назначен'}, ${f.ageDays} дн.${f.overdue ? ', ПРОСРОЧЕНА' : ''}`).join('; ') + '.' : 'Открытых находок нет.',
     '',
-    'Сделай один экран дня (страница out/index.html, коротко): 1) главная цифра и темп; 2) что изменилось со вчера; 3) узкое место воронки и где нет данных; 4) три действия на сегодня — у каждого контур, ответственный агент и срок не больше 2 дней; 5) новые находки списком «находка — контур — ответственный». Не выдумывай цифры: чего нет в данных — так и пиши «нет данных».',
+    'Сделай один экран дня (страница out/index.html, коротко): 1) главная цифра и темп; 2) что изменилось со вчера; 3) узкое место воронки и где нет данных; 4) три действия на сегодня — у каждого контур, ответственный агент и срок не больше 2 дней. Не выдумывай цифры: чего нет в данных — так и пиши «нет данных».',
+    `В конце отчёта — новые находки, каждая отдельной строкой ровно в таком виде (от самой важной, не больше 5, без повторов уже открытых): «НАХОДКА: что не так и что сделать | контур | id агента». Контуры: ${CONTOURS.map(c => `${c.id} (${c.name})`).join(', ')}. Агенты: ${CONTOURS.map(c => c.agents.map(id => `${id} — ${c.name}`).join(', ')).join('; ')}. Эти строки офис сам превратит в задачи агентам.`,
   ];
   return lines.filter(x => x !== '').join('\n');
 }
 
+// «НАХОДКА: текст | контур | агент» in the report of Штаб → findings; contour and agent by id or by name
+export function parseFindings(text, agents = {}) {
+  const out = [], seen = new Set();
+  for (const line of String(text || '').split('\n')) {
+    const m = line.match(/НАХОДКА\s*:\s*(.+)$/i);
+    if (!m) continue;
+    const [t, c = '', a = ''] = m[1].replace(/[*_`»«]+$/g, '').split('|').map(x => x.trim().replace(/^[«"*_`]+|[»"*_`]+$/g, ''));
+    if (!t || seen.has(t.toLowerCase())) continue;
+    seen.add(t.toLowerCase());
+    const low = s => s.toLowerCase();
+    const contour = CONTOURS.find(x => low(x.id) === low(c) || low(x.name) === low(c) || (c && low(x.name).startsWith(low(c))))?.id || 'hq';
+    const agent = agents[a] ? a : Object.values(agents).find(x => low(x.name || '') === low(a))?.id || '';
+    out.push({ text:t.slice(0, 400), contour, owner:agent });
+  }
+  return out.slice(0, 8);
+}
+
 export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify = null, token = process.env.HQ_CABINET_TOKEN || '' }) {
   const DIR = path.join(dataDir, 'cabinet');
+  const DAILY = !/^(0|off|false|no)$/i.test(process.env.HQ_NEURO_DAILY || ''), BRIEF_AT = /^\d{2}:\d{2}$/.test(process.env.HQ_NEURO_BRIEF_AT || '') ? process.env.HQ_NEURO_BRIEF_AT : '09:40';
+  const AUTO = !/^(0|off|false|no)$/i.test(process.env.HQ_NEURO_AUTO || ''), AUTO_MAX = Math.max(0, Number(process.env.HQ_NEURO_AUTO_MAX ?? 3) || 0);
   fs.mkdirSync(DIR, { recursive:true });
   const cache = {};
   const file = id => path.join(DIR, id + '.json');
@@ -276,10 +302,7 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
       if (a === 'finding-remove') { cab.findings.splice(cab.findings.indexOf(f), 1); note(cab, `находка удалена: ${f.text}`); }
     } else if (a === 'brief') {
       if (!desk) throw new Error('Рабочий стол недоступен.');
-      const s = screen(cab, { desk, agents:A });
-      const { task } = desk.createTask({ text:briefText(cab, s), agent:A.shtab ? 'shtab' : '', source:'cabinet' });
-      cab.tasks.unshift(task.id);
-      note(cab, 'разбор дня отдан Штабу');
+      const task = brief(cab, b.auto ? 'по расписанию' : '');
       save(cab);
       return { task:{ id:task.id } };
     } else throw new Error('Неизвестное действие.');
@@ -287,11 +310,48 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
     return {};
   }
 
+  function brief(cab, why = '') {
+    if (!desk) throw new Error('Рабочий стол недоступен.');
+    const A = agents(), s = screen(cab, { desk, agents:A });
+    const { task } = desk.createTask({ text:briefText(cab, s), agent:A.shtab ? 'shtab' : '', source:'cabinet' });
+    cab.tasks.unshift(task.id);
+    (cab.briefs ||= []).unshift({ taskId:task.id, date:msk(), parsed:false });
+    cab.briefs.length = Math.min(cab.briefs.length, 60);
+    note(cab, `разбор дня отдан Штабу${why ? ' — ' + why : ''}`);
+    return task;
+  }
+  // the report of Штаб came for review: its «НАХОДКА: …» lines become findings, the first few go to their agents at once
+  function takeFindings(cab, b) {
+    const v = desk?.get(b.taskId);
+    if (!v || !['review', 'done'].includes(v.status) || !v.result?.summary) return false;
+    b.parsed = true;
+    const A = agents(), open = new Set(cab.findings.filter(f => f.status !== 'done').map(f => f.text.toLowerCase()));
+    const found = parseFindings(v.result.summary, A).filter(f => !open.has(f.text.toLowerCase()));
+    let sent = 0;
+    for (const x of found) {
+      const f = { id:crypto.randomBytes(4).toString('hex'), text:x.text, detail:`Из разбора дня Штаба ${b.date}.`, contour:x.contour, owner:x.owner,
+        created:new Date().toISOString(), status:'open', taskId:'', escalated:'', from:'shtab' };
+      cab.findings.unshift(f);
+      if (AUTO && sent < AUTO_MAX && f.owner) { try { sendFinding(cab, f); sent++; } catch (e) { console.error('cabinet auto:', e.message); } }
+    }
+    note(cab, `Штаб нашёл ${found.length} ${found.length === 1 ? 'находку' : 'находок'}${sent ? `, ${sent} сразу ушли агентам` : ''}`);
+    return true;
+  }
+  const mskTime = (d = new Date()) => new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit', hour12:false }).format(d);
+
   // the escalation: a finding open more than 2 days goes to the owner once; a finding whose task was accepted closes itself
   async function tick(nowMs = Date.now()) {
     for (const id of Object.keys(CABINETS)) {
       if (!fs.existsSync(file(id))) continue;
       const cab = load(id); let changed = false;
+      // the office works on its own: the morning «Разбор дня» once a day, then the findings of Штаб
+      const now = new Date(nowMs);
+      if (DAILY && desk && cab.lastAutoBrief !== msk(now) && mskTime(now) >= BRIEF_AT) {
+        cab.lastAutoBrief = msk(now);
+        try { brief(cab, 'по расписанию'); } catch (e) { console.error('cabinet brief:', e.message); }
+        changed = true;
+      }
+      for (const b of cab.briefs || []) if (!b.parsed && takeFindings(cab, b)) changed = true;
       for (const f of cab.findings) {
         if (f.status === 'task' && f.taskId && desk?.get(f.taskId)?.status === 'done') {
           f.status = 'done'; f.closedAt = new Date(nowMs).toISOString(); changed = true; note(cab, `находка закрыта — задача принята: ${f.text}`);
@@ -307,7 +367,7 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
       if (changed) save(cab);
     }
   }
-  setInterval(() => { tick().catch(e => console.error('cabinet tick:', e.message)); }, 10 * 60e3).unref();
+  setInterval(() => { tick().catch(e => console.error('cabinet tick:', e.message)); }, 2 * 60e3).unref();
 
   const json = (res, code, body) => { res.writeHead(code, { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store' }); res.end(JSON.stringify(body)); };
   async function readJson(req, limit = 64e3) {
@@ -327,11 +387,11 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
       try { const r = addEvent(cab, { tag:b.tag, step:b.step, n:b.n, amount:b.amount, date:b.date }); note(cab, `событие извне: ${b.step}${r.unit ? ` по ${r.unit}` : ''}`); save(cab); return json(res, 200, { ok:true, ...r }); }
       catch (e) { return json(res, 400, { error:e.message }); }
     }
-    if (!who?.owner) return json(res, 403, { error:'Кабинет пока тестовый — он открыт только владельцу.' });
-    if (req.method === 'GET' && !sub) return json(res, 200, { ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token) });
+    if (!who?.owner) return json(res, 403, { error:'Кабинет кампании открыт только владельцу.' });
+    if (req.method === 'GET' && !sub) return json(res, 200, { ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX } });
     if (req.method === 'POST' && !sub) {
       const b = await readJson(req);
-      try { const r = act(id, b); return json(res, 200, { ok:true, ...r, ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token) }); }
+      try { const r = act(id, b); return json(res, 200, { ok:true, ...r, ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX } }); }
       catch (e) { return json(res, 400, { error:e.message }); }
     }
     return json(res, 404, { error:'not found' });

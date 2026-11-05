@@ -52,7 +52,7 @@ const STEPS_KEPT = 80;
 const KIND = { slides:'Презентация', document:'Документ', landing:'Сайт', script:'Сценарии', carousel:'Дизайн', video:'Видео', image:'Дизайн', research:'Исследование', other:'Разработка' };
 const STATUS = { routing:'диспетчер разбирает', question:'нужен ваш ответ', queued:'в очереди', work:'в работе', review:'на проверке', done:'готово', cancelled:'отменена', error:'ошибка', paused:'на паузе' };
 const OPEN = ['routing', 'question', 'queued', 'work', 'review', 'paused'];
-const SOURCES = ['office', 'assistant', 'twin', 'telegram', 'cabinet'];
+const SOURCES = ['office', 'assistant', 'twin', 'telegram', 'cabinet', 'neuro'];
 const msk = iso => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' }).format(new Date(iso));
 const TRANSCRIBER = 'transcriber';
 // «Контролёр качества»: проверяет первую сдачу результата до владельца и один раз возвращает агенту на доработку
@@ -210,7 +210,10 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const agents = [], lines = ['# Агенты офиса (id в скобках)'];
     // the meeting room of legends: the whole council first, then each advisor (office.config.js → council)
     const groups = [...CFG.depts, ...(CFG.council?.agents?.length ? [{ ...CFG.council, agents:[CFG.council.board, ...CFG.council.agents].filter(Boolean),
-      name:`${CFG.council.name} — ИИ-советники по методам легенд бизнеса: сюда задачи «на собеседование» (оценить оффер, воронку, запуск, тексты, продажи, план) и «на исправление деталей» по их методу; «Совет легенд» — когда нужен взгляд всех восьми` }] : [])];
+      name:`${CFG.council.name} — ИИ-советники по методам легенд бизнеса: сюда задачи «на собеседование» (оценить оффер, воронку, запуск, тексты, продажи, план) и «на исправление деталей» по их методу; «Совет легенд» — когда нужен взгляд всех восьми` }] : []),
+      // the office of «Нейроворонка»: its own team of the campaign (agents.js dept:'neuro'), subordinate to the main office
+      ...(CFG.neuro && W.OFFICE_AGENTS?.ofContour ? [{ id:'neuro', name:`${CFG.neuro.name} — отдельная команда кампании Нейроворонки (контуры: ${CFG.neuro.contours.map(c => c.name).join(', ')}): задачи именно по кампании Нейроворонки — сюда, остальное — главному офису`,
+        agents:CFG.neuro.contours.flatMap(c => W.OFFICE_AGENTS.ofContour(c.id)) }] : [])];
     for (const d of groups) {
       lines.push('', `## ${d.name}`);
       const hp = (W.HEAD_CONTENT || {})[d.id]?.products || [];
@@ -560,7 +563,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const asked = t.agent && ids.includes(t.agent) ? agentOf(t.agent) : null;
     const links = videoLinks([t.text, ...t.answers.map(x => x.a)].join(' ')), media = t.files.filter(f => MEDIA_EXT.test(f.name));
     const request = [t.by ? `Просьба руководителя ${t.by.name} (от имени владельца офиса): «${t.text}»` : `Просьба владельца: «${t.text}»`,
-      allow ? `Выбирай агента ТОЛЬКО из агентов этого руководителя: ${ids.map(id => `${agentOf(id)?.name} (${id})`).join(', ')}. Конвейеры — только: ${pipes.join(', ') || 'нет'}.` : '',
+      allow ? `Выбирай агента ТОЛЬКО из агентов ${t.source === 'neuro' ? 'офиса Нейроворонки (задача поставлена в этом офисе)' : 'этого руководителя'}: ${ids.map(id => `${agentOf(id)?.name} (${id})`).join(', ')}. Конвейеры — только: ${pipes.join(', ') || 'нет'}.` : '',
       links.length ? `Ссылки на видео в просьбе: ${links.join(', ')}.` : 'Ссылок на видео в просьбе нет.',
       asked ? `Владелец сам выбрал агента: ${asked.name} (${asked.id}).` : 'Агента владелец не выбирал — выбери сам.',
       PIPELINES[t.pipelinePick] ? `Владелец сам выбрал конвейер: ${t.pipelinePick} («${PIPELINES[t.pipelinePick].label}»).` : '',
@@ -895,13 +898,15 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     return {};
   }
 
-  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null, source = '', pipeline = '', by = null }) {
+  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null, source = '', pipeline = '', by = null, allowed = null }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
       files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false,
       source:routine ? 'routine' : direct ? (SOURCES.includes(source) ? source : 'twin') : SOURCES.includes(source) ? source : 'office',
       ...(PIPELINES[pipeline] ? { pipelinePick:pipeline } : {}),
       // a department head: the dispatcher picks only from their agents (+ the shared helpers)
-      ...(by ? { by:{ id:by.id, name:by.name }, allowed:[...by.agents] } : {}) };
+      ...(by ? { by:{ id:by.id, name:by.name }, allowed:[...by.agents] } : {}),
+      // a task from the office of «Нейроворонка»: the dispatcher picks only from its team
+      ...(allowed?.length ? { allowed:by ? by.agents.filter(id => allowed.includes(id)) : [...allowed] } : {}) };
     takeUploads(t, uploads);
     tasks.unshift(t);
     if (routine) {
@@ -1410,7 +1415,8 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       if (head && b.agent && !head.agents.includes(b.agent)) return json(res, 403, { error:'Этот агент не в вашем отделе — поставить ему задачу может его руководитель или владелец.' });
       if (head && PIPELINES[b.pipeline] && !PIPELINES[b.pipeline].stages.every(s => head.agents.includes(s.agent) || [TRANSCRIBER, QA].includes(s.agent)))
         return json(res, 403, { error:'В этом конвейере есть агенты другого отдела — запустить его может владелец.' });
-      const { task } = createTask({ text:b.text, agent:b.agent, pipeline:String(b.pipeline || ''), uploads:Array.isArray(b.uploads) ? b.uploads : [], source:'office', by:head });
+      const neuro = b.scope === 'neuro' ? catalog().agents.filter(a => a.dept === 'neuro').map(a => a.id) : null;
+      const { task } = createTask({ text:b.text, agent:b.agent, pipeline:neuro ? '' : String(b.pipeline || ''), uploads:Array.isArray(b.uploads) ? b.uploads : [], source:neuro ? 'neuro' : 'office', by:head, allowed:neuro });
       return json(res, 200, { task:view(task) });
     }
     if (seg[0] === 'tasks' && seg[1] && M === 'POST') {
