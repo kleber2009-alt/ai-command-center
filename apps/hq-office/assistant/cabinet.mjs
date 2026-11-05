@@ -514,6 +514,11 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
       try { const r = addEvent(cab, { tag:b.tag, step:b.step, n:b.n, amount:b.amount, date:b.date }); note(cab, `событие извне: ${b.step}${r.unit ? ` по ${r.unit}` : ''}`); save(cab); return json(res, 200, { ok:true, ...r }); }
       catch (e) { return json(res, 400, { error:e.message }); }
     }
+    // ready materials of the project — for the tab «Работы» of the office; a guest sees only finished public pages and media
+    if (req.method === 'GET' && sub === 'materials') {
+      const open = m => m.status === 'ready' && (/^media\//.test(m.url) || (/^https:\/\//.test(m.url) && !/claude\.ai|github\.com|\/api\/assistant\//.test(m.url)));
+      return json(res, 200, { kinds:MATERIAL_KINDS, items:MATERIALS.filter(m => who?.owner || open(m)).map(({ id, kind, status, title, url, preview, note }) => ({ id, kind, status, title, url, preview, note:who?.owner ? note : '' })) });
+    }
     if (!who?.owner) return json(res, 403, { error:'Кабинет кампании открыт только владельцу.' });
     if (req.method === 'GET' && !sub) return json(res, 200, { ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX }, contoursAll:CONTOURS.map(c => ({ id:c.id, name:c.name })) });
     if (req.method === 'POST' && !sub) {
