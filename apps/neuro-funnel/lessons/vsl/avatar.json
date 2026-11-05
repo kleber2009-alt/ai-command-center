@@ -1,0 +1,22 @@
+{
+  "_about": "Рендер аватара VSL. Одни настройки на все сегменты — чтобы голос и манера не плавали на 7 минутах. Сегменты 17 (кейс) и 20 (цена) — после материалов Ильи, с теми же настройками.",
+  "look": "57 · 281f9318a63b4b8a9f6d1fda58cf6eda",
+  "settings": {
+    "engine": {"type": "avatar_v", "more_blinking": true},
+    "motion_prompt": "Calm, confident podcast host at a desk talking to the camera. Natural, varied hand gestures that follow the meaning of the speech, small nods and slight head tilts on key words, relaxed shoulders, natural blinking, friendly expression, steady eye contact with the camera. No exaggerated or repetitive movements.",
+    "voice_id": "8124c63842a04fceaf34661a804690f9",
+    "voice_settings": {"speed": 1.0, "engine_settings": {"engine_type": "elevenlabs", "model": "eleven_multilingual_v2", "stability": 0.5, "similarity_boost": 0.85, "style": 0.15, "use_speaker_boost": true}},
+    "brand_glossary_id": "d69a8a73c7694f11a2d33a019a5eaadd",
+    "pauses": "<break time=\"0.3–0.5s\"/> перед ударной фразой и после цифр-хуков; между слайдами склейка добавляет 0.45 с",
+    "aspect_ratio": "9:16", "resolution": "1080p"
+  },
+  "videos": {
+    "01": "5eee5117f442f60f3a4cb8ce5d6df059", "02": "3a977221b55a19eac0a4e6d9f0576aa4", "03": "2cf0f0f836f832c6763e8acd5e826b34",
+    "04": "7aaf7ead0acf3b7a2c95e24c6d606591", "05": "837046dd5e74424a9ecfaf3bdb41f710", "06": "816544f7c6f8d4f4f8ba8ab3d2e357df",
+    "07": "f19599fc2f6093c2fde587012124b8cd", "08": "b7754378445600f316d9d1059d5d8026", "09": "556a943354461e54828b3d10ba54c8b6",
+    "10": "8b65346f2d21e57237bf2b9215cebf1f", "11": "5a706d12d5d057465cfa3cfdc9572662", "12": "07f5c9a44766601075cccaf4bd558c2d",
+    "13": "7dc6e9eec620b3f19a665e05fec1c617", "14": "9cc601f34135c6b37c624b610f22be30", "15": "1e48b66b6e4d285eaf6606e763343d25",
+    "16": "a43439188366cec2e69d3dc611b2be3c", "17": null, "18": "b01fa09014476795c68610a2c8b31f6b",
+    "19": "dfd9518eeacc07baeb365159c0b11a14", "20": null, "21": "7b7cde3cdfb5df8c40c6655753508fc1"
+  }
+}

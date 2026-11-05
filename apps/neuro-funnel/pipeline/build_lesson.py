@@ -77,10 +77,13 @@ def main():
                 sys.exit(f"нет {f}")
         out = seg_dir / f"{nn}.mp4"
         speak = duration(av)
-        full = lesson["slides"][i - 1].get("full")  # cutaway: slide on the whole frame, avatar voice only
+        full = lesson["slides"][i - 1].get("full")
+        zc = lesson.get("avatar_crop")  # {"w": share of avatar width kept, "y": top as share of height} — tighter framing
+        avcrop = (f"crop=iw*{zc['w']}:iw*{zc['w']}*{H}/{AV_W}:iw*{(1 - zc['w']) / 2}:ih*{zc['y']}," if zc
+                  else f"scale={AV_W}:-2,crop={AV_W}:{H}:0:(ih-{H})*{CROP_TOP},")  # cutaway: slide on the whole frame, avatar voice only
         vid = (f"[0:v]fps={FPS},scale=1920:{H},zoompan=z='1.04+0.06*on/({FPS}*{speak + PAUSE:.2f})':d=1:s=1920x{H}:fps={FPS}[st];[st]"
                if full else
-               f"[1:v]fps={FPS},scale={AV_W}:-2,crop={AV_W}:{H}:0:(ih-{H})*{CROP_TOP}[a];"
+               f"[1:v]fps={FPS},{avcrop}scale={AV_W}:{H}[a];"
                f"[0:v]fps={FPS},scale={SLIDE_W}:{H}[s];[a][s]hstack=inputs=2:shortest=1,")
         fc = (vid + f"tpad=stop_mode=clone:stop_duration={PAUSE},format=yuv420p[v];"
               f"[1:a]aresample=48000,apad=pad_dur={PAUSE}[aout]")
