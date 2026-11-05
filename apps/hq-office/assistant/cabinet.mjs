@@ -11,9 +11,12 @@
    - one screen a day: «Разбор дня» gives the snapshot to the agent «Штаб» as a desk task.
 
    The office of «Нейроворонка» (the third style of the site, ?theme=neuro) works on its own through this module:
-   - every morning at HQ_NEURO_BRIEF_AT (09:40 МСК) the agent «Штаб кампании» gets «Разбор дня» (HQ_NEURO_DAILY=off — only by the button);
-   - the report of Штаб ends with lines «НАХОДКА: … | контур | агент»: when it comes for review, they become findings, and the first
-     HQ_NEURO_AUTO_MAX (3) of them go to their agents as desk tasks at once (HQ_NEURO_AUTO=off — they wait for «В работу»).
+   - the routine ROUTINES: «Разбор дня» → Штаб every morning at HQ_NEURO_BRIEF_AT (09:40 МСК), the week of content (Mon), the roadmap
+     (Mon, Thu), the progress of students (Tue, Fri, after the sales start), the weekly summary of stages and the report to the main office
+     (Fri); HQ_NEURO_DAILY=off — only by the buttons;
+   - the reports end with lines «НАХОДКА: … | контур | агент»: when one comes for review, they become findings, and the first
+     HQ_NEURO_AUTO_MAX (3) of them go to their agents as desk tasks at once (HQ_NEURO_AUTO=off — they wait for «В работу»);
+   - PLAN — the plan of the project as a checklist with owners and criteria; contextFiles — what every agent of the office gets with a task.
    It answers to the main office: every task goes through the shared desk, the quality check and the owner's review.
 
    Owner only. Data — DATA_DIR/cabinet/<id>.json.
@@ -26,38 +29,96 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+// the funnel of the plan (neuro-plan.md → «Метрики и экономика»): content → code word → bot → VSL → landing → payment → lessons → upsell
 export const STEPS = [
-  { id:'reach', name:'Охват', hint:'просмотры контента кампании' },
-  { id:'touch', name:'Касание', hint:'кодовое слово, клик, переход' },
-  { id:'lead', name:'Подписка в бота', hint:'старт бота / подписка' },
-  { id:'reg', name:'Регистрация', hint:'записались на урок или эфир' },
-  { id:'came', name:'Пришли', hint:'открыли урок / пришли на эфир' },
-  { id:'offer', name:'Дошли до оффера', hint:'досмотрели до продажи' },
-  { id:'apply', name:'Заявка', hint:'заявка или переписка о покупке' },
-  { id:'paid', name:'Оплата', hint:'оплатили' },
+  { id:'reach', name:'Охват', hint:'просмотры контента кампании (статистика Instagram)' },
+  { id:'word', name:'Кодовое слово', hint:'написали кодовое слово (сервис автоответов)' },
+  { id:'bot', name:'Старт бота', hint:'нажали «старт» в боте' },
+  { id:'vsl', name:'Досмотр VSL', hint:'досмотрели VSL до оффера (события бота)' },
+  { id:'landing', name:'Лендинг', hint:'перешли по ссылке на лендинг (метки бота)' },
+  { id:'paid', name:'Оплата', hint:'оплатили (платёжка)' },
+  { id:'study', name:'Проходят уроки', hint:'открыли и проходят уроки (платформа уроков)' },
+  { id:'upsell', name:'Мастер-группа', hint:'перешли в Мастер-группу' },
 ];
 const STEP_IDS = STEPS.map(s => s.id);
-// a sane conversion of each step from the previous one — the bottleneck is the step furthest below it
-const BENCH = { touch:0.01, lead:0.5, reg:0.4, came:0.35, offer:0.6, apply:0.1, paid:0.3 };
-export const UNIT_TYPES = { reel:'Рилс', carousel:'Карусель', threads:'Threads', stories:'Сторис', post:'Пост в канале', ad:'Реклама', mailing:'Рассылка', live:'Эфир / урок', other:'Другое' };
+// a sane conversion of each step from the previous one — the weakest stage is the one furthest below it (targets — after the test week)
+const BENCH = { word:0.01, bot:0.6, vsl:0.4, landing:0.3, paid:0.08, study:0.7, upsell:0.1 };
+export const UNIT_TYPES = { reel:'Рилс', carousel:'Карусель', vsl:'VSL', lesson:'Урок', stories:'Сторис', post:'Пост в канале', ad:'Реклама', mailing:'Сообщение бота', other:'Другое' };
 
+// six contours of the office «Нейроворонка» — the same as office.config.js → neuro.contours, each with its own number
 export const CONTOURS = [
-  { id:'hq', name:'Штаб', role:'Цель, приоритеты, один экран в день, находки → задачи', metric:'Оплаты к цели', kind:'goal',
-    agents:['shtab', 'nfanalyst', 'nfliaison'] },
-  { id:'strategy', name:'Стратегия и бренд', role:'Оффер, позиционирование, голос бренда, кейсы', metric:'Дошли до оффера → заявка', kind:'conv', from:'offer', to:'apply',
-    agents:['brandkeeper', 'cases', 'nfoffer', 'nfvoice'] },
-  { id:'editorial', name:'Редакция', role:'Темы, контент-план, сценарии, залёты', metric:'Охват за 7 дней', kind:'sum', step:'reach',
-    agents:['nfplan', 'nfscripts', 'nfthreads'] },
-  { id:'production', name:'Производство', role:'Монтаж, аватар, карусели, презентации, креативы', metric:'Единиц контента за 7 дней', kind:'units',
-    agents:['nfvideo', 'nfcarousel', 'nfcreatives'] },
-  { id:'funnels', name:'Воронки', role:'Бот, прогрев, лид-магнит, лендинг, ответы на кодовые слова', metric:'Подписка → пришли', kind:'conv', from:'lead', to:'came',
-    agents:['nfbot', 'nfdirect', 'nflanding'] },
-  { id:'launch', name:'Запуски и трафик', role:'Запуск, рассылки, реклама Meta', metric:'Подписки в бота за 7 дней', kind:'sum', step:'lead',
-    agents:['nflaunch', 'nfmail', 'nfads'] },
+  { id:'hq', name:'Штаб и запуск', role:'Оператор воронки, дорожная карта, контроль качества, оферта, связь с главным офисом', metric:'Оплаты к цели', kind:'goal',
+    agents:['shtab', 'nfroadmap', 'nfqa', 'nflegal', 'nfliaison'] },
+  { id:'strategy', name:'Стратегия и база знаний', role:'Блок 0: карта смыслов, оффер и тарифы, бренд, голос клиента, кейсы', metric:'Досмотр VSL → лендинг', kind:'conv', from:'vsl', to:'landing',
+    agents:['nfkb', 'nfoffer', 'brandkeeper', 'nfvoice', 'cases'] },
+  { id:'content', name:'Контент-завод', role:'Блок 1: ресёрч, сценарии, аватар, монтаж, карусели, публикации с метками', metric:'Охват за 7 дней', kind:'sum', step:'reach',
+    agents:['nfresearch', 'nfscripts', 'nfpublish', 'nfavatar', 'nfvideo', 'nfcarousel'] },
+  { id:'funnels', name:'Воронка и продажи', role:'Блоки 2–4: кодовые слова, бот и VSL, дожим, лендинг, оплата и доступ', metric:'Кодовое слово → оплата', kind:'conv', from:'word', to:'paid',
+    agents:['nfwords', 'nfbot', 'nffollow', 'nflanding', 'nfpay'] },
+  { id:'product', name:'Продукт и ученики', role:'Блок 5: уроки, презентации, запись, платформа, успеваемость, поддержка, апсейл', metric:'Оплатили → проходят уроки', kind:'conv', from:'paid', to:'study',
+    agents:['nfmethod', 'nfslides', 'nflessons', 'nfplatform', 'nfprogress', 'nfsupport', 'nfupsell'] },
+  { id:'analytics', name:'Метрики и аналитика', role:'Блок 6: конверсия этапов, сквозные метки, экономика, платный трафик', metric:'Этапов воронки с данными', kind:'coverage',
+    agents:['nfanalyst', 'nftracking', 'nfeconomics', 'nfads'] },
+];
+// the plan as a checklist: blocks of the system with the criterion «готово, когда», the nine elements, the offer's obligations
+// and the open decisions — each has an owner; «В работу» gives it to them with the criterion, an accepted task closes it
+export const PLAN = [
+  { group:'Блоки системы', items:[
+    { id:'b0', name:'0. База знаний', owner:'nfkb', done:'Любой сценарий можно написать, ссылаясь только на базу, без ручных пояснений' },
+    { id:'b1', name:'1. Контент-завод', owner:'nfscripts', done:'Неделя контента собирается за один цикл, Илья тратит не больше часа на утверждение' },
+    { id:'b2', name:'2. Кодовые слова', owner:'nfwords', done:'Комментарий со словом за минуту приводит человека в бот, переход отслеживается' },
+    { id:'b3', name:'3. Бот + VSL', owner:'nfbot', done:'Новый человек проходит путь от старта до ссылки на оплату без участия команды' },
+    { id:'b4', name:'4. Лендинг', owner:'nflanding', done:'Оплата проходит, доступ выдаётся автоматически, чек уходит' },
+    { id:'b5', name:'5. Продукт', owner:'nfmethod', done:'Все уроки потока записаны и открываются по расписанию из оферты' },
+    { id:'b6', name:'6. Аналитика', owner:'nfanalyst', done:'Видно конверсию каждого этапа и доход по каждому кодовому слову' },
+  ] },
+  { group:'Что держит деньги и обязательства', items:[
+    { id:'e1', name:'Автоответы на кодовые слова (API Meta)', owner:'nfwords', done:'Автоответы только через официальный API Meta, без серых ботов' },
+    { id:'e2', name:'Дожим в боте 3–7 дней', owner:'nffollow', done:'Серия для досмотревших VSL и не купивших: кейсы, возражения, дедлайн' },
+    { id:'e3', name:'Сегментация в боте', owner:'nffollow', done:'Теги: пришёл, досмотрел VSL, кликнул на лендинг, купил' },
+    { id:'e4', name:'Оплата: две платёжки, 54-ФЗ, автовыдача', owner:'nfpay', done:'Тестовая покупка прошла, доступ выдан сам, чек ушёл' },
+    { id:'e5', name:'Платформа уроков', owner:'nfplatform', done:'Платформа выбрана, уроки открываются по расписанию, доступ после оплаты' },
+    { id:'e6', name:'Сквозная аналитика', owner:'nftracking', done:'Метка на каждое кодовое слово, события бота и оплаты приходят в кабинет' },
+    { id:'e7', name:'Юридический контур', owner:'nflegal', done:'Оферта, согласие 152-ФЗ в боте, маркировка ИИ и рекламы' },
+    { id:'e8', name:'Контроль качества', owner:'nfqa', done:'Чек-лист и утверждение Ильи перед каждой публикацией' },
+    { id:'e9', name:'Апсейл в Мастер-группу', owner:'nfupsell', done:'Переход в старший продукт в конце курса и в боте' },
+  ] },
+  { group:'Обязательства в оферте', items:[
+    { id:'o1', name:'Срок доступа и дата выхода каждого урока', owner:'nflegal', done:'Указано в оферте, график ведёт методист' },
+    { id:'o2', name:'Формат поддержки: кто отвечает и в какой срок', owner:'nfsupport', done:'Формат и сроки в оферте, ответственный назначен' },
+    { id:'o3', name:'Условия возврата', owner:'nflegal', done:'Условия в оферте' },
+    { id:'o4', name:'Техподдержка по оплате и доступу — в течение рабочего дня', owner:'nfsupport', done:'База ответов и дежурный' },
+    { id:'o5', name:'Обновления курса при смене инструментов', owner:'nfmethod', done:'Правило обновлений в оферте и план' },
+    { id:'o6', name:'Обратная связь и кейсы после каждого потока', owner:'cases', done:'Опрос и сбор кейсов после потока' },
+  ] },
+  { group:'Решения и запуск', items:[
+    { id:'d1', name:'Оффер, цена и тарифы', owner:'nfoffer', done:'Утверждены Ильёй' },
+    { id:'d2', name:'Формат записи уроков: аватар или живой Илья', owner:'nflessons', done:'Решение и пробный урок' },
+    { id:'d3', name:'Первые 3 кодовых слова и темы рилсов', owner:'nfwords', done:'Слова выбраны, автоответы готовы' },
+    { id:'d4', name:'Первая версия сценария VSL (2 хука)', owner:'nfbot', done:'Сценарий утверждён' },
+    { id:'d5', name:'Тестовая неделя: покупка, доступ, проход воронки', owner:'nfroadmap', done:'От кодового слова до оплаты без сбоев' },
+    { id:'d6', name:'Ответственный оператор воронки и поддержки', owner:'shtab', done:'Назначен, график дежурств' },
+  ] },
+];
+const PLAN_ITEMS = PLAN.flatMap(g => g.items.map(i => ({ ...i, group:g.group })));
+// the routine of the office: it works on its own (HQ_NEURO_DAILY=off — only by the buttons). dow: 1 = Monday … 7 = Sunday, empty — every day;
+// after — from the date the sales start (office.config.js → neuro.start)
+export const ROUTINES = [
+  { id:'brief', agent:'shtab', at:'09:40', dow:[], name:'Разбор дня', about:'экран дня и находки → задачи' },
+  { id:'content-week', agent:'nfscripts', at:'10:30', dow:[1], name:'Неделя контента за один цикл', about:'сценарии рилсов и каруселей недели, текст для аватара, подписи с кодовыми словами — на проверку и утверждение',
+    text:'Собери неделю контента Нейроворонки за один цикл (блок 1 плана): идеи от ресёрча и базы знаний → 5 сценариев рилсов и 2 карусели с кодовыми словами → текст для аватара → подписи с кодовым словом и маркировкой ИИ. Сдай одной страницей на утверждение — Илья должен потратить не больше часа.' },
+  { id:'roadmap', agent:'nfroadmap', at:'11:00', dow:[1, 4], name:'Статус дорожной карты', about:'блоки и критерии готовности, что мешает старту',
+    text:'Проверь статус дорожной карты Нейроворонки: 7 блоков системы и 9 элементов по критериям готовности (in/neuro-cabinet.md → «План»), что горит, что мешает продажам и первому потоку. Новые находки — строками «НАХОДКА: … | контур | агент».' },
+  { id:'progress', agent:'nfprogress', at:'12:00', dow:[2, 5], after:'start', name:'Успеваемость потока', about:'кто проходит уроки, кто отстаёт',
+    text:'Собери отчёт успеваемости потока Нейроворонки: кто открыл и прошёл уроки, кто отстаёт, кому нужна поддержка, кто кандидат в кейсы и Мастер-группу. Чего нет в данных — так и пиши.' },
+  { id:'metrics-week', agent:'nfanalyst', at:'16:00', dow:[5], name:'Сводка недели по этапам', about:'конверсии этапов, слабый этап, гипотезы, обновление базы знаний',
+    text:'Собери сводку недели по этапам воронки Нейроворонки (блок 6 плана): конверсия каждого этапа, формула выручки, доход по кодовым словам и меткам, самый слабый этап, 3 гипотезы, что обновить в базе знаний. Новые находки — строками «НАХОДКА: … | контур | агент».' },
+  { id:'report', agent:'nfliaison', at:'18:00', dow:[5], name:'Отчёт главному офису', about:'оплаты, этапы, что сделано, что нужно от главного офиса',
+    text:'Собери отчёт недели офиса Нейроворонки для главного офиса AICEX: оплаты к цели, этапы воронки, что сделано по плану, что мешает, что нужно от главного офиса (ресурсы, решения Ильи).' },
 ];
 const CONTOUR_IDS = CONTOURS.map(c => c.id);
 export const ESCALATE_MS = 2 * 864e5;
-export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf' } };
+export const CABINETS = { neuro:{ product:'Нейроворонка', tagPrefix:'nf', name:'Нейроворонка — первый поток', start:'2026-11-10', end:'2026-11-30' } };
 
 const msk = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(d);
 const str = (v, n = 300) => String(v ?? '').trim().slice(0, n);
@@ -70,8 +131,8 @@ function blank(id) {
   const c = CABINETS[id];
   return {
     id, created:new Date().toISOString(),
-    campaign:{ name:`${c.product} — тестовая кампания`, product:c.product, goalTarget:0, start:msk(), end:'', budget:0, botUrl:'', landingUrl:'', note:'' },
-    targets:{}, days:{}, units:[], seq:0, findings:[], tasks:[], log:[],
+    campaign:{ name:c.name || c.product, product:c.product, goalTarget:0, start:c.start || msk(), end:c.end || '', budget:0, botUrl:'', landingUrl:'', note:'' },
+    targets:{}, days:{}, units:[], seq:0, findings:[], tasks:[], log:[], plan:{}, runs:{},
   };
 }
 
@@ -110,10 +171,7 @@ export function funnelOf(cab, dates) {
 function contourValue(cab, c, week, total) {
   if (c.kind === 'goal') return { value:total.steps.find(s => s.id === 'paid').n, target:num(cab.campaign.goalTarget) || null, unit:'оплат' };
   if (c.kind === 'sum') return { value:week.steps.find(s => s.id === c.step).n, target:num(cab.targets[c.id]) || null, unit:'' };
-  if (c.kind === 'units') {
-    const from = daysBack(7).at(-1);
-    return { value:cab.units.filter(u => (u.date || '') >= from).length, target:num(cab.targets[c.id]) || null, unit:'шт.' };
-  }
+  if (c.kind === 'coverage') return { value:week.steps.filter(s => s.has).length, target:STEPS.length, unit:'' };
   const f = week.steps.find(s => s.id === c.from), t = week.steps.find(s => s.id === c.to);
   return { value:f.n > 0 && t.has ? Math.round(t.n / f.n * 1000) / 10 : null, target:num(cab.targets[c.id]) || null, unit:'%' };
 }
@@ -122,7 +180,7 @@ function contourValue(cab, c, week, total) {
 export function screen(cab, { desk, agents = {}, nowMs = Date.now() } = {}) {
   const today = msk(new Date(nowMs)), week = daysBack(7, new Date(nowMs));
   const start = isDate(cab.campaign.start) ? cab.campaign.start : (Object.keys(cab.days).sort()[0] || today);
-  const allDates = Object.keys(cab.days).filter(d => d >= start).sort();
+  const allDates = Object.keys(cab.days).sort();   // the whole campaign: leads gather before the sales start too
   const w = funnelOf(cab, week), total = funnelOf(cab, allDates);
   const yesterday = funnelOf(cab, [msk(new Date(nowMs - 864e5))]);
   const paid = total.steps.find(s => s.id === 'paid').n, target = num(cab.campaign.goalTarget);
@@ -140,14 +198,25 @@ export function screen(cab, { desk, agents = {}, nowMs = Date.now() } = {}) {
   }).sort((a, b) => (a.status === 'done') - (b.status === 'done') || b.overdue - a.overdue || Date.parse(a.created) - Date.parse(b.created));
   const units = cab.units.map(u => ({ ...u, typeName:UNIT_TYPES[u.type] || u.type, links:linksOf(cab, u),
     contourName:CONTOURS.find(c => c.id === u.contour)?.name || '' }))
-    .sort((a, b) => (b.stats.paid || 0) - (a.stats.paid || 0) || (b.stats.apply || 0) - (a.stats.apply || 0) || (b.stats.lead || 0) - (a.stats.lead || 0) || String(b.date).localeCompare(String(a.date)));
+    .sort((a, b) => (b.stats.paid || 0) - (a.stats.paid || 0) || (b.stats.landing || 0) - (a.stats.landing || 0) || (b.stats.bot || 0) - (a.stats.bot || 0) || String(b.date).localeCompare(String(a.date)));
   const contours = CONTOURS.map(c => {
     const open = findings.filter(f => f.contour === c.id && f.status !== 'done');
     return { ...c, ...contourValue(cab, c, w, total), agents:c.agents.filter(id => agents[id]).map(id => ({ id, name:agents[id].name, color:agents[id].color })),
       open:open.length, overdue:open.filter(f => f.overdue).length };
   });
   const tasks = cab.tasks.map(taskOf).filter(Boolean).slice(0, 30);
+  // the plan: every block, element, obligation and decision with its owner, status and task
+  const plan = PLAN.map(g => ({ group:g.group, items:g.items.map(i => { const st = cab.plan?.[i.id] || {};
+    return { ...i, ownerName:agents[i.owner]?.name || i.owner, status:st.status || 'todo', task:taskOf(st.taskId), doneAt:st.doneAt || '' }; }) }));
+  const planCount = { all:PLAN_ITEMS.length, done:plan.flatMap(g => g.items).filter(i => i.status === 'done').length, work:plan.flatMap(g => g.items).filter(i => i.status === 'work').length };
+  // the revenue formula of the plan: reach × CR(word) × CR(bot) × CR(VSL) × CR(landing) × CR(payment) × check
+  const T = Object.fromEntries(total.steps.map(x => [x.id, x]));
+  const formula = { reach:T.reach.has ? T.reach.n : null, crs:['word', 'bot', 'vsl', 'landing', 'paid'].map(id => ({ id, name:T[id].name, conv:T[id].conv })),
+    check:paid ? Math.round(total.revenue / paid) : null, revenue:total.revenue };
+  const startAt = cab.campaign.start, daysToStart = isDate(startAt) ? Math.ceil((Date.parse(startAt) - Date.parse(today)) / 864e5) : null;
   return {
+    plan, planCount, formula, roadmap:{ start:startAt, end:cab.campaign.end, daysToStart },
+    routines:ROUTINES.map(r => ({ id:r.id, agent:r.agent, agentName:agents[r.agent]?.name || r.agent, at:r.at, dow:r.dow, after:r.after || '', name:r.name, about:r.about, last:cab.runs?.[r.id] || '' })),
     today, campaign:cab.campaign, goal:{ paid, target:target || null, revenue:total.revenue, pace },
     week:w, total, yesterday:yesterday.steps.map(s => ({ id:s.id, n:s.n, has:s.has })), contours, units, findings, tasks,
     counts:{ units:units.length, untracked:units.filter(u => !STEP_IDS.some(k => u.stats[k])).length,
@@ -159,22 +228,40 @@ export function screen(cab, { desk, agents = {}, nowMs = Date.now() } = {}) {
 }
 
 // the text the agent «Штаб» gets for «Разбор дня»
-export function briefText(cab, s) {
+export function snapshotText(cab, s) {
   const pct = v => v == null ? '—' : (v * 100).toFixed(1).replace('.', ',') + '%';
-  const lines = [
-    `Кабинет «${cab.campaign.product}» (тестовый, hq2.aicex.club/neuro/). Разбор дня ${s.today}: один экран вместо пяти отчётов.`,
+  const st = { todo:'не начато', work:'в работе', done:'готово' };
+  return [
+    `# Кабинет кампании «${cab.campaign.product}» — состояние на ${s.today} (hq2.aicex.club/neuro/)`,
+    s.roadmap.start ? `Старт продаж: ${s.roadmap.start}${s.roadmap.daysToStart > 0 ? ` (через ${s.roadmap.daysToStart} дн.)` : ' (идут продажи)'}, система отлажена к ${s.roadmap.end || '—'}.` : '',
     `Кампания: ${cab.campaign.name}${cab.campaign.end ? `, до ${cab.campaign.end}` : ''}. Главная цифра — оплаты: ${s.goal.paid}${s.goal.target ? ` из ${s.goal.target}` : ' (цель не задана)'}${s.goal.pace ? `, по плану на сегодня ${s.goal.pace.due} — ${s.goal.pace.ahead ? 'идём в плане' : 'отстаём'}` : ''}. Выручка: ${s.goal.revenue}.`,
     'Воронка за 7 дней: ' + s.week.steps.map(x => `${x.name} ${x.has ? x.n : 'нет данных'}${x.conv != null ? ` (${pct(x.conv)})` : ''}`).join(' → ') + '.',
     s.week.gaps.length ? `Нет данных на шагах: ${s.week.gaps.map(g => `«${g.name}»`).join(', ')}.` : '',
     s.week.bottleneck ? `Узкое место: «${s.week.bottleneck.name}» — ${pct(s.week.bottleneck.conv)} при норме ${pct(s.week.bottleneck.bench)}.` : '',
     'Контуры: ' + s.contours.map(c => `${c.name} — ${c.metric}: ${c.value ?? 'нет данных'}${c.unit && c.value != null ? ' ' + c.unit : ''}${c.target ? ` / цель ${c.target}` : ''}${c.open ? `, открытых находок ${c.open}${c.overdue ? ` (просрочено ${c.overdue})` : ''}` : ''}`).join('; ') + '.',
-    s.units.length ? 'Контент по меткам (лучшие сверху): ' + s.units.slice(0, 12).map(u => `${u.tag} ${u.typeName} «${u.title}» — касаний ${u.stats.touch || 0}, подписок ${u.stats.lead || 0}, заявок ${u.stats.apply || 0}, оплат ${u.stats.paid || 0}`).join('; ') + '.' : 'Контента с метками пока нет.',
+    s.formula.check ? `Средний чек: ${s.formula.check}.` : '',
+    s.units.length ? 'Контент по меткам (лучшие сверху): ' + s.units.slice(0, 12).map(u => `${u.tag} ${u.typeName} «${u.title}» — кодовое слово ${u.stats.word || 0}, бот ${u.stats.bot || 0}, лендинг ${u.stats.landing || 0}, оплат ${u.stats.paid || 0}`).join('; ') + '.' : 'Контента с метками пока нет.',
     s.findings.filter(f => f.status !== 'done').length ? 'Открытые находки: ' + s.findings.filter(f => f.status !== 'done').map(f => `«${f.text}» — ${f.contourName}, ответственный ${f.ownerName || 'не назначен'}, ${f.ageDays} дн.${f.overdue ? ', ПРОСРОЧЕНА' : ''}`).join('; ') + '.' : 'Открытых находок нет.',
-    '',
-    'Сделай один экран дня (страница out/index.html, коротко): 1) главная цифра и темп; 2) что изменилось со вчера; 3) узкое место воронки и где нет данных; 4) три действия на сегодня — у каждого контур, ответственный агент и срок не больше 2 дней. Не выдумывай цифры: чего нет в данных — так и пиши «нет данных».',
-    `В конце отчёта — новые находки, каждая отдельной строкой ровно в таком виде (от самой важной, не больше 5, без повторов уже открытых): «НАХОДКА: что не так и что сделать | контур | id агента». Контуры: ${CONTOURS.map(c => `${c.id} (${c.name})`).join(', ')}. Агенты: ${CONTOURS.map(c => c.agents.map(id => `${id} — ${c.name}`).join(', ')).join('; ')}. Эти строки офис сам превратит в задачи агентам.`,
-  ];
-  return lines.filter(x => x !== '').join('\n');
+    `## План (${s.planCount.done} из ${s.planCount.all} готово, ${s.planCount.work} в работе)`,
+    ...s.plan.flatMap(g => [`${g.group}:`, ...g.items.map(i => `- ${i.name} — ${st[i.status]}; ответственный ${i.ownerName} (${i.owner}); готово, когда: ${i.done}`)]),
+  ].filter(x => x !== '').join('\n');
+}
+
+// how a report hands findings back to the office: «НАХОДКА: … | контур | агент» lines (parseFindings)
+export const FINDINGS_RULE = `В конце отчёта — новые находки, каждая отдельной строкой ровно так (от самой важной, не больше 5, без повторов уже открытых): «НАХОДКА: что не так и что сделать | контур | id агента». Контуры и агенты: ${CONTOURS.map(c => `${c.id} (${c.name}): ${c.agents.join(', ')}`).join('; ')}. Эти строки офис сам превратит в задачи агентам.`;
+
+// the text the agent «Штаб» gets for «Разбор дня» (a task holds 4000 chars: the full state of the cabinet goes as in/neuro-cabinet.md)
+export function briefText(cab, s) {
+  const pct = v => v == null ? '—' : (v * 100).toFixed(1).replace('.', ',') + '%';
+  return [
+    `Разбор дня ${s.today} в офисе Нейроворонки: один экран вместо пяти отчётов. Полное состояние кабинета — цифры, контуры, метки, находки, план — в in/neuro-cabinet.md, план проекта — in/neuro-plan.md.`,
+    `Оплаты: ${s.goal.paid}${s.goal.target ? ` из ${s.goal.target}` : ' (цель не задана)'}${s.goal.pace ? `, по плану на сегодня ${s.goal.pace.due} — ${s.goal.pace.ahead ? 'идём в плане' : 'отстаём'}` : ''}${s.roadmap.daysToStart > 0 ? `; до старта продаж ${s.roadmap.daysToStart} дн.` : ''}. План: ${s.planCount.done} из ${s.planCount.all} готово, ${s.planCount.work} в работе.`,
+    'Воронка за 7 дней: ' + s.week.steps.map(x => `${x.name} ${x.has ? x.n : 'нет данных'}${x.conv != null ? ` (${pct(x.conv)})` : ''}`).join(' → ') + '.',
+    s.week.bottleneck ? `Самый слабый этап: «${s.week.bottleneck.name}» — ${pct(s.week.bottleneck.conv)} при норме ${pct(s.week.bottleneck.bench)}.` : '',
+    `Открытых находок: ${s.counts.open}, просрочено: ${s.counts.overdue}.`, '',
+    'Сделай один экран дня (страница out/index.html, коротко): 1) главная цифра и темп; 2) что изменилось со вчера; 3) самый слабый этап воронки и где нет данных; 4) что горит по плану к старту продаж; 5) три действия на сегодня — у каждого контур, ответственный агент и срок не больше 2 дней. Не выдумывай цифры: чего нет в данных — так и пиши «нет данных».',
+    FINDINGS_RULE,
+  ].filter(Boolean).join('\n');
 }
 
 // «НАХОДКА: текст | контур | агент» in the report of Штаб → findings; contour and agent by id or by name
@@ -194,7 +281,7 @@ export function parseFindings(text, agents = {}) {
   return out.slice(0, 8);
 }
 
-export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify = null, token = process.env.HQ_CABINET_TOKEN || '' }) {
+export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify = null, token = process.env.HQ_CABINET_TOKEN || '', plan = () => '', office = () => '' }) {
   const DIR = path.join(dataDir, 'cabinet');
   const DAILY = !/^(0|off|false|no)$/i.test(process.env.HQ_NEURO_DAILY || ''), BRIEF_AT = /^\d{2}:\d{2}$/.test(process.env.HQ_NEURO_BRIEF_AT || '') ? process.env.HQ_NEURO_BRIEF_AT : '09:40';
   const AUTO = !/^(0|off|false|no)$/i.test(process.env.HQ_NEURO_AUTO || ''), AUTO_MAX = Math.max(0, Number(process.env.HQ_NEURO_AUTO_MAX ?? 3) || 0);
@@ -227,7 +314,7 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
   function sendFinding(cab, f) {
     if (!desk) throw new Error('Рабочий стол недоступен.');
     const c = CONTOURS.find(x => x.id === f.contour);
-    const text = `Кабинет «${cab.campaign.product}» (тест), контур «${c?.name || '—'}». Находка: ${f.text}\n` +
+    const text = `Офис Нейроворонки, контур «${c?.name || '—'}». Находка: ${f.text}\n` +
       `${f.detail ? `Подробности: ${f.detail}\n` : ''}Срок — 2 дня, дальше находка уходит Илье. Сделай, что нужно, и в отчёте напиши, что изменилось в цифрах кампании или как это проверить.`;
     const { task } = desk.createTask({ text, agent:f.owner || '', source:'cabinet' });
     f.taskId = task.id; f.status = 'task';
@@ -302,22 +389,46 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
       if (a === 'finding-remove') { cab.findings.splice(cab.findings.indexOf(f), 1); note(cab, `находка удалена: ${f.text}`); }
     } else if (a === 'brief') {
       if (!desk) throw new Error('Рабочий стол недоступен.');
-      const task = brief(cab, b.auto ? 'по расписанию' : '');
+      const task = runRoutine(cab, ROUTINES[0], 'по кнопке');
       save(cab);
       return { task:{ id:task.id } };
+    } else if (a === 'routine') {
+      const r = ROUTINES.find(x => x.id === b.id);
+      if (!r) throw new Error('Нет такого шага регламента.');
+      const task = runRoutine(cab, r, 'по кнопке');
+      save(cab);
+      return { task:{ id:task.id } };
+    } else if (a === 'plan-task' || a === 'plan-done' || a === 'plan-reopen') {
+      const it = PLAN_ITEMS.find(x => x.id === b.id);
+      if (!it) throw new Error('Нет такого пункта плана.');
+      const st = ((cab.plan ||= {})[it.id] ||= { status:'todo' });
+      if (a === 'plan-task') {
+        if (!desk) throw new Error('Рабочий стол недоступен.');
+        const owner = A[b.owner] ? b.owner : it.owner;
+        const { task } = desk.createTask({ text:`План Нейроворонки, «${it.group}»: ${it.name}.\nГотово, когда: ${it.done}.\nСделай, что нужно для этого критерия, и в отчёте честно напиши, выполнен ли он и что осталось. План проекта — in/neuro-plan.md, состояние кампании — in/neuro-cabinet.md. Действия во внешних системах (оплата, ChatPlace, рассылки, реклама) — только через разрешение владельца.`,
+          agent:A[owner] ? owner : '', source:'cabinet' });
+        Object.assign(st, { status:'work', taskId:task.id, owner });
+        if (!cab.tasks.includes(task.id)) cab.tasks.unshift(task.id);
+        note(cab, `план в работу: ${it.name}`);
+      }
+      if (a === 'plan-done') { Object.assign(st, { status:'done', doneAt:new Date().toISOString() }); note(cab, `план готов: ${it.name}`); }
+      if (a === 'plan-reopen') { Object.assign(st, { status:st.taskId ? 'work' : 'todo', doneAt:'' }); note(cab, `план снова открыт: ${it.name}`); }
     } else throw new Error('Неизвестное действие.');
     save(cab);
     return {};
   }
 
-  function brief(cab, why = '') {
+  // one step of the routine (or «Разбор дня» by the button): a desk task to its agent; the report is read for findings
+  function runRoutine(cab, r, why = '', day = msk()) {
     if (!desk) throw new Error('Рабочий стол недоступен.');
-    const A = agents(), s = screen(cab, { desk, agents:A });
-    const { task } = desk.createTask({ text:briefText(cab, s), agent:A.shtab ? 'shtab' : '', source:'cabinet' });
+    const A = agents();
+    const text = r.id === 'brief' ? briefText(cab, screen(cab, { desk, agents:A })) : `${r.text}\nДанные кампании — in/neuro-cabinet.md, план проекта — in/neuro-plan.md.\n${FINDINGS_RULE}`;
+    const { task } = desk.createTask({ text, agent:A[r.agent] ? r.agent : '', source:'cabinet' });
     cab.tasks.unshift(task.id);
-    (cab.briefs ||= []).unshift({ taskId:task.id, date:msk(), parsed:false });
+    (cab.briefs ||= []).unshift({ taskId:task.id, date:day, parsed:false, routine:r.id });
     cab.briefs.length = Math.min(cab.briefs.length, 60);
-    note(cab, `разбор дня отдан Штабу${why ? ' — ' + why : ''}`);
+    (cab.runs ||= {})[r.id] = day;
+    note(cab, `«${r.name}» — ${A[r.agent]?.name || r.agent}${why ? ', ' + why : ''}`);
     return task;
   }
   // the report of Штаб came for review: its «НАХОДКА: …» lines become findings, the first few go to their agents at once
@@ -330,11 +441,12 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
     let sent = 0;
     for (const x of found) {
       const f = { id:crypto.randomBytes(4).toString('hex'), text:x.text, detail:`Из разбора дня Штаба ${b.date}.`, contour:x.contour, owner:x.owner,
-        created:new Date().toISOString(), status:'open', taskId:'', escalated:'', from:'shtab' };
+        created:new Date().toISOString(), status:'open', taskId:'', escalated:'', from:ROUTINES.find(r => r.id === (b.routine || 'brief'))?.agent || 'shtab' };
       cab.findings.unshift(f);
       if (AUTO && sent < AUTO_MAX && f.owner) { try { sendFinding(cab, f); sent++; } catch (e) { console.error('cabinet auto:', e.message); } }
     }
-    note(cab, `Штаб нашёл ${found.length} ${found.length === 1 ? 'находку' : 'находок'}${sent ? `, ${sent} сразу ушли агентам` : ''}`);
+    const who = ROUTINES.find(r => r.id === (b.routine || 'brief'));
+    note(cab, `${who ? `«${who.name}»` : 'Штаб'}: ${found.length} ${found.length === 1 ? 'находка' : 'находок'}${sent ? `, ${sent} сразу ушли агентам` : ''}`);
     return true;
   }
   const mskTime = (d = new Date()) => new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit', hour12:false }).format(d);
@@ -344,12 +456,19 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
     for (const id of Object.keys(CABINETS)) {
       if (!fs.existsSync(file(id))) continue;
       const cab = load(id); let changed = false;
-      // the office works on its own: the morning «Разбор дня» once a day, then the findings of Штаб
-      const now = new Date(nowMs);
-      if (DAILY && desk && cab.lastAutoBrief !== msk(now) && mskTime(now) >= BRIEF_AT) {
-        cab.lastAutoBrief = msk(now);
-        try { brief(cab, 'по расписанию'); } catch (e) { console.error('cabinet brief:', e.message); }
+      // the office works on its own: the routine (ROUTINES) — each step once on its day after its time; then the findings of the reports
+      const now = new Date(nowMs), today = msk(now), dow = ((new Date(today + 'T12:00:00Z').getUTCDay() + 6) % 7) + 1, time = mskTime(now);
+      if (DAILY && desk) for (const r of ROUTINES) {
+        const at = r.id === 'brief' ? BRIEF_AT : r.at;
+        if (cab.runs?.[r.id] === today || time < at || (r.dow.length && !r.dow.includes(dow))) continue;
+        if (r.after === 'start' && !(isDate(cab.campaign.start) && today >= cab.campaign.start)) continue;
+        try { runRoutine(cab, r, 'по регламенту', today); } catch (e) { console.error('cabinet routine:', e.message); }
         changed = true;
+      }
+      // a plan item whose task was accepted is done
+      for (const [pid, st] of Object.entries(cab.plan || {})) if (st.status === 'work' && st.taskId && desk?.get(st.taskId)?.status === 'done') {
+        Object.assign(st, { status:'done', doneAt:now.toISOString() }); changed = true;
+        note(cab, `план готов — задача принята: ${PLAN_ITEMS.find(x => x.id === pid)?.name || pid}`);
       }
       for (const b of cab.briefs || []) if (!b.parsed && takeFindings(cab, b)) changed = true;
       for (const f of cab.findings) {
@@ -388,14 +507,25 @@ export function initCabinet({ dataDir, desk = null, agents = () => ({}), notify 
       catch (e) { return json(res, 400, { error:e.message }); }
     }
     if (!who?.owner) return json(res, 403, { error:'Кабинет кампании открыт только владельцу.' });
-    if (req.method === 'GET' && !sub) return json(res, 200, { ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX } });
+    if (req.method === 'GET' && !sub) return json(res, 200, { ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX }, contoursAll:CONTOURS.map(c => ({ id:c.id, name:c.name })) });
     if (req.method === 'POST' && !sub) {
       const b = await readJson(req);
-      try { const r = act(id, b); return json(res, 200, { ok:true, ...r, ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX } }); }
+      try { const r = act(id, b); return json(res, 200, { ok:true, ...r, ...screen(load(id), { desk, agents:agents() }), log:load(id).log.slice(0, 30), hook:Boolean(token), auto:{ daily:DAILY, at:BRIEF_AT, send:AUTO, max:AUTO_MAX }, contoursAll:CONTOURS.map(c => ({ id:c.id, name:c.name })) }); }
       catch (e) { return json(res, 400, { error:e.message }); }
     }
     return json(res, 404, { error:'not found' });
   }
 
-  return { handle, act, tick, load, screen:id => screen(load(id), { desk, agents:agents() }) };
+  // what every agent of the office «Нейроворонка» gets with a task (desk.mjs → setContext): the plan of the project, the state of the
+  // cabinet and the knowledge of the main office
+  function contextFiles() {
+    const cab = load('neuro');
+    return [
+      { name:'neuro-plan.md', text:plan() || '' },
+      { name:'neuro-cabinet.md', text:snapshotText(cab, screen(cab, { desk, agents:agents() })) },
+      { name:'main-office.md', text:office() || '' },
+    ].filter(f => f.text);
+  }
+
+  return { handle, act, tick, load, contextFiles, screen:id => screen(load(id), { desk, agents:agents() }) };
 }

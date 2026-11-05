@@ -23,30 +23,30 @@ function setup() {
 }
 
 test('the funnel shows where the data stops and the bottleneck', () => {
-  const c = { days:{ '2026-11-01':{ reach:10000, touch:200, lead:100, reg:20 } } };
+  const c = { days:{ '2026-11-01':{ reach:10000, word:200, bot:100, vsl:20 } } };
   const f = funnelOf(c, ['2026-11-01']);
-  assert.equal(f.gap.id, 'came');                       // no numbers after «Регистрация»
-  assert.deepEqual(f.gaps.map(g => g.id), ['came', 'offer', 'apply', 'paid']);
-  assert.equal(f.bottleneck.id, 'reg');                 // 20% against the norm of 40%
-  assert.equal(f.steps.find(s => s.id === 'lead').conv, 0.5);
+  assert.equal(f.gap.id, 'landing');                    // no numbers after «Досмотр VSL»
+  assert.deepEqual(f.gaps.map(g => g.id), ['landing', 'paid', 'study', 'upsell']);
+  assert.equal(f.bottleneck.id, 'vsl');                 // 20% against the norm of 40%
+  assert.equal(f.steps.find(s => s.id === 'bot').conv, 0.5);
 });
 
 test('content gets a tag and tagged links; events count per tag and per day', () => {
   const { cab } = setup();
   cab.act('neuro', { action:'campaign', botUrl:'https://t.me/neuro_bot', landingUrl:'https://neuro.example/l', goalTarget:30 });
-  const { unit } = cab.act('neuro', { action:'unit', type:'reel', title:'Рилс про воронку', contour:'editorial' });
+  const { unit } = cab.act('neuro', { action:'unit', type:'reel', title:'Рилс про воронку', contour:'content' });
   assert.equal(unit.tag, 'nf-001');
   assert.equal(unit.links.bot, 'https://t.me/neuro_bot?start=nf-001');
   assert.match(unit.links.landing, /utm_content=nf-001/);
-  cab.act('neuro', { action:'result', tag:'nf-001', step:'lead', n:5 });
+  cab.act('neuro', { action:'result', tag:'nf-001', step:'bot', n:5 });
   cab.act('neuro', { action:'result', tag:'NF-001', step:'paid', n:1, amount:9900 });
   const s = cab.screen('neuro');
-  assert.equal(s.units[0].stats.lead, 5);
+  assert.equal(s.units[0].stats.bot, 5);
   assert.equal(s.units[0].stats.paid, 1);
   assert.equal(s.goal.paid, 1);
   assert.equal(s.goal.revenue, 9900);
-  assert.equal(s.contours.find(c => c.id === 'production').value, 1);
-  assert.throws(() => cab.act('neuro', { action:'result', tag:'nf-999', step:'lead' }), /Нет контента/);
+  assert.equal(s.contours.find(c => c.id === 'analytics').value, 2);    // two stages have data: bot and paid
+  assert.throws(() => cab.act('neuro', { action:'result', tag:'nf-999', step:'bot' }), /Нет контента/);
   assert.equal(linksOf({ id:'neuro', campaign:{ botUrl:'', landingUrl:'' } }, unit).bot, undefined);
 });
 
@@ -56,7 +56,7 @@ test('a finding goes to the agent as a desk task and closes when the task is acc
   assert.equal(made.length, 1);
   assert.equal(made[0].agent, 'funnels');
   assert.equal(made[0].source, 'cabinet');
-  assert.match(made[0].text, /Воронки/);
+  assert.match(made[0].text, /Воронка и продажи/);
   let s = cab.screen('neuro');
   assert.equal(s.findings[0].status, 'task');
   assert.equal(s.tasks[0].id, 't0');
@@ -82,7 +82,7 @@ test('a finding open more than 2 days escalates to the owner once', async () => 
 
 test('the brief goes to Штаб with the numbers of the day', () => {
   const { cab, made } = setup();
-  cab.act('neuro', { action:'day', date:'2026-11-04', values:{ reach:5000, touch:120, lead:60 } });
+  cab.act('neuro', { action:'day', date:'2026-11-04', values:{ reach:5000, word:120, bot:60 } });
   cab.act('neuro', { action:'brief' });
   assert.equal(made[0].agent, 'shtab');
   assert.match(made[0].text, /Разбор дня/);
@@ -109,7 +109,7 @@ test('the office works on its own: the morning brief, then the findings of Шт�
   process.env.HQ_NEURO_AUTO_MAX = '1';
   const { cab, made, status, results } = setup();
   delete process.env.HQ_NEURO_AUTO_MAX;
-  cab.act('neuro', { action:'day', date:'2026-11-04', values:{ reach:5000, lead:60 } });
+  cab.act('neuro', { action:'day', date:'2026-11-04', values:{ reach:5000, bot:60 } });
   const morning = Date.parse('2026-11-05T06:45:00Z');          // 09:45 МСК
   await cab.tick(Date.parse('2026-11-05T05:00:00Z'));           // 08:00 МСК — рано
   assert.equal(made.length, 0);
@@ -128,4 +128,31 @@ test('the office works on its own: the morning brief, then the findings of Шт�
   assert.equal(s.findings.filter(f => f.status === 'task').length, 1);
   await cab.tick(morning + 180e3);                              // the report is read once
   assert.equal(cab.screen('neuro').findings.length, 2);
+});
+
+test('the plan: an item goes to its owner with the criterion and is done when the task is accepted; the routine runs on its days', async () => {
+  const { cab, made, status } = setup();
+  cab.act('neuro', { action:'plan-task', id:'b3' });
+  assert.match(made[0].text, /Бот \+ VSL/);
+  assert.match(made[0].text, /без участия команды/);
+  let item = cab.screen('neuro').plan.flatMap(g => g.items).find(i => i.id === 'b3');
+  assert.equal(item.status, 'work');
+  status.t0 = 'done';
+  const fri = Date.parse('2026-11-06T15:30:00Z');                // Friday 18:30 МСК
+  await cab.tick(fri);
+  item = cab.screen('neuro').plan.flatMap(g => g.items).find(i => i.id === 'b3');
+  assert.equal(item.status, 'done');
+  // Friday: the brief, the weekly summary and the report to the main office; not the Monday content week, not progress before the start
+  assert.deepEqual(Object.keys(cab.load('neuro').runs).sort(), ['brief', 'metrics-week', 'report']);
+  assert.equal(made.length, 4);
+  await cab.tick(fri + 60e3);                                    // once a day
+  assert.equal(made.length, 4);
+});
+
+test('the context for the agents of the office: the plan, the cabinet, the main office', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cab-test-')); dirs.push(dataDir);
+  const cab = initCabinet({ dataDir, agents:() => ({}), plan:() => '# План', office:() => '# Главный офис' });
+  const files = cab.contextFiles();
+  assert.deepEqual(files.map(f => f.name), ['neuro-plan.md', 'neuro-cabinet.md', 'main-office.md']);
+  assert.match(files[1].text, /Блоки системы/);
 });

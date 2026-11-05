@@ -220,7 +220,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (hp.length) lines.push(`Руководитель ${d.head?.name || ''} сам отвечает за: ${hp.map(p => `${p.title} (${p.url}) — ${p.note || ''}`).join('; ')}. Задачи по этим продуктам — агентам этого отдела.`);
       for (const id of d.agents) {
         const c = AC[id] || {}, seen = new Set();
-        const skills = [...(c.skills || []), ...(WS[id] || []), ...EXTRA.filter(s => (s.agents || []).includes(id))]
+        // an agent of the office «Нейроворонка» also has the skills of its mentors in the main office (agents.js → base)
+        const own = [id, ...(W.OFFICE_AGENTS?.list?.[id]?.base || [])];
+        const skills = [...(c.skills || []), ...own.flatMap(x => WS[x] || []), ...EXTRA.filter(s => (s.agents || []).some(x => own.includes(x)))]
           .filter(s => s?.name && !seen.has(s.name) && seen.add(s.name));
         const a = { id, name:CAT[id]?.name || id, role:CAT[id]?.role || '', color:CAT[id]?.color || '', dept:d.id, deptName:d.name, lead:c.lead || '' };
         agents.push(a);
@@ -591,6 +593,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (pid && !t.pipeline) setPipeline(t, pid);
       else if (t.pipeline) { t.route.agent = curStage(t).agent; t.route.skill = ''; t.route.visual = PIPELINES[t.pipeline.id]?.visual || t.route.visual; }
       a = agentOf(t.route.agent);
+      if (a?.dept === 'neuro') attachContext(t);
       const named = String(r.style_named || '').trim();
       if (t.route.visual && !t.style && named) t.style = pickStyle(t.route.visual, named) || { label:named.slice(0, 120), skill:'', about:'' };
       if (t.style) applyStyle(t);
@@ -731,12 +734,38 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       'Это собеседование или исправление: сначала честная оценка (что сильно, что слабо, оценка по 10-балльной шкале по каждому критерию метода), затем исправленная версия — готовая к использованию, а не советы в общем.' + (a.id === 'legends' ? ' Каждый из восьми говорит отдельным разделом коротко; где расходятся — покажи спор; в конце общий вердикт и 3–5 правок по приоритету, с тем, кто из агентов офиса их делает.' : ''),
       ...pipelineNote(t), lessonsNote(a.id).text,
       'Оформи out/index.html: оценка, разбор по критериям, исправленная версия, следующий шаг.', '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
-    return [`Ты — агент «${a.name}» (${a.role}) живого офиса AICEX, отдел «${a.deptName}». Задачу поставил владелец, Илья Палий, прямо в офисе hq2.aicex.club.`,
+    return [a.dept === 'neuro' ? `Ты — агент «${a.name}» (${a.role}) офиса Нейроворонки. Задачу поставил владелец, Илья Палий, или сам офис по регламенту.` : `Ты — агент «${a.name}» (${a.role}) живого офиса AICEX, отдел «${a.deptName}». Задачу поставил владелец, Илья Палий, прямо в офисе hq2.aicex.club.`,
+      ...neuroNote(t, a),
       '', `Задача: ${t.route.title}`, `Слова владельца: «${t.text}»`, `ТЗ от диспетчера: ${t.route.brief}`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       t.route.skill ? `Скилл: ${t.route.skill} — вызови его инструментом Skill и работай по нему.` : 'Если среди твоих скиллов есть подходящий — работай по нему.',
       styleLine(t),
       `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), ...pipelineNote(t), mcpNote(), lessonsNote(a.id).text, '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
+  }
+  // the office «Нейроворонка»: its agents get the plan of the project, the state of the cabinet and the knowledge of the main office
+  // as files in in/ (server.mjs → setContext → cabinet.contextFiles); refreshed every time the task goes to an agent of that office
+  let contextOf = null;
+  function attachContext(t) {
+    if (!contextOf) return;
+    let files = [];
+    try { files = contextOf(t) || []; } catch (e) { console.error('desk context:', e.message); return; }
+    const dir = path.join(taskDir(t.id), 'in');
+    fs.mkdirSync(dir, { recursive:true });
+    for (const f of files) {
+      const name = safeName(f.name);
+      fs.writeFileSync(path.join(dir, name), f.text);
+      const size = fs.statSync(path.join(dir, name)).size, have = t.files.find(x => x.name === name);
+      if (have) have.size = size; else t.files.push({ name, size });
+    }
+    t.context = files.map(f => safeName(f.name));
+  }
+  function neuroNote(t, a) {
+    if (a.dept !== 'neuro') return [];
+    const base = (catalog().agents.find(x => x.id === a.id) && officeWindow(officeDir)?.OFFICE_AGENTS?.list?.[a.id]?.base) || [];
+    return [`Ты работаешь в офисе Нейроворонки — отдельном офисе кампании «Нейроворонка» при главном офисе AICEX. Работаешь только на этот проект, подчиняешься главному офису: результат проверяет контролёр качества и принимает Илья.`,
+      `Прочитай первыми: ${(t.context || ['neuro-plan.md', 'neuro-cabinet.md', 'main-office.md']).map(f => 'in/' + f).join(', ')} — план проекта (блоки, критерии готовности, сроки, обязательства оферты), текущие цифры и план кампании, знания главного офиса (команда, продукты, история задач, карта проектов).`,
+      `У тебя все скиллы главного офиса (~/.claude/skills) — вызывай любые подходящие инструментом Skill.${base.length ? ` Твои наставники в главном офисе: ${base.map(id => agentOf(id)?.name || id).join(', ')} — их скиллы и приёмы твои.` : ''}`,
+      'Не выдумывай цифры и обещания: чего нет в данных и в оферте — так и пиши. Рассылки, реклама, изменения в ChatPlace, платёжках и на платформе уроков — только через разрешение владельца (строка APPROVE).'];
   }
   function transcriptNote(t) {
     if (!t.transcribed) return [];
@@ -1462,7 +1491,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     return notFound(res);
   }
 
-  return { handle, createTask, summary, tickRoutines, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, setContext:fn => { contextOf = fn; }, summary, tickRoutines, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view),
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };

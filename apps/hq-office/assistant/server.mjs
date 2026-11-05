@@ -106,7 +106,11 @@ const notifyTg = async text => {
   await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, { method:'POST', headers:{ 'content-type':'application/json' }, signal:AbortSignal.timeout(15e3),
     body:JSON.stringify({ chat_id:chat, text, disable_web_page_preview:true }) });
 };
-const cabinet = initCabinet({ dataDir:DATA_DIR, desk, notify:notifyTg, agents:() => Object.fromEntries(desk.agents().map(a => [a.id, a])) });
+const cabinet = initCabinet({ dataDir:DATA_DIR, desk, notify:notifyTg, agents:() => Object.fromEntries(desk.agents().map(a => [a.id, a])),
+  // the office «Нейроворонка»: the plan of the project (neuro-plan.md, next to the server, not on the site) and the knowledge of the main office
+  plan:() => { try { return fs.readFileSync(path.join(HERE, 'neuro-plan.md'), 'utf8'); } catch { return ''; } },
+  office:() => [`# Знания главного офиса AICEX (${SITE})`, loadOffice(OFFICE_DIR).text, PROJECT_MAP ? '\n# Карта проектов монорепозитория\n' + loadProjectMap(PROJECT_MAP) : ''].join('\n') });
+desk.setContext(() => cabinet.contextFiles());
 
 /* ---------- auth and limits ---------- */
 

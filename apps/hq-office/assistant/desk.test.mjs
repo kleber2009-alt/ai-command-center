@@ -77,11 +77,19 @@ test('без ключа Claude диспетчер сразу отдаёт оши
 
 test('задача из офиса Нейроворонки уходит только его команде', async () => {
   const d = setup();
+  d.desk.setContext(() => [{ name:'neuro-plan.md', text:'# План' }, { name:'main-office.md', text:'# Главный офис' }]);
   d.routes.push({ agent:'nfbot', deliverable:'doc' });
   const id = await d.task('почини цепочку практикума', { scope:'neuro' });
   const t = await d.get(id);
   assert.equal(t.source, 'neuro');
   assert.equal(t.route.agent, 'nfbot');
+  const job = await d.claim();
+  assert.equal(job.id, id);
+  assert.deepEqual(job.files, ['neuro-plan.md', 'main-office.md']);      // the plan and the knowledge of the main office go with the task
+  assert.match(job.prompt, /офиса Нейроворонки/);
+  assert.match(job.prompt, /in\/neuro-plan\.md/);
+  assert.match(job.prompt, /все скиллы главного офиса/);
+  assert.match(job.prompt, /наставники в главном офисе: .*Воронки/);
   d.routes.push({ agent:'slides' });
   const id2 = await d.task('сделай презентацию', { scope:'neuro' });
   assert.equal((await d.get(id2)).status, 'error');           // an agent of the main office is not allowed here

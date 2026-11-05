@@ -116,7 +116,7 @@
     <span class="chip test">Кабинет кампании</span>
     <a class="chip" href="../?theme=neuro">← Офис Нейроворонки</a>
   </header>
-  <p class="lede">Новая модель маркетинга на одном продукте. В центре кампания и одна главная цифра. Шесть контуров, у каждого своя цифра. Каждая единица контента получает метку и прослеживается до оплаты. Находка сразу становится задачей с ответственным, а если висит больше 2 дней, уходит вам. Офис Нейроворонки работает сам: каждое утро Штаб разбирает цифры, а найденное уходит агентам контуров. Подчиняется главному офису: результаты — на вашу проверку.</p>
+  <p class="lede">Новая модель маркетинга на одном продукте. В центре кампания и одна главная цифра. Шесть контуров, у каждого своя цифра. Каждая единица контента получает метку и прослеживается до оплаты. Находка сразу становится задачей с ответственным, а если висит больше 2 дней, уходит вам. Офис Нейроворонки работает сам по регламенту: Штаб каждое утро разбирает цифры, по понедельникам собирается неделя контента, по пятницам — сводка этапов и отчёт главному офису. Найденное уходит агентам контуров. Подчиняется главному офису: результаты — на вашу проверку.</p>
   <div id="root"><div class="empty">Загружаю кабинет…</div></div>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -157,13 +157,13 @@ function gate(msg) {
   };
 }
 
-const TABS = [['today', 'Сегодня'], ['contours', 'Контуры'], ['content', 'Контент'], ['findings', 'Находки'], ['funnel', 'Воронка'], ['campaign', 'Кампания']];
+const TABS = [['today', 'Сегодня'], ['plan', 'План'], ['contours', 'Команда и регламент'], ['content', 'Контент'], ['findings', 'Находки'], ['funnel', 'Воронка'], ['campaign', 'Кампания']];
 function render() {
   $('title').textContent = S.campaign.product || 'Нейроворонка';
   document.title = `Кабинет ${S.campaign.product || 'Нейроворонки'}`;
   const badge = { findings:S.counts.overdue };
   $('root').innerHTML = `<nav class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}${badge[k] ? `<span class="n">${badge[k]}</span>` : ''}</button>`).join('')}</nav><div id="view"></div>`;
-  const V = { today:vToday, contours:vContours, content:vContent, findings:vFindings, funnel:vFunnel, campaign:vCampaign }[tab] || vToday;
+  const V = { today:vToday, plan:vPlan, contours:vContours, content:vContent, findings:vFindings, funnel:vFunnel, campaign:vCampaign }[tab] || vToday;
   $('view').innerHTML = V();
   wire();
   const h = location.hash.match(/^#f-(\w+)/);
@@ -197,7 +197,9 @@ function vToday() {
       <div class="big">${fmt(g.paid)}${g.target ? `<small> из ${fmt(g.target)}</small>` : ''}</div>
       ${g.target ? `<div class="prog"><i style="width:${p}%"></i>${dueP != null ? `<b style="left:${dueP}%" title="план на сегодня"></b>` : ''}</div>` : ''}
       <div class="row">${g.pace ? `<span class="chip ${g.pace.ahead ? 'g' : 'r'}">${g.pace.ahead ? 'Идём в плане' : 'Отстаём от плана'} · на сегодня ${fmt(g.pace.due)}</span><span class="chip">Осталось ${g.pace.daysLeft} дн.</span>` : '<span class="sub">Темп появится, когда заданы цель и дата конца кампании.</span>'}
-        <span class="chip b">Выручка ${rub(g.revenue)}</span></div>
+        <span class="chip b">Выручка ${rub(g.revenue)}</span>
+        ${S.roadmap.daysToStart > 0 ? `<span class="chip test">До старта продаж ${S.roadmap.daysToStart} дн.</span>` : S.roadmap.start ? '<span class="chip g">Продажи идут</span>' : ''}
+        <button class="chip" data-go="plan">План: ${S.planCount.done} из ${S.planCount.all} готово</button></div>
       <div class="row"><button class="btn pri" data-brief>Разбор дня → Штаб</button><span class="sub">${S.auto?.daily ? `Офис работает сам: разбор дня каждое утро в ${esc(S.auto.at)} МСК${S.auto.send && S.auto.max ? `, до ${S.auto.max} находок Штаба сразу уходят агентам` : ', находки ждут вашего «В работу»'}. Кнопка — разобрать ещё раз сейчас.` : 'Штаб соберёт один экран дня и находки. Результат придёт на ваш стол в офисе.'}</span></div>
     </div>
     <div class="card${alerts.length ? ' warn' : ''}">
@@ -205,6 +207,11 @@ function vToday() {
       ${alerts.length ? alerts.map(a => `<div>• ${a}</div>`).join('') : '<div class="empty">Тревог нет: данные идут по всем шагам, узких мест ниже нормы нет.</div>'}
     </div>
   </div>
+  <div class="card" style="margin-top:12px"><div class="row"><h2>Формула выручки</h2><span class="sp"></span><span class="sub">за всю кампанию · улучшаем самый слабый множитель</span></div>
+    <div class="row" style="font:600 14px 'JetBrains Mono',monospace;gap:8px">
+      <span class="st">Охват <b>${S.formula.reach == null ? '—' : fmt(S.formula.reach)}</b></span>
+      ${S.formula.crs.map(c => `<span>×</span><span class="st${S.week.bottleneck?.id === c.id ? '" style="border-color:var(--red)' : ''}">${esc(c.name)} <b>${pct(c.conv)}</b></span>`).join('')}
+      <span>×</span><span class="st">Чек <b>${S.formula.check ? rub(S.formula.check) : '—'}</b></span><span>=</span><span class="st">Выручка <b>${rub(S.formula.revenue)}</b></span></div></div>
   <div class="grid g2" style="margin-top:12px">
     <div class="card"><div class="row"><h2>Воронка за 7 дней</h2><span class="sp"></span><span class="sub">конверсия / норма</span></div>${funnelHTML(S.week)}</div>
     <div class="card">
@@ -237,18 +244,36 @@ function unitMini(u) {
   return `<div class="it"><span class="tag">${esc(u.tag)}</span><div class="col"><div class="tt">${u.url ? `<a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.title)}</a>` : esc(u.title)}</div>
     <div class="stats">${statChips(u)}</div></div></div>`;
 }
-const STAT_KEYS = ['touch', 'lead', 'reg', 'came', 'offer', 'apply', 'paid'];
+const STAT_KEYS = ['word', 'bot', 'vsl', 'landing', 'paid', 'study', 'upsell'];
 const statChips = u => STAT_KEYS.filter(k => u.stats[k]).map(k => `<span class="st">${esc(S.steps.find(s => s.id === k).name)} <b>${fmt(u.stats[k])}</b></span>`).join('') + (u.stats.revenue ? `<span class="st">Выручка <b>${rub(u.stats.revenue)}</b></span>` : '') || '<span class="sub">результатов по метке пока нет</span>';
 
+const PST = { todo:['Не начато', ''], work:['В работе', 'b'], done:['Готово', 'g'] };
+function vPlan() {
+  return `<div class="card"><div class="row"><h2>План проекта</h2><span class="sp"></span><span class="chip">${S.planCount.done} из ${S.planCount.all} готово · ${S.planCount.work} в работе</span>
+      ${S.roadmap.start ? `<span class="chip test">Старт продаж ${esc(S.roadmap.start)}${S.roadmap.daysToStart > 0 ? ` · через ${S.roadmap.daysToStart} дн.` : ''}</span>` : ''}</div>
+    <div class="sub">Блоки системы, девять элементов, обязательства оферты и решения из плана «Нейроворонка — план реализации». У каждого пункта ответственный агент и критерий «готово, когда». «В работу» отдаёт пункт агенту с этим критерием. Когда вы принимаете результат, пункт закрывается сам.</div></div>
+  ${S.plan.map(g => `<div class="card" style="margin-top:12px"><h2>${esc(g.group)}</h2>${g.items.map(i => `<div class="it"><div class="col">
+      <div class="tt">${esc(i.name)}</div><div class="sub">Готово, когда: ${esc(i.done)}</div>
+      <div class="row sub"><span class="chip ${PST[i.status][1]}">${PST[i.status][0]}</span><span>${esc(i.ownerName)}</span>${i.task ? `<span>· ${taskLink(i.task)}</span>` : ''}</div></div>
+    <div class="row">${i.status !== 'done' ? `<button class="btn sm${i.status === 'todo' ? ' pri' : ''}" data-ptask="${esc(i.id)}">${i.status === 'work' ? 'Ещё раз' : 'В работу'}</button><button class="btn sm" data-pdone="${esc(i.id)}">Готово</button>` : `<button class="btn sm" data-preopen="${esc(i.id)}">Открыть снова</button>`}</div></div>`).join('')}</div>`).join('')}`;
+}
+const DOW = ['', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+function routinesHTML() {
+  return `<div class="card" style="margin-top:12px"><div class="row"><h2>Регламент: офис работает сам</h2><span class="sp"></span>${S.auto?.daily ? '<span class="chip g">Включён</span>' : '<span class="chip r">Только кнопками</span>'}</div>
+    <div class="sub">Каждый шаг ставит задачу своему агенту через общий рабочий стол. Находки из отчётов (строки «НАХОДКА») становятся задачами контурам${S.auto?.send && S.auto?.max ? `, первые ${S.auto.max} уходят агентам сразу` : ''}. Всё проверяет контролёр качества и принимаете вы.</div>
+    ${S.routines.map(r => `<div class="it"><div class="col"><div class="tt">${esc(r.name)}</div>
+      <div class="row sub"><span class="chip">${r.dow.length ? r.dow.map(d => DOW[d]).join(', ') : 'каждый день'} · ${esc(r.id === 'brief' ? (S.auto?.at || r.at) : r.at)} МСК</span><span>${esc(r.agentName)}</span>${r.after ? '<span>· после старта продаж</span>' : ''}${r.last ? `<span>· последний раз ${esc(r.last)}</span>` : ''}</div>
+      <div class="sub">${esc(r.about)}</div></div><button class="btn sm" data-rrun="${esc(r.id)}">Запустить сейчас</button></div>`).join('')}</div>`;
+}
 function vContours() {
   return `<div class="grid g2">${S.contours.map(c => `<div class="card">
     <div class="row"><h2>${esc(c.name)}</h2><span class="sp"></span>${c.overdue ? `<span class="chip r">просрочено ${c.overdue}</span>` : c.open ? `<span class="chip">находок ${c.open}</span>` : ''}</div>
     <div class="sub">${esc(c.role)}</div>
     <div class="row"><div class="ct"><div class="lbl">${esc(c.metric)}</div><div class="val">${contourVal(c)}</div></div><span class="sp"></span>
-      ${c.kind === 'goal' ? '<span class="sub">Цель — во вкладке «Кампания»</span>' : `<label class="f">Цель<input type="number" min="0" step="any" value="${c.target ?? ''}" data-target="${esc(c.id)}" style="width:110px"></label>`}</div>
+      ${c.kind === 'coverage' ? '<span class="sub">Цель — все этапы считаются</span>' : c.kind === 'goal' ? '<span class="sub">Цель — во вкладке «Кампания»</span>' : `<label class="f">Цель<input type="number" min="0" step="any" value="${c.target ?? ''}" data-target="${esc(c.id)}" style="width:110px"></label>`}</div>
     <div class="row">${c.agents.map(agentChip).join('')}</div>
     <div class="row"><button class="btn sm" data-newf="${esc(c.id)}">Находка в контур</button></div>
-  </div>`).join('')}</div>`;
+  </div>`).join('')}</div>${routinesHTML()}`;
 }
 
 const typeOpts = sel => Object.entries(S.types).map(([k, v]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(v)}</option>`).join('');
@@ -259,7 +284,7 @@ function vContent() {
     <form id="unitF" class="form">
       <label class="f">Формат<select name="type">${typeOpts('reel')}</select></label>
       <label class="f w2">Название<input name="title" required placeholder="Рилс «Нейроворонка за вечер»"></label>
-      <label class="f">Контур<select name="contour">${contourOpts('editorial')}</select></label>
+      <label class="f">Контур<select name="contour">${contourOpts('content')}</select></label>
       <label class="f w2">Ссылка на публикацию<input name="url" placeholder="https://instagram.com/reel/…"></label>
       <label class="f">Кодовое слово<input name="word" placeholder="ВОРОНКА"></label>
       <label class="f">Дата выхода<input name="date" type="date" value="${esc(S.today)}"></label>
@@ -354,6 +379,10 @@ function wire() {
   document.querySelectorAll('[data-fdone]').forEach(b => b.onclick = () => act({ action:'finding-done', id:b.dataset.fdone }, 'Находка закрыта'));
   document.querySelectorAll('[data-freopen]').forEach(b => b.onclick = () => act({ action:'finding-reopen', id:b.dataset.freopen }, 'Находка снова открыта'));
   document.querySelectorAll('[data-newf]').forEach(b => b.onclick = () => { findF.contour = b.dataset.newf; tab = 'findings'; render(); $('findF').text.focus(); });
+  document.querySelectorAll('[data-ptask]').forEach(b => b.onclick = () => act({ action:'plan-task', id:b.dataset.ptask }, 'Пункт плана отдан агенту'));
+  document.querySelectorAll('[data-pdone]').forEach(b => b.onclick = () => act({ action:'plan-done', id:b.dataset.pdone }, 'Пункт плана готов'));
+  document.querySelectorAll('[data-preopen]').forEach(b => b.onclick = () => act({ action:'plan-reopen', id:b.dataset.preopen }, 'Пункт снова открыт'));
+  document.querySelectorAll('[data-rrun]').forEach(b => b.onclick = async () => { b.disabled = true; if (!await act({ action:'routine', id:b.dataset.rrun }, 'Задача поставлена агенту')) b.disabled = false; });
   document.querySelectorAll('[data-target]').forEach(i => i.onchange = () => act({ action:'contour', id:i.dataset.target, target:i.value }, 'Цель контура сохранена'));
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => navigator.clipboard?.writeText(b.dataset.copy).then(() => toast('Скопировано')).catch(() => toast('Не удалось скопировать')));
   document.querySelectorAll('[data-unrm]').forEach(b => b.onclick = () => { if (confirm(`Убрать ${b.dataset.unrm} из кабинета? Результаты по метке пропадут.`)) act({ action:'unit-remove', tag:b.dataset.unrm }, 'Контент убран'); });
