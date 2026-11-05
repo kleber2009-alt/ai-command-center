@@ -950,6 +950,7 @@
 <div class="toast glass" id="toast" hidden role="status"><span id="toastText"></span><button class="btn-go" id="toastGo">Открыть</button></div>
 
 <nav class="dock glass" id="dock" aria-label="Вид">
+  <button data-cmd="neuro" id="dNeuro" hidden title="Тестовый кабинет продукта «Нейроворонка»: кампания, 6 контуров, контент с метками до оплаты, находки → задачи"><svg viewBox="0 0 24 24"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>Нейроворонка</button>
   <button data-cmd="admin" id="dAdmin" hidden title="Админ-панель: люди и доступы, агенты, новый агент, журнал"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>Админка</button>
   <button data-cmd="login" class="login" id="dLogin" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Войти</button>
   <button data-cmd="newtask" class="go" id="dNew" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Задача агенту</button>
@@ -4525,11 +4526,11 @@ const ico = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
 const I = {
   office:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>', assistant:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   twin:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>', routine:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  telegram:'<path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/>', check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
+  telegram:'<path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/>', cabinet:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>', check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
   video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>', image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
   page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>', doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>', file:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>',
 };
-const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' };
+const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram', cabinet:'Кабинет Нейроворонки' };
 function deskSource(t) {
   const k = t.source && DSRC[t.source] ? t.source : t.routine ? 'routine' : t.route?.agent === 'claude-code' ? 'twin' : 'office';
   return { k, icon:I[k], label:k === 'routine' ? `По расписанию · ${hhmm(new Date(t.created))}` : DSRC[k] };
@@ -5298,10 +5299,10 @@ function select(id, flyCam = false) {
   agents.forEach(paintLabel);
   renderPanel(); $('pbody').scrollTop = 0;
 }
-function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo', 'admin', 'login', 'newtask'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
+function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo', 'admin', 'neuro', 'login', 'newtask'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`)?.classList.toggle('on', on); }
 function cmd(k) {
-  if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo', 'admin'].includes(k)) stopTour();
+  if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo', 'admin', 'neuro'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
   if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 96, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 50, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
@@ -5318,6 +5319,7 @@ function cmd(k) {
   if (k === 'holo') holoSummon();
   if (k === 'login') openLogin();
   if (k === 'admin') openTeamAdmin();
+  if (k === 'neuro') location.href = 'neuro/';
 }
 // вход владельца с любого экрана: ассистент открывается сразу с полем пароля
 async function openLogin() {
@@ -5346,6 +5348,7 @@ function appShell() {
     : lock ? 'Войти' : `${TASKS.length} ${word(TASKS.length, 'задача', 'задачи', 'задач')}`;
   $('dLogin').hidden = !lock;
   $('dAdmin').hidden = role() !== 'owner';
+  $('dNeuro').hidden = role() !== 'owner';
 }
 function mOpen(k) {
   $('msheet').hidden = true;
@@ -5365,7 +5368,7 @@ function moreSheet() {
     ['tour', 'Экскурсия', '<path d="m8 5 11 7-11 7z"/>'], ['holo', 'Голограмма', '<ellipse cx="12" cy="20" rx="6" ry="1.6"/><circle cx="12" cy="8" r="4"/>'], ['labels', 'Подписи', '<path d="M4 6h16M4 12h10M4 18h7"/>']];
   $('msh').innerHTML = `<i class="grip"></i><h3>Вид офиса</h3><div class="row">${views.map(([k, l, p]) => `<button data-mc="${k}"${k === 'labels' && labelsOn ? ' class="on"' : ''}>${ic(p)}${l}</button>`).join('')}</div>
     <h3>Оформление</h3><div class="row">${Object.entries(THEMES).map(([id, T]) => `<button data-th="${id}"${id === STYLE ? ' class="on"' : ''}><span class="sw">${T.sw.map(c => `<i style="--c:${c}"></i>`).join('')}</span>${esc(T.name)}</button>`).join('')}</div>
-    ${role() === 'owner' ? `<h3>Админка</h3><div class="row"><button data-mc="admin">${ic('<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}Админ-панель</button></div>` : ''}
+    ${role() === 'owner' ? `<h3>Админка</h3><div class="row"><button data-mc="admin">${ic('<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}Админ-панель</button><button data-mc="neuro">${ic('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>')}Кабинет Нейроворонки</button></div>` : ''}
     <h3>Аккаунт</h3><div class="acct">${s?.owner ? `<span>Вы вошли как владелец</span><button class="btn-go" data-mc="logout">Выйти</button>`
       : s?.configured?.login ? `<span>Войдите, чтобы ставить задачи и видеть, что в работе</span><button class="btn-go" data-mc="login">Войти</button>` : '<span>Демо для гостей</span>'}</div>`;
   $('msheet').hidden = false;

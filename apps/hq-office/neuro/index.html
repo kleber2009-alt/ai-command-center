@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Кабинет Нейроворонки</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- Тестовый кабинет продукта «Нейроворонка» в офисе hq2.aicex.club/neuro/ — новая модель маркетинга на одном продукте:
+     кампания в центре, 6 контуров со своими цифрами, воронка из 8 шагов по дням, контент с метками до оплаты,
+     находки → задачи агентам (срок 2 дня, дальше — Илье), один экран в день. Данные — /api/assistant/cabinet/neuro
+     (assistant/cabinet.mjs), только владелец; вход — тот же, что в офисе. -->
+<style>
+  :root{--bg:#0f1218;--card:#171b24;--card2:#1c212c;--line:#252c39;--ink:#eef1f6;--ink2:#a3abbd;--ink3:#8790a3;--field:#11151c;--btn:#1f2530;--btnline:#2c3442;
+    --amber:#ffb020;--amberInk:#ffc35c;--amberBg:rgba(245,165,36,.12);--green:#4ade80;--greenInk:#4ade80;--greenBg:rgba(74,222,128,.10);
+    --blue:#3b82f6;--blueInk:#8ec1ff;--blueBg:rgba(124,180,255,.10);--red:#ff6b6b;--redInk:#ff8a8a;--redBg:rgba(255,107,107,.10);--bar:#2a313d;--mint:#7cf0c0}
+  @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f3f5f9;--card:#ffffff;--card2:#f7f8fb;--line:#e2e6ee;--ink:#10141b;--ink2:#4b5466;--ink3:#626b7d;--field:#f1f3f7;--btn:#eef1f6;--btnline:#d8dde7;
+    --amberInk:#8a5800;--amberBg:rgba(245,165,36,.14);--greenInk:#157a3a;--greenBg:rgba(74,222,128,.16);--blueInk:#1d5fbf;--blueBg:rgba(59,130,246,.10);--redInk:#c23030;--redBg:rgba(255,107,107,.12);--bar:#e2e6ee;--mint:#0f8a5f}}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  button,input,textarea,select{font:inherit;color:inherit}
+  button{cursor:pointer}
+  a{color:var(--blueInk)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
+  header{display:flex;align-items:center;gap:12px;padding:18px 0 10px;flex-wrap:wrap}
+  header .t{flex:1;min-width:220px}
+  .eb{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+  h1{margin:2px 0 0;font-size:26px;font-weight:800;letter-spacing:-.01em}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--btn);border:1px solid var(--btnline);color:var(--ink2);white-space:nowrap}
+  .chip.test{background:var(--amberBg);border-color:rgba(245,165,36,.35);color:var(--amberInk)}
+  .chip.g{background:var(--greenBg);border-color:transparent;color:var(--greenInk)}
+  .chip.r{background:var(--redBg);border-color:transparent;color:var(--redInk)}
+  .chip.b{background:var(--blueBg);border-color:transparent;color:var(--blueInk)}
+  .lede{color:var(--ink2);font-size:14px;max-width:780px;margin:4px 0 14px}
+  nav.tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 0 14px;scrollbar-width:none;position:sticky;top:0;background:var(--bg);z-index:3}
+  nav.tabs button{border:1px solid var(--btnline);background:var(--btn);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;white-space:nowrap;color:var(--ink2)}
+  nav.tabs button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  nav.tabs .n{display:inline-block;min-width:18px;margin-left:6px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media (max-width:860px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .card.warn{border-color:rgba(255,107,107,.45)}
+  .card h2{margin:0;font-size:16px;font-weight:800}
+  .card h3{margin:0;font-size:14px;font-weight:800}
+  .lbl{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+  .sub{font-size:13px;color:var(--ink2)}
+  .big{font-size:44px;font-weight:800;line-height:1;letter-spacing:-.02em}
+  .big small{font-size:18px;color:var(--ink3);font-weight:700}
+  .prog{height:10px;border-radius:6px;background:var(--bar);overflow:hidden;position:relative}
+  .prog i{position:absolute;inset:0 auto 0 0;background:var(--green);border-radius:6px}
+  .prog b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--amber)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .sp{flex:1}
+  .btn{height:38px;padding:0 14px;border-radius:11px;border:1px solid var(--btnline);background:var(--btn);font-size:14px;font-weight:700;white-space:nowrap}
+  .btn.pri{background:var(--blue);border:0;color:#fff}
+  .btn.ok{background:var(--green);border:0;color:#06210f}
+  .btn.sm{height:30px;padding:0 10px;font-size:12.5px;border-radius:9px}
+  .btn:disabled{opacity:.5;cursor:default}
+  input,select,textarea{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+  textarea{width:100%;min-height:64px;resize:vertical}
+  label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink2);font-weight:600;min-width:0}
+  .form{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .form .w2{grid-column:span 2} @media (max-width:520px){.form .w2{grid-column:auto}}
+  /* funnel */
+  .fun{display:flex;flex-direction:column;gap:6px}
+  .fs{display:grid;grid-template-columns:150px minmax(0,1fr) 120px;gap:10px;align-items:center;font-size:13.5px}
+  @media (max-width:560px){.fs{grid-template-columns:110px minmax(0,1fr) 84px}}
+  .fs .bar{height:22px;border-radius:6px;background:var(--bar);position:relative;overflow:hidden}
+  .fs .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--blue),var(--mint));opacity:.45;border-radius:6px}
+  .fs .bar span{position:absolute;left:8px;top:0;line-height:22px;font-weight:800;font-size:12.5px;color:var(--ink)}
+  .fs .cv{text-align:right;font:600 12.5px 'JetBrains Mono',monospace;color:var(--ink2)}
+  .fs.low .cv{color:var(--redInk)} .fs.gap .bar{background:repeating-linear-gradient(45deg,var(--bar),var(--bar) 6px,transparent 6px,transparent 12px)}
+  .fs.gap .bar span{color:var(--ink3)}
+  /* lists */
+  .it{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+  .it:first-child{border-top:0;padding-top:0}
+  .it .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .it .tt{font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+  .tag{font:600 12px 'JetBrains Mono',monospace;padding:3px 7px;border-radius:7px;background:var(--blueBg);color:var(--blueInk);white-space:nowrap}
+  .stats{display:flex;gap:6px;flex-wrap:wrap}
+  .st{font-size:12px;padding:3px 8px;border-radius:8px;background:var(--card2);border:1px solid var(--line);color:var(--ink2)}
+  .st b{color:var(--ink)}
+  .av{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px 3px 4px;border-radius:999px;background:var(--card2);border:1px solid var(--line)}
+  .av i{width:14px;height:14px;border-radius:50%}
+  .ct{display:flex;flex-direction:column;gap:8px}
+  .ct .val{font-size:30px;font-weight:800;line-height:1}
+  .ct .val small{font-size:14px;color:var(--ink3);font-weight:700}
+  .empty{color:var(--ink3);font-size:13.5px;padding:6px 0}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.05em;color:var(--ink3);text-transform:uppercase}
+  .tbl{overflow-x:auto}
+  .dayin{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+  .dayin input{width:100%}
+  .link{display:flex;gap:6px;align-items:center;font:500 12px 'JetBrains Mono',monospace;color:var(--ink2);min-width:0}
+  .link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .gate{max-width:420px;margin:12vh auto 0}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+  .log{font-size:12.5px;color:var(--ink2);display:flex;flex-direction:column;gap:4px}
+  .log time{font:500 11.5px 'JetBrains Mono',monospace;color:var(--ink3);margin-right:6px}
+  .hl{animation:hl 2s ease-out}
+  @keyframes hl{from{box-shadow:0 0 0 3px var(--amber)}to{box-shadow:0 0 0 0 transparent}}
+  details summary{cursor:pointer;font-weight:700;font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t">
+      <div class="eb">Офис AICEX · кабинет продукта</div>
+      <h1 id="title">Нейроворонка</h1>
+    </div>
+    <span class="chip test">Тестовый кабинет</span>
+    <a class="chip" href="../">← В офис</a>
+  </header>
+  <p class="lede">Новая модель маркетинга на одном продукте. В центре кампания и одна главная цифра. Шесть контуров, у каждого своя цифра. Каждая единица контента получает метку и прослеживается до оплаты. Находка сразу становится задачей с ответственным, а если висит больше 2 дней, уходит вам. Если модель приживётся, её перенесём на весь отдел.</p>
+  <div id="root"><div class="empty">Загружаю кабинет…</div></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const API = '/api/assistant';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const fmt = n => n == null ? '—' : Number(n).toLocaleString('ru-RU', { maximumFractionDigits:1 });
+const pct = v => v == null ? '—' : (v * 100).toLocaleString('ru-RU', { maximumFractionDigits:1 }) + '%';
+const rub = n => n ? Number(n).toLocaleString('ru-RU', { maximumFractionDigits:0 }) + ' ₽' : '0 ₽';
+const tokenHdr = () => { try { const t = sessionStorage.getItem('hqa'); return t ? { 'x-hqa':t } : {}; } catch { return {}; } };
+let S = null, tab = (() => { try { return localStorage.getItem('neuro:tab') || 'today'; } catch { return 'today'; } })();
+
+function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { el.hidden = true; }, 2600); }
+async function api(method, body) {
+  const r = await fetch(API + '/cabinet/neuro', { method, credentials:'include', headers:{ 'content-type':'application/json', ...tokenHdr() }, body:body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || 'Ошибка сервера'); e.status = r.status; throw e; }
+  return j;
+}
+async function load() {
+  try { S = await api('GET'); render(); }
+  catch (e) { if (e.status === 403 || e.status === 401) gate(e.message); else $('root').innerHTML = `<div class="card"><h2>Кабинет недоступен</h2><div class="sub">${esc(e.message)}</div></div>`; }
+}
+async function act(body, okText) {
+  try { const j = await api('POST', body); S = j; render(); if (okText) toast(okText); return j; }
+  catch (e) { toast(e.message); return null; }
+}
+function gate(msg) {
+  $('root').innerHTML = `<div class="card gate"><h2>Вход владельца</h2><div class="sub">${esc(msg)} Войдите тем же паролем, что и в офисе.</div>
+    <form id="lg" class="row"><input type="password" id="pw" placeholder="Пароль" autocomplete="current-password" style="flex:1"><button class="btn pri">Войти</button></form></div>`;
+  $('lg').onsubmit = async e => {
+    e.preventDefault();
+    const r = await fetch(API + '/login', { method:'POST', credentials:'include', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ password:$('pw').value }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return toast(j.error || 'Не вышло войти');
+    load();
+  };
+}
+
+const TABS = [['today', 'Сегодня'], ['contours', 'Контуры'], ['content', 'Контент'], ['findings', 'Находки'], ['funnel', 'Воронка'], ['campaign', 'Кампания']];
+function render() {
+  $('title').textContent = S.campaign.product || 'Нейроворонка';
+  document.title = `Кабинет ${S.campaign.product || 'Нейроворонки'}`;
+  const badge = { findings:S.counts.overdue };
+  $('root').innerHTML = `<nav class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}${badge[k] ? `<span class="n">${badge[k]}</span>` : ''}</button>`).join('')}</nav><div id="view"></div>`;
+  const V = { today:vToday, contours:vContours, content:vContent, findings:vFindings, funnel:vFunnel, campaign:vCampaign }[tab] || vToday;
+  $('view').innerHTML = V();
+  wire();
+  const h = location.hash.match(/^#f-(\w+)/);
+  if (h && tab === 'findings') { const el = document.querySelector(`[data-fid="${h[1]}"]`); if (el) { el.scrollIntoView({ block:'center' }); el.classList.add('hl'); } }
+}
+
+const agentChip = a => `<span class="av"><i style="background:${esc(a.color || '#888')}"></i>${esc(a.name)}</span>`;
+const taskLink = t => t ? `<a href="../#desk-${esc(t.id)}" target="_blank" rel="noopener">${esc(t.agent || 'агент')} · ${esc(t.statusText)}</a>` : '';
+
+function funnelHTML(f, { compact = false } = {}) {
+  const max = Math.max(1, ...f.steps.map(s => s.n));
+  return `<div class="fun">${f.steps.map(s => {
+    const w = s.n > 0 ? Math.max(2, Math.sqrt(s.n / max) * 100) : 0, low = s.ratio != null && s.ratio < 0.6;
+    return `<div class="fs${!s.has ? ' gap' : ''}${low ? ' low' : ''}" title="${esc(s.hint)}"><div>${esc(s.name)}</div><div class="bar"><i style="width:${w}%"></i><span>${s.has ? fmt(s.n) : 'нет данных'}</span></div>
+      <div class="cv">${s.conv != null ? pct(s.conv) + (compact || s.bench == null ? '' : ` / ${pct(s.bench)}`) : ''}</div></div>`;
+  }).join('')}</div>`;
+}
+
+function vToday() {
+  const g = S.goal, p = g.target ? Math.min(100, g.paid / g.target * 100) : 0, dueP = g.target && g.pace ? Math.min(100, g.pace.due / g.target * 100) : null;
+  const over = S.findings.filter(f => f.overdue), open = S.findings.filter(f => f.status !== 'done' && !f.overdue);
+  const top = S.units.filter(u => u.stats.lead || u.stats.apply || u.stats.paid).slice(0, 5);
+  const alerts = [];
+  if (S.week.gaps.length) alerts.push(`Нет данных на ${S.week.gaps.length > 1 ? 'шагах' : 'шаге'} ${S.week.gaps.map(g => `«${esc(g.name)}»`).join(', ')}. Здесь кабинет не видит людей. Подключите источник или вносите цифры вручную во вкладке «Воронка».`);
+  if (S.week.bottleneck) alerts.push(`Узкое место: «${esc(S.week.bottleneck.name)}». Конверсия ${pct(S.week.bottleneck.conv)} при норме ${pct(S.week.bottleneck.bench)}.`);
+  if (S.counts.untracked && S.units.length) alerts.push(`${S.counts.untracked} из ${S.units.length} единиц контента пока без единого результата по метке.`);
+  if (!g.target) alerts.push('Главная цифра не задана. Укажите цель по оплатам во вкладке «Кампания».');
+  return `<div class="grid g2">
+    <div class="card">
+      <div class="lbl">Главная цифра · оплаты</div>
+      <div class="big">${fmt(g.paid)}${g.target ? `<small> из ${fmt(g.target)}</small>` : ''}</div>
+      ${g.target ? `<div class="prog"><i style="width:${p}%"></i>${dueP != null ? `<b style="left:${dueP}%" title="план на сегодня"></b>` : ''}</div>` : ''}
+      <div class="row">${g.pace ? `<span class="chip ${g.pace.ahead ? 'g' : 'r'}">${g.pace.ahead ? 'Идём в плане' : 'Отстаём от плана'} · на сегодня ${fmt(g.pace.due)}</span><span class="chip">Осталось ${g.pace.daysLeft} дн.</span>` : '<span class="sub">Темп появится, когда заданы цель и дата конца кампании.</span>'}
+        <span class="chip b">Выручка ${rub(g.revenue)}</span></div>
+      <div class="row"><button class="btn pri" data-brief>Разбор дня → Штаб</button><span class="sub">Штаб соберёт один экран дня и находки. Результат придёт на ваш стол в офисе.</span></div>
+    </div>
+    <div class="card${alerts.length ? ' warn' : ''}">
+      <div class="lbl">Что важно сегодня</div>
+      ${alerts.length ? alerts.map(a => `<div>• ${a}</div>`).join('') : '<div class="empty">Тревог нет: данные идут по всем шагам, узких мест ниже нормы нет.</div>'}
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card"><div class="row"><h2>Воронка за 7 дней</h2><span class="sp"></span><span class="sub">конверсия / норма</span></div>${funnelHTML(S.week)}</div>
+    <div class="card">
+      <div class="row"><h2>Находки</h2><span class="sp"></span><button class="btn sm" data-go="findings">Все</button></div>
+      ${over.length ? `<div class="lbl" style="color:var(--redInk)">Висят больше ${S.escalateDays} дней — решение за вами</div>${over.map(findingRow).join('')}` : ''}
+      ${open.length ? `<div class="lbl">В работе</div>${open.slice(0, 5).map(findingRow).join('')}` : ''}
+      ${!over.length && !open.length ? '<div class="empty">Открытых находок нет.</div>' : ''}
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card"><div class="row"><h2>Контент, который довёл до денег</h2><span class="sp"></span><button class="btn sm" data-go="content">Весь контент</button></div>
+      ${top.length ? top.map(unitMini).join('') : '<div class="empty">Пока ни одна метка не принесла подписку, заявку или оплату.</div>'}</div>
+    <div class="card"><div class="row"><h2>Задачи кабинета</h2><span class="sp"></span><span class="sub">${S.counts.tasksOpen} в работе</span></div>
+      ${S.tasks.length ? S.tasks.slice(0, 8).map(t => `<div class="it"><div class="col"><div class="tt">${esc(t.title)}</div><div class="sub">${taskLink(t)}</div></div></div>`).join('') : '<div class="empty">Задач из кабинета ещё не ставили.</div>'}</div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="row"><h2>Контуры</h2><span class="sp"></span><button class="btn sm" data-go="contours">Подробно</button></div>
+    <div class="grid g3">${S.contours.map(c => `<div class="ct"><div class="lbl">${esc(c.name)}</div><div class="val">${contourVal(c)}</div><div class="sub">${esc(c.metric)}${c.open ? ` · находок ${c.open}${c.overdue ? `, просрочено ${c.overdue}` : ''}` : ''}</div></div>`).join('')}</div></div>`;
+}
+const contourVal = c => `${c.value == null ? '—' : fmt(c.value)}${c.unit && c.value != null ? `<small> ${esc(c.unit)}</small>` : ''}${c.target ? `<small> / ${fmt(c.target)}</small>` : ''}`;
+
+function findingRow(f) {
+  return `<div class="it" data-fid="${esc(f.id)}"><div class="col"><div class="tt">${esc(f.text)}</div>
+    <div class="row sub"><span>${esc(f.contourName)}</span><span>· ${f.ownerName ? esc(f.ownerName) : 'ответственный не назначен'}</span><span>· ${f.ageDays} дн.</span>
+    ${f.overdue ? '<span class="chip r">Больше 2 дней</span>' : ''}${f.status === 'done' ? '<span class="chip g">Закрыта</span>' : ''}${f.task ? `<span>· ${taskLink(f.task)}</span>` : ''}</div>
+    ${f.detail ? `<div class="sub">${esc(f.detail)}</div>` : ''}</div>
+    <div class="row">${f.status === 'open' ? `<button class="btn sm pri" data-ftask="${esc(f.id)}">В работу</button>` : ''}
+      ${f.status !== 'done' ? `<button class="btn sm" data-fdone="${esc(f.id)}">Закрыть</button>` : `<button class="btn sm" data-freopen="${esc(f.id)}">Открыть снова</button>`}</div></div>`;
+}
+function unitMini(u) {
+  return `<div class="it"><span class="tag">${esc(u.tag)}</span><div class="col"><div class="tt">${u.url ? `<a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.title)}</a>` : esc(u.title)}</div>
+    <div class="stats">${statChips(u)}</div></div></div>`;
+}
+const STAT_KEYS = ['touch', 'lead', 'reg', 'came', 'offer', 'apply', 'paid'];
+const statChips = u => STAT_KEYS.filter(k => u.stats[k]).map(k => `<span class="st">${esc(S.steps.find(s => s.id === k).name)} <b>${fmt(u.stats[k])}</b></span>`).join('') + (u.stats.revenue ? `<span class="st">Выручка <b>${rub(u.stats.revenue)}</b></span>` : '') || '<span class="sub">результатов по метке пока нет</span>';
+
+function vContours() {
+  return `<div class="grid g2">${S.contours.map(c => `<div class="card">
+    <div class="row"><h2>${esc(c.name)}</h2><span class="sp"></span>${c.overdue ? `<span class="chip r">просрочено ${c.overdue}</span>` : c.open ? `<span class="chip">находок ${c.open}</span>` : ''}</div>
+    <div class="sub">${esc(c.role)}</div>
+    <div class="row"><div class="ct"><div class="lbl">${esc(c.metric)}</div><div class="val">${contourVal(c)}</div></div><span class="sp"></span>
+      ${c.kind === 'goal' ? '<span class="sub">Цель — во вкладке «Кампания»</span>' : `<label class="f">Цель<input type="number" min="0" step="any" value="${c.target ?? ''}" data-target="${esc(c.id)}" style="width:110px"></label>`}</div>
+    <div class="row">${c.agents.map(agentChip).join('')}</div>
+    <div class="row"><button class="btn sm" data-newf="${esc(c.id)}">Находка в контур</button></div>
+  </div>`).join('')}</div>`;
+}
+
+const typeOpts = sel => Object.entries(S.types).map(([k, v]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(v)}</option>`).join('');
+const contourOpts = sel => S.contours.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+function vContent() {
+  return `<div class="card"><h2>Новая единица контента</h2>
+    <div class="sub">Кабинет даст метку вида nf-001 и ссылки с ней: старт бота и utm на лендинге. Ставьте их в подпись, кнопку или рекламу, тогда подписки, заявки и оплаты посчитаются по этой метке.</div>
+    <form id="unitF" class="form">
+      <label class="f">Формат<select name="type">${typeOpts('reel')}</select></label>
+      <label class="f w2">Название<input name="title" required placeholder="Рилс «Нейроворонка за вечер»"></label>
+      <label class="f">Контур<select name="contour">${contourOpts('editorial')}</select></label>
+      <label class="f w2">Ссылка на публикацию<input name="url" placeholder="https://instagram.com/reel/…"></label>
+      <label class="f">Кодовое слово<input name="word" placeholder="ВОРОНКА"></label>
+      <label class="f">Дата выхода<input name="date" type="date" value="${esc(S.today)}"></label>
+      <div class="row" style="align-self:end"><button class="btn pri">Добавить и получить метку</button></div>
+    </form></div>
+    <div class="card" style="margin-top:12px"><div class="row"><h2>Контент кампании</h2><span class="sp"></span><span class="sub">${S.units.length} шт. · лучшие по оплатам сверху</span></div>
+    ${S.units.length ? S.units.map(unitRow).join('') : '<div class="empty">Контента с метками пока нет.</div>'}</div>`;
+}
+function unitRow(u) {
+  const links = Object.entries({ 'Бот':u.links.bot, 'Лендинг':u.links.landing }).filter(([, v]) => v);
+  return `<div class="it"><span class="tag">${esc(u.tag)}</span><div class="col">
+    <div class="tt">${u.url ? `<a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.title)}</a>` : esc(u.title)}</div>
+    <div class="row sub"><span>${esc(u.typeName)}</span><span>· ${esc(u.contourName)}</span><span>· ${esc(u.date || '')}</span>${u.word ? `<span>· слово «${esc(u.word)}»</span>` : ''}</div>
+    ${links.map(([k, v]) => `<div class="link"><b>${k}:</b><span>${esc(v)}</span><button class="btn sm" data-copy="${esc(v)}">Копировать</button></div>`).join('')}
+    ${!links.length ? '<div class="sub">Ссылок с меткой нет: укажите бота и лендинг во вкладке «Кампания».</div>' : ''}
+    <div class="stats">${statChips(u)}</div>
+    <details><summary>Добавить результат по метке</summary>
+      <form class="row" data-res="${esc(u.tag)}" style="margin-top:8px">
+        <select name="step">${S.steps.filter(s => s.id !== 'reach').map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+        <input name="n" type="number" min="1" value="1" style="width:80px"><input name="amount" type="number" min="0" placeholder="сумма, ₽" style="width:120px">
+        <button class="btn sm pri">Добавить</button><button type="button" class="btn sm" data-unrm="${esc(u.tag)}">Убрать контент</button>
+      </form></details>
+  </div></div>`;
+}
+
+function vFindings() {
+  const owners = S.contours.flatMap(c => c.agents.map(a => ({ ...a, c:c.id })));
+  return `<div class="card"><h2>Новая находка</h2>
+    <div class="sub">Находка — это то, что мешает главной цифре. У каждой есть контур и ответственный агент. «В работу» ставит задачу агенту на рабочий стол офиса. Через ${S.escalateDays} дня открытая находка уходит вам в Telegram.</div>
+    <form id="findF" class="form">
+      <label class="f w2">Что не так<input name="text" required placeholder="Регистрации не доходят до урока: 327 из 429"></label>
+      <label class="f">Контур<select name="contour" id="fC">${contourOpts(findF.contour || 'hq')}</select></label>
+      <label class="f">Ответственный<select name="owner" id="fO"></select></label>
+      <label class="f w2">Подробности<input name="detail" placeholder="Цифры, ссылки, гипотеза"></label>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px;align-self:end"><input type="checkbox" name="toTask" checked>Сразу в работу</label>
+      <div class="row" style="align-self:end"><button class="btn pri">Добавить</button></div>
+    </form></div>
+    <div class="card" style="margin-top:12px"><h2>Все находки</h2>${S.findings.length ? S.findings.map(findingRow).join('') : '<div class="empty">Находок пока нет.</div>'}</div>`;
+}
+const findF = { contour:'' };
+function fillOwners() {
+  const c = S.contours.find(x => x.id === $('fC').value);
+  $('fO').innerHTML = (c?.agents || []).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('') + '<option value="">Диспетчер решит</option>';
+}
+
+function vFunnel() {
+  const day = S.days.find(d => d.date === S.today) || {};
+  return `<div class="card"><h2>Цифры за день</h2>
+    <div class="sub">Пока источники не подключены, вносите цифры воронки вручную, раз в день. Пустое поле значит «нет данных», ноль значит «никого». События извне (вебхук ChatPlace, оплаты) прибавляются к дню сами.</div>
+    <form id="dayF"><div class="row" style="margin-bottom:10px"><label class="f">Дата<input type="date" name="date" id="dD" value="${esc(S.today)}"></label></div>
+      <div class="dayin">${S.steps.map(s => `<label class="f" title="${esc(s.hint)}">${esc(s.name)}<input type="number" min="0" step="any" name="${s.id}" value="${day[s.id] ?? ''}"></label>`).join('')}
+        <label class="f">Выручка, ₽<input type="number" min="0" step="any" name="revenue" value="${day.revenue ?? ''}"></label></div>
+      <div class="row" style="margin-top:10px"><button class="btn pri">Сохранить день</button></div></form></div>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="card"><h2>За 7 дней</h2>${funnelHTML(S.week)}</div>
+      <div class="card"><h2>За всю кампанию</h2>${funnelHTML(S.total)}</div>
+    </div>
+    <div class="card" style="margin-top:12px"><h2>По дням</h2>${S.days.length ? `<div class="tbl"><table><thead><tr><th>Дата</th>${S.steps.map(s => `<th>${esc(s.name)}</th>`).join('')}<th>Выручка</th></tr></thead>
+      <tbody>${S.days.slice().reverse().map(d => `<tr><td>${esc(d.date)}</td>${S.steps.map(s => `<td>${d[s.id] == null ? '·' : fmt(d[s.id])}</td>`).join('')}<td>${d.revenue ? rub(d.revenue) : '·'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Цифр ещё нет.</div>'}</div>`;
+}
+
+function vCampaign() {
+  const c = S.campaign, hookUrl = location.origin + API + '/cabinet/neuro/hook';
+  return `<div class="card"><h2>Кампания</h2>
+    <form id="campF" class="form">
+      <label class="f w2">Название<input name="name" value="${esc(c.name)}"></label>
+      <label class="f">Начало<input type="date" name="start" value="${esc(c.start)}"></label>
+      <label class="f">Конец<input type="date" name="end" value="${esc(c.end)}"></label>
+      <label class="f">Цель: оплат<input type="number" min="0" name="goalTarget" value="${c.goalTarget || ''}"></label>
+      <label class="f">Бюджет на рекламу, ₽<input type="number" min="0" name="budget" value="${c.budget || ''}"></label>
+      <label class="f w2">Бот (ссылка t.me/…)<input name="botUrl" value="${esc(c.botUrl)}" placeholder="https://t.me/имя_бота"></label>
+      <label class="f w2">Лендинг<input name="landingUrl" value="${esc(c.landingUrl)}" placeholder="https://…"></label>
+      <label class="f w2" style="grid-column:1/-1">Заметка<textarea name="note">${esc(c.note)}</textarea></label>
+      <div class="row"><button class="btn pri">Сохранить</button></div>
+    </form></div>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="card"><h2>События извне</h2>
+        <div class="sub">Платёжка, форма или входящий вебхук ChatPlace могут сами прибавлять шаги воронки. Для этого отправьте POST на адрес ниже с заголовком <code>x-cabinet-token</code> и телом <code>{"tag":"nf-001","step":"paid","n":1,"amount":9900}</code>. Поле <code>step</code> принимает: ${S.steps.map(s => `<code>${s.id}</code>`).join(', ')}.</div>
+        <div class="link"><span>${esc(hookUrl)}</span><button class="btn sm" data-copy="${esc(hookUrl)}">Копировать</button></div>
+        <div class="row">${S.hook ? '<span class="chip g">Токен задан</span>' : '<span class="chip r">Токен не задан</span><span class="sub">Нужен секрет HQ_CABINET_TOKEN</span>'}</div>
+      </div>
+      <div class="card"><h2>Журнал</h2><div class="log">${(S.log || []).map(l => `<div><time>${esc(new Date(l.at).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }))}</time>${esc(l.text)}</div>`).join('') || '<div class="empty">Пусто.</div>'}</div></div>
+    </div>`;
+}
+
+const formObj = f => Object.fromEntries(new FormData(f).entries());
+function wire() {
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; try { localStorage.setItem('neuro:tab', tab); } catch {} render(); scrollTo(0, 0); });
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { tab = b.dataset.go; render(); scrollTo(0, 0); });
+  document.querySelectorAll('[data-brief]').forEach(b => b.onclick = async () => { b.disabled = true; const j = await act({ action:'brief' }, 'Разбор дня отдан Штабу'); if (!j) b.disabled = false; });
+  document.querySelectorAll('[data-ftask]').forEach(b => b.onclick = () => act({ action:'finding-task', id:b.dataset.ftask }, 'Задача поставлена агенту'));
+  document.querySelectorAll('[data-fdone]').forEach(b => b.onclick = () => act({ action:'finding-done', id:b.dataset.fdone }, 'Находка закрыта'));
+  document.querySelectorAll('[data-freopen]').forEach(b => b.onclick = () => act({ action:'finding-reopen', id:b.dataset.freopen }, 'Находка снова открыта'));
+  document.querySelectorAll('[data-newf]').forEach(b => b.onclick = () => { findF.contour = b.dataset.newf; tab = 'findings'; render(); $('findF').text.focus(); });
+  document.querySelectorAll('[data-target]').forEach(i => i.onchange = () => act({ action:'contour', id:i.dataset.target, target:i.value }, 'Цель контура сохранена'));
+  document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => navigator.clipboard?.writeText(b.dataset.copy).then(() => toast('Скопировано')).catch(() => toast('Не удалось скопировать')));
+  document.querySelectorAll('[data-unrm]').forEach(b => b.onclick = () => { if (confirm(`Убрать ${b.dataset.unrm} из кабинета? Результаты по метке пропадут.`)) act({ action:'unit-remove', tag:b.dataset.unrm }, 'Контент убран'); });
+  document.querySelectorAll('[data-res]').forEach(f => f.onsubmit = e => { e.preventDefault(); const o = formObj(f); act({ action:'result', tag:f.dataset.res, step:o.step, n:o.n, amount:o.amount }, 'Результат добавлен'); });
+  if ($('unitF')) $('unitF').onsubmit = async e => { e.preventDefault(); const j = await act({ action:'unit', ...formObj(e.target) }); if (j?.unit) toast(`Метка ${j.unit.tag} готова`); };
+  if ($('findF')) {
+    fillOwners(); $('fC').onchange = fillOwners;
+    $('findF').onsubmit = e => { e.preventDefault(); const o = formObj(e.target); findF.contour = o.contour; act({ action:'finding', ...o, toTask:Boolean(o.toTask) }, o.toTask ? 'Находка ушла агенту' : 'Находка добавлена'); };
+  }
+  if ($('dayF')) {
+    $('dD').onchange = () => { const d = S.days.find(x => x.date === $('dD').value) || {}; for (const el of $('dayF').querySelectorAll('.dayin input')) el.value = d[el.name] ?? ''; };
+    $('dayF').onsubmit = e => { e.preventDefault(); const o = formObj(e.target), date = o.date; delete o.date; act({ action:'day', date, values:o }, 'День сохранён'); };
+  }
+  if ($('campF')) $('campF').onsubmit = e => { e.preventDefault(); act({ action:'campaign', ...formObj(e.target) }, 'Кампания сохранена'); };
+}
+
+addEventListener('hashchange', () => { if (/^#f-/.test(location.hash)) { tab = 'findings'; render(); } });
+if (/^#f-/.test(location.hash)) tab = 'findings';
+load();
+setInterval(() => { if (document.visibilityState === 'visible' && S && !document.activeElement?.matches('input,select,textarea')) load(); }, 60e3);
+</script>
+</body>
+</html>

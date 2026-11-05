@@ -381,7 +381,7 @@ function detail(id) {
   }
   const k = statusKey(t), rate = S.rate[t.id] || '';
   let body = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill ${k}">${esc(k === 'paused' ? pausedNote(t) : STATUS[k] || t.statusText)}</span>${t.urgent && !['done', 'cancelled'].includes(t.status) ? '<span class="pill urgent">срочно</span>' : ''}
-      ${t.source ? `<span class="chip">${esc({ office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' }[t.source] || t.source)}</span>` : ''}
+      ${t.source ? `<span class="chip">${esc({ office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram', cabinet:'Кабинет Нейроворонки' }[t.source] || t.source)}</span>` : ''}
       ${t.usage ? `<span class="chip">${fmtDur(t.usage.ms)}${t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : ''}</span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.eta ? `<span class="chip">${esc(etaText(t.eta, true))}</span>` : ''}</div>
     <span style="font-size:20px;font-weight:800;line-height:1.25">${esc(t.route?.title || t.text)}</span>
     <span class="row">${avatar(t)}<span class="col"><span style="font-size:14px;font-weight:700">${esc(t.agent?.name || 'Диспетчер')}</span><span class="sub">${esc(t.pipeline ? t.pipeline.label : DEPT[t.agent?.dept] || '')}</span></span></span>

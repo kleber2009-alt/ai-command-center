@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "SERVE_STATIC=1 node server.mjs",
-    "test": "node --test desk.test.mjs"
+    "test": "node --test desk.test.mjs cabinet.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0"

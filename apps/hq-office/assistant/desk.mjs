@@ -52,7 +52,7 @@ const STEPS_KEPT = 80;
 const KIND = { slides:'Презентация', document:'Документ', landing:'Сайт', script:'Сценарии', carousel:'Дизайн', video:'Видео', image:'Дизайн', research:'Исследование', other:'Разработка' };
 const STATUS = { routing:'диспетчер разбирает', question:'нужен ваш ответ', queued:'в очереди', work:'в работе', review:'на проверке', done:'готово', cancelled:'отменена', error:'ошибка', paused:'на паузе' };
 const OPEN = ['routing', 'question', 'queued', 'work', 'review', 'paused'];
-const SOURCES = ['office', 'assistant', 'twin', 'telegram'];
+const SOURCES = ['office', 'assistant', 'twin', 'telegram', 'cabinet'];
 const msk = iso => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' }).format(new Date(iso));
 const TRANSCRIBER = 'transcriber';
 // «Контролёр качества»: проверяет первую сдачу результата до владельца и один раз возвращает агенту на доработку
