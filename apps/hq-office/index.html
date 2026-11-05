@@ -779,6 +779,10 @@
   .nt-bar svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .nt-bar .ln{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:#5fe0d4}
   .nt-bar .ln[hidden]{display:none}
+  .nt-mic{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:10px;font-size:12.5px;font-weight:700;color:var(--ink-2);background:transparent;border:0;cursor:pointer}
+  .nt-mic:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+  .nt-mic.rec{background:#ff4d4f;color:#fff;animation:orb .8s ease-in-out infinite}
+  .nt #kMicNote{margin:-6px 4px 0;font-size:12.5px;color:var(--ink-3)}
   .nt-h{font:600 10.5px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);display:flex;align-items:center;gap:10px}
   .nt-who{display:flex;gap:6px;flex-wrap:wrap}
   .nt-who button{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:13px;font-weight:700;color:var(--ink-2)}
@@ -4641,8 +4645,9 @@ function openDeskNew({ agent = '', text = '' } = {}) {
     <p>Опишите своими словами, что нужно. Остальное офис сделает сам — и принесёт результат к вашему столу.</p>`;
   $('kBody').innerHTML = `<div class="nt">
     <div class="nt-box" id="kDrop"><input type="file" id="kFile" multiple hidden><textarea id="kText" aria-label="Что сделать" placeholder="Например: вот рилс конкурента https://… — сделай сценарий в моём стиле с кодовым словом ОФИС">${esc(text)}</textarea>
-      <div class="nt-bar"><label for="kFile">${ico('<path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>')}Материалы</label><span class="nt-hint">${isMobile ? '' : 'или Ctrl+V — скриншот, файл'}</span>
+      <div class="nt-bar"><label for="kFile">${ico('<path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>')}Материалы</label><button type="button" class="nt-mic" id="kMic" data-k="mic" title="Надиктовать задачу: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Голосом</button><span class="nt-hint">${isMobile ? '' : 'или Ctrl+V — скриншот, файл'}</span>
         <span class="ln" id="kLink" hidden>${ico(I.video)}ссылка на ролик — сначала расшифровка</span></div></div>
+    <p class="note" id="kMicNote" hidden></p>
     <ul class="files" id="kFiles"></ul>
     <div class="chipsrow dk-ex">${DESK_EXAMPLES.map(x => `<button type="button" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     ${desk.pipelines.length ? `<div class="nt-h">Как сделать</div><input type="hidden" id="kPipe" value=""><div class="dk-pipes" id="kPipes"></div>` : ''}
@@ -4742,6 +4747,7 @@ function renderUploads() {
 }
 async function deskSubmit() {
   const text = $('kText').value.trim(), btn = $('kFoot').querySelector('[data-k="submit"]');
+  if (desk.rec || desk.stt) return deskNote('Сначала закончите запись голосом — текст допишется в поле.', true);
   if (!text) { $('kText').focus(); return deskNote('Опишите задачу — хотя бы одной фразой.', true); }
   if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
   if (desk.busy) return;
@@ -4851,10 +4857,12 @@ function deskExtraHTML(t) {
   if (t.runs?.length) h += `<section class="kcard"><h4 style="--g:#9aa3b5"><i></i>Затраты</h4><table class="runs"><tbody>${t.runs.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(RUNK[r.kind] || r.kind)}</td><td>${fmtDur(r.ms)}</td><td>${r.cost ? fmtUsd(r.cost) : '—'}</td></tr>`).join('')}<tr class="sum"><td>Итого</td><td>${t.usage.runs} ${word(t.usage.runs, 'запуск', 'запуска', 'запусков')}</td><td>${fmtDur(t.usage.ms)}</td><td>${t.usage.cost ? fmtUsd(t.usage.cost) : '—'}</td></tr></tbody></table></section>`;
   return h;
 }
-// голосовая правка: нажать — говорить, нажать ещё раз — текст дописывается в поле «Правка» (не дольше двух минут)
+// голосом — новая задача (поле «Что сделать») или правка (поле «Правка»): нажать — говорить, нажать ещё раз — текст
+// дописывается в поле (не дольше двух минут)
 async function deskMic() {
+  const form = desk.form && !desk.openId, field = form ? 'kText' : 'kRevise', what = form ? 'задачу' : 'правку';
   const note = (txt, err) => { const n = $('kMicNote'); if (!n) return; n.hidden = !txt; n.textContent = txt || ''; n.classList.toggle('err', !!err); };
-  const btn = on => $('kReviseMic')?.classList.toggle('rec', on);
+  const btn = on => $(form ? 'kMic' : 'kReviseMic')?.classList.toggle('rec', on);
   if (desk.rec) return desk.rec.stop();
   if (desk.stt) return;
   asstStopVoice();
@@ -4868,10 +4876,10 @@ async function deskMic() {
   rec.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
     clearInterval(desk.recTimer); desk.rec = null; btn(false);
-    if (rec.cancelled || desk.openId !== taskId) return note('');
+    if (rec.cancelled || desk.openId !== taskId || !$(field)) return note('');
     const blob = new Blob(chunks, { type:rec.mimeType || type || 'audio/webm' }), dur = (Date.now() - t0) / 1000;
     const diag = `(${dur.toFixed(1)} с, ${Math.round(blob.size / 1024)} КБ, ${blob.type || 'без типа'})`;
-    if (dur < 0.8) return note('Запись слишком короткая — нажмите «Голосом», скажите правку и нажмите ещё раз.', true);
+    if (dur < 0.8) return note(`Запись слишком короткая — нажмите «Голосом», скажите ${what} и нажмите ещё раз.`, true);
     if (!blob.size) return note(`Браузер не передал звук с микрофона ${diag} — проверьте, что выбран нужный микрофон, и попробуйте ещё раз.`, true);
     desk.stt = true; note('Распознаю речь…');
     try {
@@ -4879,9 +4887,9 @@ async function deskMic() {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error);
       if (!j.text) throw new Error(`Не расслышал ${diag} — попробуйте ещё раз, говорите ближе к микрофону.`);
-      const ta = $('kRevise');
-      if (ta && desk.openId === taskId) { ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + j.text.trim(); ta.focus(); }
-      note('Готово — проверьте текст и нажмите «Отправить правку».');
+      const ta = $(field);
+      if (ta && desk.openId === taskId) { ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + j.text.trim(); ta.focus(); if (form) ntRefresh(); }
+      note(`Готово — проверьте текст и нажмите «${form ? 'Поставить задачу' : 'Отправить правку'}».`);
     } catch (e) { note(e.message || 'Не удалось распознать речь.', true); }
     finally { desk.stt = false; }
   };
@@ -4897,9 +4905,9 @@ async function deskMic() {
 async function deskAct(k) {
   if (k === 'close') return closeDesk();
   if (k === 'submit') return deskSubmit();
+  if (k === 'mic') return deskMic();
   const t = deskTask(desk.openId);
   if (!t) return;
-  if (k === 'mic') return deskMic();
   if (k === 'files') { desk.allFiles = t.id; return renderDeskTask(); }
   if (k === 'steps') { desk.allSteps = t.id; return renderDeskTask(); }
   if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
