@@ -52,8 +52,8 @@
   .fold{flex:none;width:30px;height:30px;border-radius:10px;background:var(--glass-hi);display:grid;place-items:center;color:var(--ink-2)}
   .fold svg{width:16px;height:16px;transition:transform .25s;transform:rotate(180deg)}
   .brand.open .fold svg{transform:none}
-  .themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
-  /* два стиля офиса — «Волна» и «Ночной Сити»: переключатель в шапке и в «Ещё» на телефоне */
+  .themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  /* три стиля офиса — «Волна», «Главный офис» и «Офис Нейроворонки»: переключатель в шапке и в «Ещё» на телефоне */
   .brand-lede{margin:8px 0 2px;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:320px}
   .brand-lede b{color:var(--ink)}
   body.app .brand-lede{display:none}
@@ -479,6 +479,17 @@
   .nbub{font:600 11px/1.25 var(--f-ui);max-width:190px;padding:5px 9px;border-radius:9px;background:#fff7ea;color:#1b1305;text-align:center;white-space:normal;
         box-shadow:0 4px 14px rgba(0,0,0,.35);animation:nbub .25s ease-out}
   @keyframes nbub{from{opacity:0;scale:.9}}
+  /* офис Нейроворонки: та же сцена night.js, мятная палитра кампании */
+  body.neuro{--stage:#06141a;--glass:rgba(8,20,20,.82);--glass-hi:rgba(120,255,210,.07);--line:rgba(120,255,210,.17)}
+  body.neuro #loader{color:#9fd9c4}
+  body.neuro .themes button.on{background:rgba(63,240,176,.12);border-color:rgba(63,240,176,.45)}
+  body.neuro .deskl{background:rgba(63,240,176,.95);color:#04170f;box-shadow:0 6px 20px rgba(63,240,176,.35)}
+  body.neuro .deskl i{background:#04170f}
+  body.neuro .nroom{background:rgba(8,20,18,.82);border-color:rgba(120,255,210,.25)}
+  body.neuro .nroom .ic{border-color:rgba(120,255,210,.25);color:#3ff0b0}
+  body.neuro .nroom small{color:#9fd9c4}
+  body.neuro .nroom .n{background:rgba(63,240,176,.16)}
+  body.neuro .nbub{background:#eafff7;color:#04170f}
   @media (max-width:820px){ .nroom small,.nroom b{display:none} .nroom{padding:4px} .nroom .ic{width:22px;height:22px} .nbub{font-size:10px;max-width:130px} }
 
   @media (max-width:1100px){ .brand{width:300px} .team{width:376px} }
@@ -950,6 +961,7 @@
 <div class="toast glass" id="toast" hidden role="status"><span id="toastText"></span><button class="btn-go" id="toastGo">Открыть</button></div>
 
 <nav class="dock glass" id="dock" aria-label="Вид">
+  <button data-cmd="neuro" id="dNeuro" hidden title="Тестовый кабинет продукта «Нейроворонка»: кампания, 6 контуров, контент с метками до оплаты, находки → задачи"><svg viewBox="0 0 24 24"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>Нейроворонка</button>
   <button data-cmd="admin" id="dAdmin" hidden title="Админ-панель: люди и доступы, агенты, новый агент, журнал"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>Админка</button>
   <button data-cmd="login" class="login" id="dLogin" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Войти</button>
   <button data-cmd="newtask" class="go" id="dNew" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Задача агенту</button>
@@ -1055,14 +1067,37 @@ import { createHologram } from './holo.js';
 /* ======================= ДАННЫЕ ======================= */
 
 const DATA = window.OFFICE_DATA;
-const CFG = window.OFFICE_CONFIG || DATA.config;
+// Стиль офиса: «Волна» — сцена этого модуля, «Главный офис» (бывший «Ночной Сити») — сцена из night.js поверх той же симуляции,
+// «Офис Нейроворонки» — та же сцена night.js и та же симуляция, но своя команда кампании (office.config.js → neuro, agents.js dept:'neuro').
+// Переключение перезагружает страницу: каждый стиль собирается заново.
+let STYLE = 'wave';
+try { STYLE = localStorage.getItem('hq:theme') || 'wave'; } catch (e) {}
+{ const q = new URLSearchParams(location.search).get('theme'); if (q) STYLE = q; }
+if (!['wave', 'night', 'neuro'].includes(STYLE)) STYLE = 'wave';
+const NEURO = STYLE === 'neuro' && window.OFFICE_CONFIG?.neuro ? window.OFFICE_CONFIG.neuro : null;
+if (STYLE === 'neuro' && !NEURO) STYLE = 'night';
+// офис Нейроворонки: руководители — те же люди, что в главном офисе (подчинение), отделы — группы контуров
+function neuroConfig(base, N) {
+  const heads = Object.fromEntries(base.depts.map(d => [d.id, d.head]));
+  return { ...base, brand:N.brand, council:null, agents:{},
+    depts:N.depts.map(d => ({ id:d.id, name:d.name, short:d.short, head:{ ...heads[d.head] }, agents:d.contours.flatMap(c => window.OFFICE_AGENTS.ofContour(c)) })) };
+}
+const CFG = NEURO ? neuroConfig(window.OFFICE_CONFIG, NEURO) : window.OFFICE_CONFIG || DATA.config;
+const NEURO_IDS = new Set(NEURO ? CFG.depts.flatMap(d => d.agents) : []);
 const CATALOG = { ...DATA.catalog };
 for (const [id, a] of Object.entries(window.AGENT_CATALOG || {})) CATALOG[id] = { ...(CATALOG[id] || { screen:'doc', tasks:[a.task || 'Работает'], out:[] }), ...a };
 const BRAND = CFG.brand || 'AI Office';
 // История реальных задач (tasks.js + tasks.auto.js + принятые в офисе): в 3D агенты работают и носят именно эти задачи
 const MANUAL_TASKS = window.OFFICE_TASKS || [];
-const TASKS = [...MANUAL_TASKS, ...[...(window.OFFICE_TASKS_AUTO?.tasks || []), ...(window.OFFICE_TASKS_DESK || [])].filter(t => !MANUAL_TASKS.some(m => m.id === t.id))]
+const ALL_TASKS = [...MANUAL_TASKS, ...[...(window.OFFICE_TASKS_AUTO?.tasks || []), ...(window.OFFICE_TASKS_DESK || [])].filter(t => !MANUAL_TASKS.some(m => m.id === t.id))]
   .sort((a, b) => b.date.localeCompare(a.date));
+// офис Нейроворонки показывает свою историю: работы по Нейроворонке и задачи своей команды; отдел — группа контуров по тому, кто делал
+const NEURO_DEPT_OF = { funnels:'nf-funnels', landings:'nf-funnels', chats:'nf-funnels', leadmagnet:'nf-funnels', comments:'nf-funnels',
+  scripts:'nf-content', montage:'nf-content', carousel:'nf-content', avatar:'nf-content', publish:'nf-content', slides:'nf-content', creatives:'nf-content', threads:'nf-content',
+  launch:'nf-launch', mailings:'nf-launch', metaads:'nf-launch', adreports:'nf-launch' };
+const neuroDept = t => { for (const id of t.agents || []) { if (NEURO_IDS.has(id)) return CFG.depts.find(d => d.agents.includes(id)).id; if (NEURO_DEPT_OF[id]) return NEURO_DEPT_OF[id]; } return 'nf-hq'; };
+const TASKS = NEURO ? ALL_TASKS.filter(t => (t.agents || []).some(id => NEURO_IDS.has(id)) || /нейроворон/i.test(`${t.title} ${t.summary || ''} ${(t.proof || []).map(x => x.label).join(' ')}`))
+  .map(t => ({ ...t, dept:neuroDept(t) })) : ALL_TASKS;
 let OWNER_ON = false;               // = desk.on; отдельная переменная: функции работ зовутся и до объявления desk
 // задачи, скрытые от гостей в админ-панели: у владельца и руководителей видны все
 const HIDDEN_TASKS = new Set(window.OFFICE_AGENTS?.patch?.hiddenTasks || []);
@@ -1076,14 +1111,12 @@ const params = new URLSearchParams(location.search);
 const isMobile = matchMedia('(max-width: 820px)').matches || matchMedia('(pointer: coarse)').matches;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);
-// Стиль офиса: «Галерея» — сцена этого модуля, «Ночной Сити» — сцена из night.js поверх той же симуляции,
-// задач, рабочего стола и панелей. Переключение перезагружает страницу: каждый стиль собирается заново.
-let STYLE = 'wave';
-try { STYLE = localStorage.getItem('hq:theme') || 'wave'; } catch (e) {}
-if (params.get('theme')) STYLE = params.get('theme');
-if (!['wave', 'night'].includes(STYLE)) STYLE = 'wave';
-let night = STYLE === 'night', NIGHT = null;
-if (night) { document.body.classList.add('night'); $('loader').textContent = 'Собираю ночной офис…'; }
+let night = STYLE === 'night' || STYLE === 'neuro', NIGHT = null;
+if (night) { document.body.classList.add('night'); $('loader').textContent = NEURO ? 'Собираю офис Нейроворонки…' : 'Собираю главный офис…'; }
+if (NEURO) {
+  document.body.classList.add('neuro');
+  const b = $('dNeuro'); b.lastChild.textContent = 'Кабинет'; b.title = 'Кабинет кампании Нейроворонки: цель, 6 контуров, воронка, контент с метками, находки';
+} else $('dNeuro').title = 'Офис Нейроворонки: отдельная команда кампании в шести контурах';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const hhmm = (d = new Date()) => d.toTimeString().slice(0, 5);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -1095,12 +1128,14 @@ const angDamp = (a, b, k, dt) => a + wrapA(b - a) * (1 - Math.exp(-k * dt));
 const word = (n, one, few, many) => n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many;
 const mkRng = s => () => (s = s * 16807 % 2147483647) / 2147483647;
 let srnd = mkRng(7);
-document.title = `Живой офис ${BRAND}`;
-$('brandTitle').textContent = `Офис агентов ${BRAND}`;
+document.title = NEURO ? `Офис Нейроворонки · ${window.OFFICE_CONFIG.brand}` : `Живой офис ${BRAND}`;
+$('brandTitle').textContent = NEURO ? 'Офис Нейроворонки' : `Офис агентов ${BRAND}`;
 // за 10 секунд: кто здесь, что справа и что нажать
-const NAG = window.OFFICE_AGENTS.ids.filter(id => window.OFFICE_AGENTS.list[id].figure !== false).length;
-$('brandLede').innerHTML = `<b>${NAG} ${word(NAG, 'ИИ-агент', 'ИИ-агента', 'ИИ-агентов')}</b> работают по отделам. Справа — <b>реальные задачи</b> со ссылками-доказательствами. Внизу — <b>«Двойник»</b>: спросите офис голосом или текстом.`;
-$('eyebrow').textContent = `${BRAND} HQ · версия 2`;
+const NAG = NEURO ? NEURO_IDS.size : window.OFFICE_AGENTS.ids.filter(id => window.OFFICE_AGENTS.list[id].figure !== false && window.OFFICE_AGENTS.list[id].dept !== 'neuro').length;
+$('brandLede').innerHTML = NEURO
+  ? `<b>${NAG} ИИ-агентов</b> кампании Нейроворонки в шести контурах. Работают сами: Штаб каждое утро разбирает цифры и раздаёт находки. Подчиняются <b>главному офису</b>: результат — на вашу проверку. <b>Кабинет</b> — цифры кампании.`
+  : `<b>${NAG} ${word(NAG, 'ИИ-агент', 'ИИ-агента', 'ИИ-агентов')}</b> работают по отделам. Справа — <b>реальные задачи</b> со ссылками-доказательствами. Внизу — <b>«Двойник»</b>: спросите офис голосом или текстом.`;
+$('eyebrow').textContent = NEURO ? `${window.OFFICE_CONFIG.brand} HQ · офис кампании` : `${BRAND} HQ · версия 2`;
 
 const LOOKS = {
   m1:{ height:1.85, skin:'#e6b59b', hair:'#5a3420', hairStyle:'swept', suit:'#18191c', top:'#111113', cross:true },
@@ -2929,8 +2964,10 @@ const THEMES = {
     bg:'#e3e5e8', wall:'#ececeb', floor:{ map:'carpet', color:'#767c86', rough:1 }, desk:'#f5f5f3',
     sun:['#fff3e3', 3.0, [34, 20, 6]], hemi:['#ffffff', '#8a8f99', 0.55], env:0.55, exposure:1.0,
     led:{ mode:0, deep:'#00030a', glow:'#1f5cff', spark:'#a6d8ff', light:'#3b6dff', li:3 }, shelf:'#ffc574', outside:'day', bloom:0.32, vig:0.18 },
-  night: { name:'Ночной Сити', sub:'Комнаты отделов', sw:['#0a0f1f', '#3b2a1e', '#ffb45c', '#ffe2a8'],
-    note:'Ночное здание с комнатами отделов: тёплое дерево, янтарный свет, стеклянные стены и город за окнами. Та же команда, те же задачи и рабочий стол — агенты ходят по коридорам между комнатами. Загружается дольше.' },
+  night: { name:'Главный офис', sub:'Комнаты отделов', sw:['#0a0f1f', '#3b2a1e', '#ffb45c', '#ffe2a8'],
+    note:'Главный офис: здание с комнатами отделов, тёплое дерево, янтарный свет, стеклянные стены и город за окнами. Та же команда, те же задачи и рабочий стол — агенты ходят по коридорам между комнатами. Загружается дольше.' },
+  neuro: { name:'Офис Нейроворонки', sub:'Команда кампании', sw:['#06141a', '#163a33', '#3ff0b0', '#c9ffe9'],
+    note:'Отдельный офис кампании Нейроворонки: своя команда из шести контуров (Штаб, Стратегия и бренд, Редакция, Производство, Воронки, Запуски и трафик) в том же здании. Работает сам и подчиняется главному офису: задачи — через общий рабочий стол, результат — на вашу проверку.' },
 };
 const outsideCache = {};
 // сцена этого модуля всегда в «Галерее»; ночной стиль рисует night.js
@@ -4022,7 +4059,7 @@ async function holoSummon(on) {
 // снимок офиса: что видно и происходит прямо сейчас — уходит с каждым вопросом (не сохраняется)
 function officeSnapshot() {
   const L = [`Ты сейчас — голограмма двойника в центре живого 3D-офиса ${BRAND} (hq2.aicex.club): Илья вызвал тебя кнопкой «Голограмма» и говорит с тобой, глядя на офис. Ниже — снимок офиса в эту секунду. Движение агентов в 3D — визуализация их работы; настоящие задачи — рабочий стол и история. Называй агентов по именам — голограмма повернётся к ним и покажет лучом. Отвечай коротко, как живой собеседник.`];
-  L.push(`Время ${hhmm()}, стиль офиса «${night ? 'Ночной Сити' : 'Галерея'}».`);
+  L.push(`Время ${hhmm()}, стиль офиса «${THEMES[STYLE]?.name || 'Волна'}».`);
   if (selectedId && agents.get(selectedId)) { const a = agents.get(selectedId); L.push(`Сейчас выбран на экране: ${a.name} — ${a.activity()}.`); }
   if (!$('team').hidden) L.push('Открыта правая панель задач.');
   if (desk.on) {
@@ -4297,8 +4334,10 @@ function deskOff() {
   if (!$('deskModal').hidden) closeDesk();
   deskRefresh();
 }
+// офис Нейроворонки видит только задачи своей команды: поставленные здесь, из кабинета или отданные её агентам
+const ofOffice = t => !NEURO || ['neuro', 'cabinet'].includes(t.source) || NEURO_IDS.has(t.agent?.id) || NEURO_IDS.has(t.route?.agent);
 function deskSnapshot(list, runner) {
-  desk.tasks = list || []; if (runner) desk.runner = runner;
+  desk.tasks = (list || []).filter(ofOffice); if (runner) desk.runner = runner;
   const first = !desk.on;
   desk.on = OWNER_ON = true;
   if (first) guestModeChanged();
@@ -4307,6 +4346,7 @@ function deskSnapshot(list, runner) {
   if (first && desk.hash) { openDeskTask(desk.hash); desk.hash = ''; }
 }
 function deskUpsert(v) {
+  if (!ofOffice(v)) return;
   const i = desk.tasks.findIndex(t => t.id === v.id), prev = i >= 0 ? desk.tasks[i] : null;
   if (prev && prev.updated > v.updated) return;
   if (i >= 0) desk.tasks[i] = v; else desk.tasks.unshift(v);
@@ -4525,11 +4565,11 @@ const ico = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
 const I = {
   office:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>', assistant:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   twin:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>', routine:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  telegram:'<path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/>', check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
+  telegram:'<path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/>',  cabinet:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>', neuro:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>', check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
   video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>', image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
   page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>', doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>', file:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>',
 };
-const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' };
+const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram', cabinet:'Кабинет Нейроворонки', neuro:'Офис Нейроворонки' };
 function deskSource(t) {
   const k = t.source && DSRC[t.source] ? t.source : t.routine ? 'routine' : t.route?.agent === 'claude-code' ? 'twin' : 'office';
   return { k, icon:I[k], label:k === 'routine' ? `По расписанию · ${hhmm(new Date(t.created))}` : DSRC[k] };
@@ -4620,7 +4660,7 @@ function openDeskNew({ agent = '', text = '' } = {}) {
 // «Кому» и «что будет дальше» — пересобираются при вводе и выборе агента
 function ntRefresh() {
   const pid = $('kPipe')?.value || '', P = desk.pipelines.find(x => x.id === pid);
-  const pipes = desk.pipelines.filter(x => !HEAD() || x.stages.every(st => myAgent(st.agent) || ['transcriber', 'qa'].includes(st.agent)));
+  const pipes = desk.pipelines.filter(x => !NEURO && (!HEAD() || x.stages.every(st => myAgent(st.agent) || ['transcriber', 'qa'].includes(st.agent))));
   if ($('kPipes')) $('kPipes').innerHTML = [{ id:'', label:'Одним агентом', about:HEAD() ? 'диспетчер выберет из ваших агентов' : 'диспетчер выберет, кому отдать' }, ...pipes.map(x => ({ ...x, about:x.stages.map(s => s.name).join(' → ') }))]
     .map(x => `<button type="button" data-pipe="${esc(x.id)}"${x.id === pid ? ' class="on"' : ''}><b>${esc(x.label)}</b><small>${esc(x.about)}</small></button>`).join('');
   for (const el of [$('kWhoH'), $('kWho')]) if (el) el.style.display = P ? 'none' : '';
@@ -4707,7 +4747,7 @@ async function deskSubmit() {
   if (desk.busy) return;
   desk.busy = true; btn.disabled = true; deskNote('Ставлю задачу…');
   const pipeline = $('kPipe')?.value || '';
-  const r = await deskPost('/tasks', { text, agent:pipeline ? '' : $('kAgent').value, pipeline, uploads:desk.uploads.filter(u => u.id).map(u => u.id) });
+  const r = await deskPost('/tasks', { text, agent:pipeline ? '' : $('kAgent').value, pipeline, uploads:desk.uploads.filter(u => u.id).map(u => u.id), ...(NEURO ? { scope:'neuro' } : {}) });
   desk.busy = false; btn.disabled = false;
   if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось поставить задачу — попробуйте ещё раз.', true);
   desk.uploads = [];
@@ -5298,10 +5338,10 @@ function select(id, flyCam = false) {
   agents.forEach(paintLabel);
   renderPanel(); $('pbody').scrollTop = 0;
 }
-function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo', 'admin', 'login', 'newtask'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
+function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo', 'admin', 'neuro', 'login', 'newtask'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`)?.classList.toggle('on', on); }
 function cmd(k) {
-  if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo', 'admin'].includes(k)) stopTour();
+  if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo', 'admin', 'neuro'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
   if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 96, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 50, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
@@ -5318,6 +5358,7 @@ function cmd(k) {
   if (k === 'holo') holoSummon();
   if (k === 'login') openLogin();
   if (k === 'admin') openTeamAdmin();
+  if (k === 'neuro') { if (NEURO) location.href = NEURO.cabinet || 'neuro/'; else setStyle('neuro'); }
 }
 // вход владельца с любого экрана: ассистент открывается сразу с полем пароля
 async function openLogin() {
@@ -5346,6 +5387,8 @@ function appShell() {
     : lock ? 'Войти' : `${TASKS.length} ${word(TASKS.length, 'задача', 'задачи', 'задач')}`;
   $('dLogin').hidden = !lock;
   $('dAdmin').hidden = role() !== 'owner';
+  // главный офис: «Нейроворонка» — перейти в офис кампании (видно всем); офис Нейроворонки: «Кабинет» — цифры кампании (владельцу)
+  $('dNeuro').hidden = NEURO ? role() !== 'owner' : false;
 }
 function mOpen(k) {
   $('msheet').hidden = true;
@@ -5365,7 +5408,7 @@ function moreSheet() {
     ['tour', 'Экскурсия', '<path d="m8 5 11 7-11 7z"/>'], ['holo', 'Голограмма', '<ellipse cx="12" cy="20" rx="6" ry="1.6"/><circle cx="12" cy="8" r="4"/>'], ['labels', 'Подписи', '<path d="M4 6h16M4 12h10M4 18h7"/>']];
   $('msh').innerHTML = `<i class="grip"></i><h3>Вид офиса</h3><div class="row">${views.map(([k, l, p]) => `<button data-mc="${k}"${k === 'labels' && labelsOn ? ' class="on"' : ''}>${ic(p)}${l}</button>`).join('')}</div>
     <h3>Оформление</h3><div class="row">${Object.entries(THEMES).map(([id, T]) => `<button data-th="${id}"${id === STYLE ? ' class="on"' : ''}><span class="sw">${T.sw.map(c => `<i style="--c:${c}"></i>`).join('')}</span>${esc(T.name)}</button>`).join('')}</div>
-    ${role() === 'owner' ? `<h3>Админка</h3><div class="row"><button data-mc="admin">${ic('<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}Админ-панель</button></div>` : ''}
+    ${role() === 'owner' ? `<h3>Админка</h3><div class="row"><button data-mc="admin">${ic('<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}Админ-панель</button>${NEURO ? `<button data-mc="neuro">${ic('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>')}Кабинет кампании</button>` : ''}</div>` : ''}
     <h3>Аккаунт</h3><div class="acct">${s?.owner ? `<span>Вы вошли как владелец</span><button class="btn-go" data-mc="logout">Выйти</button>`
       : s?.configured?.login ? `<span>Войдите, чтобы ставить задачи и видеть, что в работе</span><button class="btn-go" data-mc="login">Войти</button>` : '<span>Демо для гостей</span>'}</div>`;
   $('msheet').hidden = false;
@@ -5602,7 +5645,9 @@ renderer.setAnimationLoop(() => {
 const hideLoader = () => requestAnimationFrame(() => setTimeout(() => { $('loader').classList.add('done'); setTimeout(() => $('loader').remove(), 700); }, 300));
 if (!night) hideLoader();
 else import('./night.js').then(m => m.createNightOffice({
-  stage:$('nstage'), labels:$('nlabels'), agents, owner:DEPTS[0].head, brand:BRAND, mobile:isMobile, reduceMotion,
+  stage:$('nstage'), labels:$('nlabels'), agents, owner:DEPTS[0].head, brand:NEURO ? 'НЕЙРОВОРОНКА' : BRAND, mobile:isMobile, reduceMotion,
+  // офис Нейроворонки: то же здание, комнаты — под контуры кампании, своя палитра и вывеска
+  ...(NEURO ? { rooms:NEURO.rooms, motto:NEURO.motto, palette:NEURO_PALETTE } : {}),
   statusColor:s => (ST[s] || ST.idle).c,
   ownerLabel:() => pods[0].deskLabel.innerHTML,
   board:nightBoard,
@@ -5617,6 +5662,11 @@ else import('./night.js').then(m => m.createNightOffice({
   console.error(err);
   night = false; document.body.classList.remove('night'); hideLoader();
 });
+// палитра здания офиса Нейроворонки (поля T в night.js): мята и холодный свет вместо янтаря главного офиса
+const NEURO_PALETTE = { sky:['#03101a', '#0b2a2c'], win:['#7affd0', '#c9ffe9'], bld:'#06121a', fog:['#06131a', .007],
+  base:'#0f1a17', edge:'#3ff0b0', floor:'#1d2c29', roomFloor:'#24433b', hubFloor:'#1f3631', rug:'#3ff0b0',
+  glass:['#a8ffe6', .1], frame:'#14211e', trim:['#3ff0b0', 2.2], outer:'#0c1513', strip:'#9effd8',
+  desk:'#4a6b62', lamp:['#a6ffe2', 14], sign:'#eafff7', accent:'#3ff0b0' };
 // доска в операционном зале ночного офиса: ваши задачи с рабочего стола и реальная история
 function nightBoard() {
   const who = t => agents.get(t.agent?.id)?.name || t.agent?.name || '';

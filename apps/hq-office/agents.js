@@ -6,7 +6,7 @@
 
    Новый агент = запись здесь + досье в agent-content.js (AGENT_CONTENT: что умеет, процесс, скиллы, примеры задач).
    Порядок внутри отдела — порядок мест в комнате. Поля:
-     dept      ceo | marketing | sales | traffic | council (переговорная легенд)
+     dept      ceo | marketing | sales | traffic | council (переговорная легенд) | neuro (офис Нейроворонки, поле contour — контур)
      screen    что на мониторе в 3D: code | chart | doc | media | flow | chat | ads | calendar | …
      status    working | thinking | idle — состояние в карточке;  now — «сейчас делает» в карточке (иначе tasks[0])
      tasks     чем агент занят в 3D (по кругу);  out — кому и что он носит: o(кому, что сделал, предмет[, вопрос вам])
@@ -264,6 +264,172 @@
         o('analytics', 'передал цену лида', 'Цена лида')],
       works:[['Сквозная аналитика', ART('UzeN9sagWbM8We1yTWTmGf')]] },
 
+    // Офис Нейроворонки (третий стиль офиса, ?theme=neuro; кабинет — neuro/): своя команда под план проекта «Нейроворонка — план
+    // реализации» (assistant/neuro-plan.md, на сайт не выкладывается): 7 блоков системы, 9 добавленных элементов, продукт и обязательства. Шесть контуров (contour), комнаты
+    // здания (night) — те же, что в «Главном офисе», переименованы (office.config.js → neuro.rooms). dept:'neuro' — в главном офисе их нет.
+    // base — наставники в главном офисе: от них агент наследует скиллы и знания (agent-content.js, каталог диспетчера).
+    // Штаб и запуск
+    shtab: { dept:'neuro', contour:'hq', base:["analytics", "briefing"], name:'Штаб и оператор воронки', role:'Ведёт воронку каждый день: экран дня, находки → задачи, сроки', color:'#7cf0c0', screen:'chart', night:'ceo', status:'thinking',
+      tasks:["Собирает экран дня кампании", "Ищет самый слабый этап воронки", "Раздаёт находки контурам"],
+      out:[
+        o('you', 'положил экран дня', 'Экран дня', 'Посмотрите экран дня Нейроворонки'),
+        o('nfanalyst', 'попросил цифры этапов', 'Запрос цифр'),
+        o('nfroadmap', 'сверил сроки с дорожной картой', 'Сроки')],
+      works:[['Кабинет Нейроворонки', 'https://hq2.aicex.club/neuro/']] },
+    nfroadmap: { dept:'neuro', contour:'hq', base:["specs", "launch"], name:'Дорожная карта запуска', role:'8 недель до отлаженной системы: блоки, сроки, тестовая неделя', color:'#ffd166', screen:'calendar', night:'ceo', status:'working',
+      tasks:["Сверяет готовность блоков", "Тестовая неделя: покупка и выдача доступа", "Чек-лист старта продаж 10 ноября"],
+      out:[
+        o('you', 'собрал статус блоков', 'Статус блоков', 'Посмотрите, что мешает старту продаж'),
+        o('shtab', 'передал сроки блоков', 'Сроки')] },
+    nfqa: { dept:'neuro', contour:'hq', base:["qa"], name:'Контроль качества кампании', role:'Чек-лист и утверждение сценариев и роликов до публикации', color:'#9be15d', screen:'doc', night:'ceo', status:'working',
+      tasks:["Проверяет сценарий по чек-листу", "Смотрит ролик до публикации", "Маркировка ИИ на месте?"],
+      out:[
+        o('nfscripts', 'вернул сценарий с замечаниями', 'Замечания'),
+        o('you', 'подготовил ролики на утверждение', 'Ролики на утверждение', 'Утвердите ролики недели')] },
+    nflegal: { dept:'neuro', contour:'hq', base:["specs"], name:'Оферта и юридический контур', role:'Оферта, 152-ФЗ, маркировка ИИ и рекламы', color:'#c7a4ff', screen:'doc', night:'ceo', status:'working',
+      tasks:["Пишет оферту с графиком уроков", "Согласие на обработку данных в боте", "Маркировка ИИ-контента"],
+      out:[
+        o('nflanding', 'передал оферту для лендинга', 'Оферта'),
+        o('nfbot', 'отдал текст согласия для бота', 'Согласие 152-ФЗ'),
+        o('you', 'собрал оферту', 'Оферта', 'Утвердите оферту')] },
+    nfliaison: { dept:'neuro', contour:'hq', base:["briefing"], name:'Связь с главным офисом', role:'Отчёт главному офису и запросы ресурсов у его отделов', color:'#ffd166', screen:'doc', night:'tech', status:'working',
+      tasks:["Отчёт недели главному офису", "Запрос монтажа у контент-студии", "Решения главного офиса — Штабу"],
+      out:[
+        o('you', 'положил отчёт для главного офиса', 'Отчёт главному офису', 'Прочитайте отчёт недели Нейроворонки'),
+        o('shtab', 'передал решения главного офиса', 'Решения')] },
+    // Стратегия и база знаний
+    nfkb: { dept:'neuro', contour:'strategy', base:["audience", "market"], name:'База знаний', role:'Карты смыслов ЦА: боли, желания, триггеры, возражения, хуки', color:'#5ad1ff', screen:'doc', night:'meet', status:'working',
+      tasks:["Собирает карту смыслов ЦА", "Библиотека хуков, приводящих кодовые слова", "Обновляет базу по цифрам недели"],
+      out:[
+        o('nfscripts', 'передал карту смыслов', 'Карта смыслов'),
+        o('nfresearch', 'отдал библиотеку хуков', 'Хуки'),
+        o('nfmethod', 'передал смыслы для уроков', 'Смыслы ЦА')] },
+    nfoffer: { dept:'neuro', contour:'strategy', base:["market", "funnels"], name:'Оффер, цена и тарифы', role:'Оффер, тарифы (уроки / уроки + поддержка), лестница в Мастер-группу', color:'#ff9f43', screen:'doc', night:'meet', status:'thinking',
+      tasks:["Утверждает оффер и цену", "Тарифы: уроки / уроки + поддержка", "Лестница до Мастер-группы"],
+      out:[
+        o('nflanding', 'передал оффер и тарифы', 'Оффер'),
+        o('nfupsell', 'отдал лестницу продуктов', 'Лестница'),
+        o('you', 'собрал оффер и тарифы', 'Оффер и тарифы', 'Утвердите оффер, цену и тарифы')] },
+    brandkeeper: { dept:'neuro', contour:'strategy', base:["audience"], name:'Хранитель бренда', role:'Голос бренда и маркировка ИИ — сверяет с ними весь контент', color:'#d9b8ff', screen:'doc', night:'meet', status:'working',
+      tasks:["Бренд-книга Нейроворонки", "Сверяет сценарий с голосом", "Живые вставки Ильи в VSL"],
+      out:[
+        o('nfscripts', 'вернул правки по голосу', 'Правки'),
+        o('nflanding', 'передал формулировки оффера', 'Формулировки')] },
+    nfvoice: { dept:'neuro', contour:'strategy', base:["chats", "audience"], name:'Голос клиента', role:'Боли, возражения и слова клиентов из переписок и бота', color:'#c38bff', screen:'chat', night:'meet', status:'working',
+      tasks:["Разбирает переписки и бота", "Топ возражений", "Слова клиентов для хуков"],
+      out:[
+        o('nffollow', 'отдал ответы на возражения для дожима', 'Возражения'),
+        o('nfkb', 'передал слова клиентов в базу', 'Слова клиентов')] },
+    cases: { dept:'neuro', contour:'strategy', base:["scripts"], name:'Кейсы', role:'Кейсы «было — стало» — главный довод, и кейс самой воронки', color:'#ffcf6e', screen:'doc', night:'meet', status:'working',
+      tasks:["Кейс самой воронки: кодовое слово → оплата", "Кейсы учеников после потока", "Отзывы для дожима"],
+      out:[
+        o('nffollow', 'передал кейсы для дожима', 'Кейсы'),
+        o('nfscripts', 'отдал кейс для рилса', 'Кейс')] },
+    // Контент-завод
+    nfresearch: { dept:'neuro', contour:'content', base:["viral", "audience", "transcriber"], name:'Ресёрч трендов и конкурентов', role:'Тренды, залёты конкурентов и идеи для рилсов', color:'#ff8a3d', screen:'chart', night:'marketing', status:'working',
+      tasks:["Ищет залёты в нише", "Расшифровывает референсы", "Идеи недели под кодовые слова"],
+      out:[
+        o('nfscripts', 'передал идеи недели', 'Идеи'),
+        o('nfkb', 'отдал рабочие хуки', 'Хуки')] },
+    nfscripts: { dept:'neuro', contour:'content', base:["scripts", "remake"], name:'Сценарии рилсов и каруселей', role:'Сценарии под ЦА, текст для аватара, подписи с кодовым словом', color:'#ff5d8f', screen:'doc', night:'marketing', status:'working',
+      tasks:["Неделя сценариев за один цикл", "Текст для аватара", "Подписи с кодовым словом"],
+      out:[
+        o('nfavatar', 'передал текст для аватара', 'Текст'),
+        o('nfcarousel', 'отдал текст карусели', 'Карусель'),
+        o('nfqa', 'отдал на проверку', 'Сценарии')] },
+    nfpublish: { dept:'neuro', contour:'content', base:["publish", "threads"], name:'Публикации и метки', role:'Контент-план, выход по дням, метка nf-… и кодовое слово на каждой единице', color:'#ffd166', screen:'calendar', night:'marketing', status:'working',
+      tasks:["Контент-план на неделю", "Метки nf-… до выхода", "Маркировка ИИ в подписи"],
+      out:[
+        o('nftracking', 'передал метки публикаций', 'Метки'),
+        o('nfwords', 'отдал кодовые слова недели', 'Кодовые слова')] },
+    nfavatar: { dept:'neuro', contour:'content', base:["avatar"], name:'Аватар HeyGen', role:'Лицо и голос Ильи: ролики двойником, живые вставки', color:'#e0559c', screen:'video', night:'studio', status:'working',
+      tasks:["Ролик двойником по тексту", "Голос-клон", "Где нужна живая вставка"],
+      out:[
+        o('nfvideo', 'передал ролик аватара в монтаж', 'Ролик аватара')] },
+    nfvideo: { dept:'neuro', contour:'content', base:["montage", "remake"], name:'Монтаж рилсов и VSL', role:'Монтаж рилсов и VSL скиллами монтажа', color:'#ff9f43', screen:'timeline', night:'studio', status:'working',
+      tasks:["Монтаж рилсов недели", "Монтаж VSL", "Субтитры и обложки"],
+      out:[
+        o('nfqa', 'сдал ролики на проверку', 'Ролики'),
+        o('nfbot', 'отдал готовый VSL', 'VSL')] },
+    nfcarousel: { dept:'neuro', contour:'content', base:["carousel"], name:'Карусели', role:'Карусели Instagram с кодовым словом', color:'#ffe08a', screen:'slides', night:'studio', status:'working',
+      tasks:["Карусели недели", "Карусель по кейсу", "Обложки 4:5"],
+      out:[
+        o('nfqa', 'сдал карусели на проверку', 'Карусели')] },
+    // Воронка и продажи
+    nfwords: { dept:'neuro', contour:'funnels', base:["comments", "chats"], name:'Кодовые слова и автоответы', role:'Кодовые слова и автоответы в Директ только на API Meta', color:'#ffd166', screen:'chat', night:'sales', status:'working',
+      tasks:["Подбирает кодовые слова под темы", "Автоответ за минуту", "Проверка: только официальный API"],
+      out:[
+        o('nfbot', 'передал переходы в бота', 'Переходы'),
+        o('nftracking', 'отдал метки слов', 'Метки слов')] },
+    nfbot: { dept:'neuro', contour:'funnels', base:["funnels", "chats"], name:'Бот и VSL', role:'Telegram-бот: старт, VSL, путь до ссылки на оплату', color:'#3ddc97', screen:'flow', night:'sales', status:'working',
+      tasks:["Сценарий VSL", "Цепочка сообщений бота", "Путь до оплаты без команды"],
+      out:[
+        o('nfvideo', 'передал сценарий VSL в монтаж', 'Сценарий VSL'),
+        o('nffollow', 'отдал события бота', 'События')] },
+    nffollow: { dept:'neuro', contour:'funnels', base:["mailings", "closer"], name:'Дожим и сегменты', role:'Дожим 3–7 дней и теги по шагам в боте', color:'#5ad1ff', screen:'chat', night:'sales', status:'working',
+      tasks:["Дожим 3–7 дней", "Теги: пришёл, досмотрел, кликнул, купил", "Сообщение каждому сегменту"],
+      out:[
+        o('nftracking', 'передал теги сегментов', 'Теги'),
+        o('head', 'показал серию дожима', 'Серия дожима')] },
+    nflanding: { dept:'neuro', contour:'funnels', base:["landings", "leadmagnet"], name:'Лендинг', role:'Лендинг: структура, тексты, дизайн, отзывы, FAQ', color:'#6366f1', screen:'code', night:'sales', status:'working',
+      tasks:["Лендинг уроков", "Блоки отзывов и FAQ", "Utm-метки на кнопках"],
+      out:[
+        o('nfpay', 'подключил оплату на лендинг', 'Кнопки оплаты')] },
+    nfpay: { dept:'neuro', contour:'funnels', base:["product"], name:'Оплата и доступ', role:'Две платёжки, чеки 54-ФЗ, автовыдача доступа', color:'#4fd18b', screen:'code', night:'tech', status:'working',
+      tasks:["Российская платёжка с чеками 54-ФЗ", "Зарубежная платёжка", "Автовыдача доступа после оплаты"],
+      out:[
+        o('nfplatform', 'передал оплаты для выдачи доступа', 'Оплаты'),
+        o('nftracking', 'отдал события оплат', 'Оплаты')] },
+    // Продукт и ученики
+    nfmethod: { dept:'neuro', contour:'product', base:["academy", "specs"], name:'Методист уроков', role:'Программа 8 уроков, сценарии уроков, шаблоны и скиллы для учеников', color:'#6ee7ff', screen:'doc', night:'analytics', status:'working',
+      tasks:["Сценарий урока", "Шаблоны и бонусы", "График выхода уроков"],
+      out:[
+        o('nfslides', 'передал структуру урока', 'Структура урока'),
+        o('nflessons', 'отдал сценарий урока на запись', 'Сценарий урока')] },
+    nfslides: { dept:'neuro', contour:'product', base:["slides"], name:'Презентации уроков', role:'Слайды уроков и эфиров', color:'#4da3ff', screen:'slides', night:'analytics', status:'working',
+      tasks:["Слайды урока", "Слайды эфира", "Шаблоны в стиле курса"],
+      out:[
+        o('nflessons', 'передал слайды на запись', 'Слайды')] },
+    nflessons: { dept:'neuro', contour:'product', base:["avatar", "montage"], name:'Запись уроков', role:'Запись уроков аватаром или живым Ильёй, монтаж', color:'#e0559c', screen:'video', night:'analytics', status:'working',
+      tasks:["Урок аватаром по сценарию", "Живые вставки Ильи", "Монтаж урока"],
+      out:[
+        o('nfplatform', 'загрузил урок на платформу', 'Урок')] },
+    nfplatform: { dept:'neuro', contour:'product', base:["product", "academy"], name:'Платформа уроков', role:'Где живут уроки, доступ по расписанию', color:'#38c3d6', screen:'code', night:'tech', status:'working',
+      tasks:["Выбор платформы: канал/бот или GetCourse", "Открытие уроков по расписанию", "Доступ после оплаты"],
+      out:[
+        o('nfprogress', 'передал данные прохождения', 'Прохождение')] },
+    nfprogress: { dept:'neuro', contour:'product', base:["academy", "analytics"], name:'Успеваемость учеников', role:'Прохождение уроков, домашки, кто отстаёт', color:'#9be15d', screen:'chart', night:'analytics', status:'working',
+      tasks:["Кто прошёл урок", "Кто отстаёт — напомнить", "Отчёт успеваемости потока"],
+      out:[
+        o('nfsupport', 'передал, кому нужна помощь', 'Отстающие'),
+        o('cases', 'отдал лучших учеников для кейсов', 'Кандидаты в кейсы')] },
+    nfsupport: { dept:'neuro', contour:'product', base:["consult", "chats"], name:'Поддержка учеников', role:'Ответ по оплате и доступу в течение рабочего дня', color:'#c38bff', screen:'chat', night:'analytics', status:'idle', needsInput:true,
+      tasks:["Вопросы по доступу и оплате", "База ответов", "Сбор обратной связи"],
+      out:[
+        o('nfprogress', 'передал обратную связь', 'Обратная связь')] },
+    nfupsell: { dept:'neuro', contour:'product', base:["closer", "launch"], name:'Апсейл в Мастер-группу', role:'Переход из уроков в старший продукт', color:'#ff5d6c', screen:'chat', night:'analytics', status:'working',
+      tasks:["Переход в конце курса", "Предложение в боте", "Кандидаты из лучших учеников"],
+      out:[
+        o('head', 'передал заявки в Мастер-группу', 'Заявки')] },
+    // Метрики и аналитика
+    nfanalyst: { dept:'neuro', contour:'analytics', base:["analytics", "socialstats"], name:'Метрики воронки', role:'Конверсия каждого этапа и формула выручки', color:'#5ad1ff', screen:'chart', night:'ads', status:'working',
+      tasks:["Сводка по этапам за неделю", "Самый слабый этап", "Гипотезы на улучшение"],
+      out:[
+        o('shtab', 'передал цифры этапов', 'Цифры'),
+        o('nfkb', 'вернул выводы недели в базу знаний', 'Выводы')] },
+    nftracking: { dept:'neuro', contour:'analytics', base:["analytics", "adreports"], name:'Сквозная аналитика и метки', role:'Метка на каждое кодовое слово и событие в боте → доход по слову', color:'#7ee0b5', screen:'chart', night:'ads', status:'working',
+      tasks:["Метки слов и рилсов", "События бота в кабинет", "Доход по каждому кодовому слову"],
+      out:[
+        o('nfanalyst', 'передал доход по словам', 'Доход по словам')] },
+    nfeconomics: { dept:'neuro', contour:'analytics', base:["finance", "billing"], name:'Экономика и инструменты', role:'Окупаемость воронки и стоимость инструментов', color:'#4fd18b', screen:'chart', night:'ads', status:'working',
+      tasks:["Стоимость инструментов", "Окупаемость воронки", "Выручка на поток"],
+      out:[
+        o('you', 'собрал экономику воронки', 'Экономика', 'Посмотрите окупаемость Нейроворонки')] },
+    nfads: { dept:'neuro', contour:'analytics', base:["metaads", "creatives", "adreports"], name:'Платный трафик', role:'Реклама Meta на рилсы и бота, если пойдёт платный трафик', color:'#ffb08a', screen:'ads', night:'ads', status:'working',
+      tasks:["Тест связок", "Креативы из рилсов-победителей", "Маркировка рекламы"],
+      out:[
+        o('nftracking', 'передал расход и подписки', 'Расход')] },
+
     // Переговорная легенд
     hormozi: { dept:'council', name:'Алекс Хормози', role:'Оффер и ценность', color:'#ffd479', screen:'doc', night:'meet', status:'working',
       tasks:['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
@@ -313,6 +479,8 @@
     ids,
     // агенты отдела в порядке мест
     of:dept => ids.filter(id => list[id].dept === dept && list[id].figure !== false),
+    // офис Нейроворонки: агенты контура
+    ofContour:c => ids.filter(id => list[id].dept === 'neuro' && list[id].contour === c && list[id].figure !== false),
     // изменения из админ-панели владельца (сервер: DATA_DIR/office-patch.json → /api/assistant/office/patch.js, сразу после
     // этого файла; тот же патч накладывает assistant/office.mjs для диспетчера). Новые агенты — added; правки имени, роли,
     // цвета, отдела — agents; «в отпуске» (vacation) и удалённые (removed) уходят из офиса и каталога диспетчера, но остаются

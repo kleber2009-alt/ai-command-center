@@ -1,4 +1,5 @@
-/* Ночной офис — второй стиль hq2.aicex.club («Ночной Сити», концепт ?v=1 из concepts/).
+/* Главный офис (бывший «Ночной Сити») — второй стиль hq2.aicex.club (концепт ?v=1 из concepts/). Та же сцена — у третьего
+   стиля, «Офис Нейроворонки» (o.rooms, o.palette, o.motto: комнаты под контуры кампании, мятная палитра).
    Своя сцена: изометрическое здание с комнатами отделов, коридорами, ночным городом и тёплым светом.
    Своей симуляции нет: это вид на ту же команду, что в основном офисе (index.html). Каждый агент
    здесь повторяет, куда идёт его двойник в основной симуляции: к столу, к коллеге с материалом,
@@ -93,6 +94,13 @@ function rr(x, X, Y, W, H, R) { x.beginPath(); x.roundRect(X, Y, W, H, R); x.fil
         onPick(id | 'you' | null) } */
 export async function createNightOffice(o) {
   await document.fonts?.ready;
+  // офис Нейроворонки (index.html → NEURO): то же здание, своя палитра, комнаты переименованы под контуры кампании
+  if (o.palette) Object.assign(T, o.palette);
+  if (o.rooms) {
+    for (const [id, p] of Object.entries(o.rooms)) if (RM[id]) Object.assign(RM[id], p);
+    for (const k of Object.keys(DEPT_ROOM)) delete DEPT_ROOM[k];
+    for (const r of ROOMS) if (r.dept) DEPT_ROOM[r.dept] = r.id;
+  }
   const MATS = new Map(), GEO = {};
   function M(color, p = {}) {
     const key = color + JSON.stringify(p);
@@ -247,7 +255,7 @@ export async function createNightOffice(o) {
       map:textTex(o.brand || 'AICEX', T.sign, `800 120px ${FONT}`), transparent:true, toneMapped:false }));
     s1.material.color.setScalar(1.6); s1.position.set(15, 2.75, -D / 2 + .02); root.add(s1);
     const s2 = new THREE.Mesh(new THREE.PlaneGeometry(10, .6), new THREE.MeshBasicMaterial({
-      map:textTex('CREATE · AUTOMATE · SCALE', T.sign, `700 64px ${FONT}`, 1024, 64), transparent:true, toneMapped:false }));
+      map:textTex(o.motto || 'CREATE · AUTOMATE · SCALE', T.sign, `700 64px ${FONT}`, 1024, 64), transparent:true, toneMapped:false }));
     s2.material.color.setScalar(1.4); s2.position.set(-16.5, 2.85, -D / 2 + .02); root.add(s2);
     // живая изгородь спереди
     const hedge = M(T.leaf, { rough:.95 });

@@ -18,6 +18,7 @@
    twin:true (owner) — the «Двойник» page (twin/): the twin's prompt and knowledge of Ilia's content
    (twin.mjs); image — a JPEG frame of the owner's camera (data URL), seen in this turn only.
      *    desk/…  the working desk: tasks for agents (desk.mjs)
+     *    cabinet/…  the test cabinet of one product, «Нейроворонка» (cabinet.mjs, hq2.aicex.club/neuro/)
 
    Env: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY, HQ_ASSISTANT_PASSWORD (no password — demo only),
    ELEVENLABS_VOICE_ID (optional), HQ_DESK_RUNNER_TOKEN (the runner of the desk),
@@ -41,6 +42,7 @@ import { initAdmin } from './admin.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
 import { startTelegram } from './tg.mjs';
+import { initCabinet } from './cabinet.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -97,6 +99,18 @@ const settings = load('settings.json', {});                  // { voiceId, voice
 const guests = new Map();                                     // guest id → { turns, at } (memory only)
 const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), heads:() => team.list(), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR,
   officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '', linkKey:crypto.createHmac('sha256', SECRET).update('desk-links').digest('hex') });
+// the test cabinet «Нейроворонка»: escalations go to the owner's Telegram through the notify bot (as the morning reports)
+const notifyTg = async text => {
+  const tok = process.env.HQ_NOTIFY_TG_TOKEN || process.env.HQ_TG_BOT_TOKEN || '', chat = process.env.HQ_NOTIFY_TG_CHAT || String(process.env.HQ_TG_OWNER_IDS || '').split(/[\s,;]+/)[0] || '';
+  if (!tok || !chat) return;
+  await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, { method:'POST', headers:{ 'content-type':'application/json' }, signal:AbortSignal.timeout(15e3),
+    body:JSON.stringify({ chat_id:chat, text, disable_web_page_preview:true }) });
+};
+const cabinet = initCabinet({ dataDir:DATA_DIR, desk, notify:notifyTg, agents:() => Object.fromEntries(desk.agents().map(a => [a.id, a])),
+  // the office «Нейроворонка»: the plan of the project (neuro-plan.md, next to the server, not on the site) and the knowledge of the main office
+  plan:() => { try { return fs.readFileSync(path.join(HERE, 'neuro-plan.md'), 'utf8'); } catch { return ''; } },
+  office:() => [`# Знания главного офиса AICEX (${SITE})`, loadOffice(OFFICE_DIR).text, PROJECT_MAP ? '\n# Карта проектов монорепозитория\n' + loadProjectMap(PROJECT_MAP) : ''].join('\n') });
+desk.setContext(() => cabinet.contextFiles());
 
 /* ---------- auth and limits ---------- */
 
@@ -550,7 +564,8 @@ http.createServer(async (req, res) => {
     bot.sendFiles(sf[1]).catch(e => console.error('send-files:', e.message));
     return json(res, 202, { ok:true });
   }
-  const route = rest.startsWith('desk/') ? rq => desk.handle(rq, res, rest.slice(5), whoOf(rq)) : ROUTES[`${req.method} ${rest}`];
+  const route = rest.startsWith('desk/') ? rq => desk.handle(rq, res, rest.slice(5), whoOf(rq))
+    : rest.startsWith('cabinet/') ? rq => cabinet.handle(rq, res, rest.slice(8), whoOf(rq)) : ROUTES[`${req.method} ${rest}`];
   if (!route) return json(res, 404, { error:'not found' });
   try { await route(req, res, isOwner(req)); }
   catch (e) {
