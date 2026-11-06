@@ -59,7 +59,7 @@ QA_TOOLS = ["Bash", "Read", "Glob", "Grep", "WebFetch"]
 DENIED_TOOLS = ["Bash(sudo:*)", "Bash(su:*)", "Bash(ssh:*)", "Bash(scp:*)", "Bash(sftp:*)", "Bash(rsync:*)", "Bash(git push:*)",
                 "Bash(docker:*)", "Bash(systemctl:*)", "Bash(crontab:*)", "Bash(pkill:*)", "Bash(killall:*)", "Bash(shutdown:*)", "Bash(reboot:*)",
                 "Read(~/.ssh/**)", "Read(~/hq-runner/*.env)", "Read(~/hq-runner/mcp*.json)", "Read(~/.claude/.credentials.json)", "Read(**/.env)"]
-VERSION = "10"
+VERSION = "11"
 WORKERS = max(1, int(os.environ.get("HQ_RUNNER_WORKERS", "2") or 2))
 # окружение для Claude Code и скриптов: без токена офиса (им нельзя сдавать задачи от имени исполнителя)
 CHILD_ENV = {k: v for k, v in os.environ.items() if k not in ("HQ_DESK_RUNNER_TOKEN",)}
@@ -805,6 +805,32 @@ def main():
         w.join()
 
 
+KEYS_FILE = Path(os.path.expanduser(os.environ.get("HQ_KEYS_FILE") or str(HOME / "hq-runner/keys.env")))
+KEYS_LOCK = threading.Lock()
+
+
+def update_keys(keys):
+    """Токены Instagram/Threads, которые офис продлевает сам (assistant/tokens.mjs), — в keys.env для скриптов аналитики."""
+    if not isinstance(keys, dict) or not keys:
+        return
+    with KEYS_LOCK:
+        try:
+            lines = KEYS_FILE.read_text().splitlines() if KEYS_FILE.exists() else []
+            have = {l.split("=", 1)[0]: l.split("=", 1)[1] for l in lines if "=" in l}
+            new = {k: str(v).strip() for k, v in keys.items() if re.fullmatch(r"[A-Z0-9_]{2,40}", str(k)) and v and "\n" not in str(v)}
+            if all(have.get(k) == v for k, v in new.items()):
+                return
+            out = [l for l in lines if l.split("=", 1)[0] not in new] + [f"{k}={v}" for k, v in new.items()]
+            KEYS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            tmp = KEYS_FILE.with_suffix(".tmp")
+            tmp.write_text("\n".join(out) + "\n")
+            os.chmod(tmp, 0o600)
+            tmp.replace(KEYS_FILE)
+            log("keys:", ", ".join(sorted(new)), "обновлены")
+        except Exception as e:
+            log("keys:", e)
+
+
 def purge(ids):
     """Папки задач, закрытых давно: офис хранит их результат сам, исполнителю они больше не нужны."""
     for jid in ids or []:
@@ -832,6 +858,7 @@ def worker(i):
             continue
         if job:
             purge(job.get("purge"))
+            update_keys(job.get("keys"))
         if status == 204 or not job or job.get("idle"):
             time.sleep(5 if not light else 3)
             continue

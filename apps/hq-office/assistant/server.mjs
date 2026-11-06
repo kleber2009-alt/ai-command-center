@@ -43,6 +43,8 @@ import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } fro
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
 import { startTelegram } from './tg.mjs';
 import { initCabinet } from './cabinet.mjs';
+import { createTokens } from './tokens.mjs';
+import { useTokens } from './publish.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -111,6 +113,12 @@ const cabinet = initCabinet({ dataDir:DATA_DIR, desk, notify:notifyTg, agents:()
   plan:() => { try { return fs.readFileSync(path.join(HERE, 'neuro-plan.md'), 'utf8'); } catch { return ''; } },
   office:() => [`# Знания главного офиса AICEX (${SITE})`, loadOffice(OFFICE_DIR).text, PROJECT_MAP ? '\n# Карта проектов монорепозитория\n' + loadProjectMap(PROJECT_MAP) : ''].join('\n') });
 desk.setContext(() => cabinet.contextFiles());
+// Instagram and Threads tokens: refreshed every week by the office itself (tokens.mjs), problems — to the owner's Telegram
+const tokens = createTokens({ dataDir:DATA_DIR, notify:notifyTg });
+useTokens(tokens);
+desk.setRunnerKeys(() => tokens.runnerKeys());
+setTimeout(() => tokens.tick().catch(e => console.error('tokens:', e.message)), 60e3).unref();
+setInterval(() => tokens.tick().catch(e => console.error('tokens:', e.message)), 6 * 3600e3).unref();
 
 /* ---------- auth and limits ---------- */
 

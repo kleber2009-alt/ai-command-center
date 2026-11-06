@@ -12,10 +12,13 @@ const VER = () => env('HQ_IG_GRAPH_VERSION', 'v23.0');
 export const IMG = /\.(jpe?g|png|webp)$/i, JPG = /\.jpe?g$/i, VID = /\.(mp4|mov|m4v)$/i;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// tokens.mjs keeps the refreshed tokens; without it — the secrets as they are
+let source = null;
+export const useTokens = t => { source = t; };
 export function keys() {
   return {
-    ig:env('HQ_IG_ACCESS_TOKEN') || env('IG_ACCESS_TOKEN'), igUser:env('HQ_IG_USER_ID') || env('IG_USER_ID'),
-    threads:env('HQ_THREADS_ACCESS_TOKEN') || env('THREADS_ACCESS_TOKEN'),
+    ig:source?.get('ig') || env('HQ_IG_ACCESS_TOKEN') || env('IG_ACCESS_TOKEN'), igUser:env('HQ_IG_USER_ID') || env('IG_USER_ID'),
+    threads:source?.get('threads') || env('HQ_THREADS_ACCESS_TOKEN') || env('THREADS_ACCESS_TOKEN'),
   };
 }
 
