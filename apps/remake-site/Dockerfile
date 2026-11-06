@@ -15,6 +15,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY server.mjs studio.mjs reels-bot.mjs carousel-bot.mjs tg-branch.mjs scout.mjs ./
 COPY skill ./skill
 COPY carousel-skill ./carousel-skill
+COPY competitors ./competitors
 ENV NODE_ENV=production PORT=8790 DATA_DIR=/data SKILL_DIR=/app/skill CAROUSEL_SKILL_DIR=/app/carousel-skill CHROMIUM_BIN=/usr/bin/chromium-browser
 USER node
 EXPOSE 8790

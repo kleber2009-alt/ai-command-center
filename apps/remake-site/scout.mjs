@@ -242,6 +242,21 @@ export function library(dir) {
 
 export const kindRu = (k) => KIND[k] || k;
 
+/* ---------- 8. the shared list of competitors (.claude/skills/competitors/competitors.json) ----------
+   One list for every content project; in the image it is competitors.json next to the code (deploy/build.sh). */
+export function sharedCompetitors(dirs = [process.env.COMPETITORS_FILE ? path.dirname(process.env.COMPETITORS_FILE) : '',
+  path.join(path.dirname(new URL(import.meta.url).pathname), 'competitors'),
+  path.join(path.dirname(new URL(import.meta.url).pathname), '../../.claude/skills/competitors')]) {
+  for (const d of dirs.filter(Boolean)) {
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(d, 'competitors.json'), 'utf8'));
+      const nicks = (j.accounts || []).map((a) => String(a.nick || '').replace(/^@/, '').toLowerCase()).filter((x) => /^[a-z0-9._]{1,30}$/.test(x));
+      return { checked: j.checked || '', nicks, accounts: j.accounts || [] };
+    } catch {}
+  }
+  return { checked: '', nicks: [], accounts: [] };
+}
+
 /* ---------- 7. own posts: real numbers from the Instagram Graph API ----------
    The public scraper shows no reposts (and no carousel views); the owner's token does. IG_ACCESS_TOKEN — an Instagram
    token (IG…, graph.instagram.com, «me») or a Facebook one with IG_USER_ID. → Map shortcode → { views, shares, comments, likes }:

@@ -697,7 +697,34 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   function queue(t, pending) {
     t.status = 'queued'; t.pending = pending; t.queuedAt = now(); t.question = null;
+    if (pending?.kind === 'run') attachCompetitors(t);
   }
+  /* Ilia's competitors (.claude/skills/competitors — one list for every content project): the agents of content, ideas and
+     research get it as in/competitors.md with every task. At deploy the file is copied next to the server (twin-skills/). */
+  const HERE = path.dirname(new URL(import.meta.url).pathname);
+  // content, ideas and research: who looks for hits, writes and plans content (not montage, slides, landings, ads)
+  const CONTENT_IDS = new Set(['market', 'transcriber', 'socialstats', 'audience', 'viral', 'scripts', 'remake', 'carousel', 'publish', 'threads',
+    'nfresearch', 'nfscripts', 'nfpublish', 'nfcarousel']);
+  function competitorsText() {
+    for (const f of [path.join(HERE, 'twin-skills/competitors/references/competitors.md'), path.join(HERE, '../../../.claude/skills/competitors/references/competitors.md')])
+      try { return fs.readFileSync(f, 'utf8'); } catch {}
+    return '';
+  }
+  function isContentAgent(id) {
+    return CONTENT_IDS.has(id);
+  }
+  function attachCompetitors(t) {
+    const id = t.route?.agent;
+    if (!id || !isContentAgent(id) || t.files.some(f => f.name === 'competitors.md')) return;
+    const text = competitorsText();
+    if (!text) return;
+    const dir = path.join(taskDir(t.id), 'in');
+    fs.mkdirSync(dir, { recursive:true });
+    fs.writeFileSync(path.join(dir, 'competitors.md'), text);
+    t.files.push({ name:'competitors.md', size:Buffer.byteLength(text) });
+  }
+  const competitorsNote = t => t.files.some(f => f.name === 'competitors.md')
+    ? ['Конкуренты Ильи — in/competitors.md (скилл competitors): ищешь идеи, залёты, референсы или делаешь ресёрч — бери аккаунты оттуда. Залёт — только от 100 000 просмотров, 1 000 комментариев и 1 000 репостов; чужое не копируй — формат и механика их, текст и примеры Ильи.'] : [];
   // a task «in work» that the runner is no longer doing (it restarted, or lost us while this server
   // restarted): back to the queue once, an error the second time
   function orphan(t, why) {
@@ -740,7 +767,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       t.route.skill ? `Скилл: ${t.route.skill} — вызови его инструментом Skill и работай по нему.` : 'Если среди твоих скиллов есть подходящий — работай по нему.',
       styleLine(t),
-      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), ...pipelineNote(t), mcpNote(), lessonsNote(a.id).text, '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
+      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), ...competitorsNote(t), ...pipelineNote(t), mcpNote(), lessonsNote(a.id).text, '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
   }
   // the office «Нейроворонка»: its agents get the plan of the project, the state of the cabinet and the knowledge of the main office
   // as files in in/ (server.mjs → setContext → cabinet.contextFiles); refreshed every time the task goes to an agent of that office

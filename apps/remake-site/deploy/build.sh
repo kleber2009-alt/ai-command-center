@@ -24,6 +24,8 @@ mkdir -p "$OUT/skill/scripts" "$OUT/skill/references"
 cp "$SKILL/config.json" "$OUT/skill/"
 cp "$SKILL"/scripts/*.py "$OUT/skill/scripts/"
 cp "$SKILL/references/script-rules.md" "$OUT/skill/references/"
+# the shared list of competitors (.claude/skills/competitors) — «План дня» of @instaoo_bot
+mkdir -p "$OUT/competitors" && cp "$APP/../../.claude/skills/competitors/competitors.json" "$OUT/competitors/"
 # «Instagram Карусели»: settings and the rules Claude follows (the carousel-pro skill)
 mkdir -p "$OUT/carousel-skill/references"
 cp "$APP/../../.claude/skills/carousel-pro/config.json" "$OUT/carousel-skill/"

@@ -9,6 +9,10 @@ description: «Карусель Pro» — карусели @ilia.paliy из то
 конкурентов — так же, как `remake-top-reel` делает для рилсов. Правила текста, хука, числа слайдов и CTA —
 `references/carousel-rules.md` (их же читает бот). Настройки — `config.json`.
 
+> **Конкуренты** — общий список Ильи (60 аккаунтов) в скилле `competitors` (`.claude/skills/competitors/competitors.json`,
+> таблица — `references/competitors.md`). Ищешь залёт конкурента или референс — бери аккаунты оттуда. Залёт — только от
+> 100 000 просмотров, 1 000 комментариев и 1 000 репостов (у каруселей — комментарии и репосты).
+
 ## Где работает
 
 1. **Ветка «Instagram Карусели» в Telegram** — `apps/remake-site/carousel-bot.mjs` (бот «Карусель Pro», свой токен

@@ -232,5 +232,8 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
   (`scripts/social_stats.py`) и разбор, что сработало и что нет. В hq2 — агент `socialstats`, каждое утро сам.
 - `service-balances` — «Балансы и подписки»: балансы, лимиты и даты продления сервисов офиса (`scripts/balances.py`),
   предупреждения в Telegram. В hq2 — агент `billing`, каждое утро сам.
+- `competitors` — «Конкуренты»: общий список конкурентов Ильи в Instagram (60 аккаунтов: Reels + ИИ + набор аудитории,
+  GPT/Claude/маркетинг; `competitors.json` + таблица + исходный xlsx). Один источник для @instaoo_bot («План дня»), офиса hq2
+  (агенты контента получают `in/competitors.md`, двойник знает список) и скиллов контента. Правка — здесь, пуш в `main`.
 - `three-technical-illustration` — 3D-взрыв-схема в стиле инженерного мануала (Three.js + HTML-оверлей подписей):
   светлый фон, белый/серебристый металл, оранжевые и зелёные акценты, выноски. Шаблон — `assets/template.html`.
