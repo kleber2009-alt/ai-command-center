@@ -14,6 +14,7 @@ import { createDesk } from './desk.mjs';
 import { startTelegram, wantsFiles } from './tg.mjs';
 
 process.env.HQ_ROUTINES = 'off';
+process.env.HQ_PLAN = 'off';  // «План дня» ходит на remake.aicex.club — включается только в своём тесте
 const OFFICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TOK = 'tok';
 const R = { authorization:'Bearer ' + TOK };
@@ -269,6 +270,28 @@ test('утренние задачи: проверка балансов без п
   await d.deliver(job, { 'index.html':'ok' }, { alerts:{ critical:[], warn:[] } });
   const t = await d.get(billing.id);
   assert.equal(t.status, 'done'); assert.equal(t.published, false); assert.equal(t.qa, null);
+});
+
+test('план дня @instaoo_bot: карусели из плана уходят агенту «Карусели» сразу, рилсы — нет, второй раз — нет', async () => {
+  const plan = { date:'2026-11-04', mix:[1, 2], items:[
+    { slot:'10:00', kind:'carousel', source:'own', own:true, url:'https://www.instagram.com/p/AAA/', code:'AAA', author:'ilia.paliy', comments:2400, shares:3100, slides:9, caption:'5 нейросетей' },
+    { slot:'14:00', kind:'reel', source:'fresh', url:'https://www.instagram.com/reel/BBB/', code:'BBB', author:'rival', views:900000, comments:5000, shares:7000 },
+    { slot:'19:00', kind:'carousel', source:'best', url:'https://www.instagram.com/p/CCC/', code:'CCC', author:'rival2', comments:1800, shares:null } ] };
+  const srv = http.createServer((req, res) => { res.writeHead(req.url === '/api/plan/2026-11-04' ? 200 : 404, { 'content-type':'application/json' }); res.end(JSON.stringify(req.url === '/api/plan/2026-11-04' ? plan : {})); }).listen(0);
+  servers.push(srv);
+  process.env.HQ_REMAKE_URL = `http://127.0.0.1:${srv.address().port}`; delete process.env.HQ_PLAN;
+  const d = setup();
+  process.env.HQ_PLAN = 'off';
+  await d.desk.contentPlan('2026-11-03', '09:00');  // ещё рано
+  await d.desk.contentPlan('2026-11-04', '09:30');
+  await d.desk.contentPlan('2026-11-04', '10:30');  // второй раз за день — ничего
+  const list = (await d.call('GET', 'tasks')).j.tasks.filter(t => t.route?.agent === 'carousel');
+  assert.equal(list.length, 2);
+  const own = list.find(t => /ремикс/.test(t.route.title)), comp = list.find(t => /@rival2/.test(t.route.title));
+  assert.ok(own && comp);
+  assert.equal(own.status, 'queued'); assert.equal(own.route.skill, 'carousel-pro'); assert.equal(own.style, 'Тёмный @ilia.paliy');
+  const full = await d.get(comp.id);
+  assert.match(full.text, /адаптируй/); assert.match(full.text, /репостов не видно/);
 });
 
 /* ---------- pipelines, QA, approvals, lessons, usage ---------- */

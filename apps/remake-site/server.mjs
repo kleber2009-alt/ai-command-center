@@ -9,7 +9,8 @@
      PUT  /api/runs/<slug>         документ прогона (JSON-объект до 1 МБ)       — Authorization: Bearer <REMAKE_SITE_TOKEN>
      PUT  /api/media/<file>        кадр или видео (jpg/png/webp/mp4, до 60 МБ)   — то же; отдаёт Caddy по /media/<file>
      /api/studio/*                 студия: референс → расшифровка → сценарий → аватар HeyGen → монтаж Кадрика (studio.mjs, вход по паролю)
-     Telegram                      ветка «Instagram Reels»: залёты → карточки → ✅ → готовый рилс файлом (reels-bot.mjs, REMAKE_TG_BOT_TOKEN)
+     Telegram                      ветка «Instagram Reels»: план дня (3 залёта, scout.mjs) → карточки → ✅ → готовый рилс файлом (reels-bot.mjs, REMAKE_TG_BOT_TOKEN)
+     GET  /api/plan[/<YYYY-MM-DD>]   план дня — его забирает офис hq2 (карусели → агент «Карусели»)
      Telegram                      ветка «Instagram Карусели»: карусель-залёты → план → ✅ → слайды альбомом (carousel-bot.mjs, CAROUSEL_TG_BOT_TOKEN)
 
    Env: REMAKE_SITE_TOKEN (без него запись выключена), DATA_DIR (runs/, media/, state.json; по умолчанию ./data),
@@ -114,6 +115,12 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/health') return send(res, 200, { ok: true, runs: fs.readdirSync(RUNS).filter((f) => f.endsWith('.json')).length, writable: Boolean(TOKEN), studio: studio.enabled, reels: reels.enabled ? reels.status() : false, carousels: carousels.enabled ? carousels.status() : carousels.error ? { error: carousels.error } : false });
     if (p.startsWith('/api/studio/')) return await studio.handle(req, res, p, url);
     if (p === '/api/runs' && req.method === 'GET') return send(res, 200, listRuns());
+    // «План дня» бота @instaoo_bot (reels-bot.mjs → scout.mjs): latest | YYYY-MM-DD; его забирает офис hq2 (desk.mjs)
+    let pm = /^\/api\/plan(?:\/(latest|\d{4}-\d{2}-\d{2}))?$/.exec(p);
+    if (pm && req.method === 'GET') {
+      try { return send(res, 200, JSON.parse(fs.readFileSync(path.join(DATA, 'plan', `${pm[1] || 'latest'}.json`), 'utf8'))); }
+      catch { return send(res, 404, { error: 'плана ещё нет' }); }
+    }
     let m = /^\/api\/runs\/([^/]+)$/.exec(p);
     if (m && req.method === 'PUT') {
       if (!authorized(req)) return send(res, TOKEN ? 401 : 403, { error: TOKEN ? 'нужен токен' : 'запись выключена: нет REMAKE_SITE_TOKEN' });
