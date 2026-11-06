@@ -262,7 +262,7 @@ test('утренние задачи: проверка балансов без п
   const d = setup();
   const made = d.desk.tickRoutines(new Date('2026-11-04T07:00:00Z'));  // 10:00 МСК — обе задачи пора ставить
   process.env.HQ_ROUTINES = 'off';
-  assert.deepEqual(made.map(t => t.routine).sort(), ['billing-daily', 'social-daily']);
+  assert.deepEqual(made.map(t => t.routine).sort(), ['billing-daily', 'chief-plan', 'social-daily']);
   assert.equal(d.desk.tickRoutines(new Date('2026-11-04T08:00:00Z')).length, 0);  // второй раз за день — нет
   const billing = made.find(t => t.routine === 'billing-daily');
   let job;
@@ -295,6 +295,63 @@ test('план дня @instaoo_bot: одобренные карусели ухо
   assert.equal(own.status, 'queued'); assert.equal(own.route.skill, 'carousel-pro'); assert.equal(own.style, 'Тёмный @ilia.paliy');
   const full = await d.get(comp.id);
   assert.match(full.text, /адаптируй/); assert.match(full.text, /репостов не видно/);
+});
+
+test('главный маркетолог: контекст дня в in/, план — в бот, ✅ в боте ставит задачи агентам, пункт «Плана дня» делает бот', async () => {
+  // the context reads the office's own «today», so the test runs on the real Moscow date
+  const day = new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(new Date()), bot = { chief:null, puts:0 };
+  const plan = { date:day, mix:[2, 1], items:[
+    { slot:'10:00', kind:'reel', source:'fresh', url:'https://www.instagram.com/reel/BBB/', code:'BBB', author:'rival', views:900000, comments:5000, shares:7000 } ] };
+  const srv = http.createServer(async (req, res) => {
+    const send = (c, j) => { res.writeHead(c, { 'content-type':'application/json' }); res.end(JSON.stringify(j)); };
+    if (req.url === `/api/plan/${day}`) return send(200, plan);
+    if (req.url === `/api/chief/${day}`) {
+      if (req.headers.authorization !== 'Bearer rs') return send(401, {});
+      if (req.method === 'PUT') { let b = ''; for await (const c of req) b += c; bot.chief = JSON.parse(b); bot.puts++; return send(200, { ok:true }); }
+      return bot.chief ? send(200, bot.chief) : send(404, {});
+    }
+    send(404, {});
+  }).listen(0);
+  servers.push(srv);
+  process.env.HQ_REMAKE_URL = `http://127.0.0.1:${srv.address().port}`; process.env.HQ_REMAKE_TOKEN = 'rs';
+  delete process.env.HQ_PLAN; delete process.env.HQ_ROUTINES;
+  const d = setup();
+  await d.desk.contentPlan(day, '09:30', { force:true });  // the bot's plan is known before the chief starts
+  const made = d.desk.tickRoutines(new Date(`${day}T06:45:00Z`));  // 09:45 МСК
+  process.env.HQ_ROUTINES = 'off';
+  const chief = made.find(t => t.routine === 'chief-plan');
+  assert.ok(chief); assert.equal(chief.route.agent, 'chiefmarketer'); assert.equal(chief.route.skill, 'chief-marketer');
+  let job;
+  while ((job = await d.claim()) && job.id !== chief.id) await d.finish(job.id, { result:'error', error:'x' });
+  assert.ok(job.files.includes('chief-context.md'));
+  const ctx = fs.readFileSync(path.join(d.dataDir, 'desk', 'tasks', chief.id, 'in', 'chief-context.md'), 'utf8');
+  assert.match(ctx, /plan_ref 0: 10:00 · рилс · @rival/);
+  const out = { date:day, summary:'Летит тема ИИ-сотрудников', items:[
+    { slot:'10:00', kind:'reel', stream:'охват', title:'Ремейк залёта @rival', hook:'У меня 8 сотрудников без зарплаты', plan_ref:0, ref:{ url:plan.items[0].url, views:900000, comments:5000, shares:7000 } },
+    { slot:'12:00', kind:'reel', stream:'личность', title:'Отец на Бали: свобода времени', hook:'Я не видел детей 3 года', code_word:'' },
+    { slot:'14:00', kind:'carousel', stream:'польза', title:'Схема ИИ-офиса', hook:'Схема, которая должна быть у каждого эксперта', code_word:'ОФИС' },
+    { slot:'18:00', kind:'threads', stream:'охват', title:'Ветка про долг $37k', agent:'threads' } ] };
+  await d.deliver(job, { 'index.html':'<h1>план</h1>', 'plan.json':JSON.stringify(out) });
+  await new Promise(r => setTimeout(r, 100));
+  assert.equal(bot.puts, 1); assert.equal(bot.chief.items.length, 4); assert.equal(bot.chief.items[0].plan_ref, 0);
+  assert.equal((await d.get(chief.id)).status, 'review');
+  // ✅ in the bot: the plan's reel (made by the bot itself), the personal reel and the carousel
+  for (const i of [0, 1, 2]) bot.chief.items[i].approved = new Date().toISOString();
+  await d.desk.contentPlan(day, '10:00', { force:true });
+  await d.desk.contentPlan(day, '10:05', { force:true });  // the second poll launches nothing new
+  await new Promise(r => setTimeout(r, 60));
+  const launched = (await d.call('GET', 'tasks')).j.tasks.filter(t => t.chief);
+  assert.equal(launched.length, 2);
+  const car = launched.find(t => t.route?.agent === 'carousel');
+  assert.ok(car); assert.equal(car.route.skill, 'carousel-pro'); assert.match(car.text, /Кодовое слово: ОФИС/);
+  const reel = launched.find(t => t !== car);
+  assert.equal(reel.pipeline?.id, 'reel'); assert.match(reel.text, /Отец на Бали/);
+  // the rest — from the office
+  const go = await d.call('POST', 'chief/go', { date:day, ids:['4'] });
+  assert.equal(go.status, 200); assert.equal(go.j.tasks.length, 1);
+  const st = (await d.call('GET', `chief/${day}`)).j;
+  assert.deepEqual(st.items.map(x => Boolean(x.launched)), [true, true, true, true]); assert.equal(st.items[0].launched, 'bot');
+  delete process.env.HQ_REMAKE_TOKEN;
 });
 
 /* ---------- pipelines, QA, approvals, lessons, usage ---------- */

@@ -129,10 +129,11 @@ jobs:
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
           tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
             | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
-          # skills of the office's own agents (Транскрибатор, Статистика соцсетей, Балансы, Конкуренты, Человек + эксперт, Конвейер объёма):
+          # skills of the office's own agents (Транскрибатор, Статистика соцсетей, Балансы, Конкуренты, Человек + эксперт, Конвейер объёма,
+          # Главный маркетолог):
           # they go with the runner and into the bots' user ~/.claude/skills
           mkdir -p apps/hq-office/runner/skills && cp -r .claude/skills/transcribe-reference .claude/skills/social-daily-stats .claude/skills/service-balances \
-            .claude/skills/competitor-ideas .claude/skills/strategy-human-expert .claude/skills/strategy-volume-factory apps/hq-office/runner/skills/
+            .claude/skills/competitor-ideas .claude/skills/strategy-human-expert .claude/skills/strategy-volume-factory .claude/skills/chief-marketer apps/hq-office/runner/skills/
           tar -C apps/hq-office/runner -czf - . \
             | $SSH "mkdir -p /opt/hq-office/runner/releases/$REL && tar -xzf - -C /opt/hq-office/runner/releases/$REL"
 
@@ -152,9 +153,12 @@ jobs:
           OFFICE_OWNERS: ${{ vars.HQ_TG_OWNER_IDS || vars.HQ_NOTIFY_TG_CHAT_ID || vars.WORKER_OWNER_TELEGRAM_ID || vars.REMAKE_TG_OWNER_IDS || vars.TG_AGENT_OWNER_TELEGRAM_ID }}
           # the test cabinet «Нейроворонка» (assistant/cabinet.mjs): events from outside (ChatPlace webhook, payments) — optional
           CABINET: ${{ secrets.HQ_CABINET_TOKEN }}
+          # «Главный маркетолог»: the day's content plan goes to @instaoo_bot (remake-site /api/chief) and ✅ comes back — the site's write token
+          REMAKE_TOKEN: ${{ secrets.REMAKE_SITE_TOKEN }}
         run: |
           [ -n "$ANTHROPIC" ] || echo "::warning::HQ_OFFICE_ANTHROPIC_API_KEY is not set — the assistant will not answer"
           [ -n "$PASS" ] || echo "::warning::HQ_ASSISTANT_PASSWORD is not set — the assistant runs as a guest demo only"
+          [ -n "$REMAKE_TOKEN" ] || echo "::warning::REMAKE_SITE_TOKEN is not set — the chief marketer's plan stays in the office (no ✅ in @instaoo_bot)"
           TG_CHAT=$(printf '%s' "$TG_CHAT" | grep -oE -- '-?[0-9]+' | head -1 || true)
           [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] && echo "morning reports → Telegram chat …${TG_CHAT: -3}" \
             || echo "::warning::no Telegram bot or owner id (HQ_NOTIFY_TG_BOT_TOKEN + HQ_NOTIFY_TG_CHAT_ID) — morning reports stay in the office only"
@@ -162,8 +166,8 @@ jobs:
           OFFICE_OWNERS=$(printf '%s' "$OFFICE_OWNERS" | grep -oE '[0-9]{5,}' | paste -sd, - || true)
           [ "$OWN" = 1 ] && echo "Telegram: the office's own bot — the control panel is on (owners: $(printf '%s' "$OFFICE_OWNERS" | tr ',' '\n' | grep -c .))" \
             || echo "::warning::no own office bot (secret HQ_NOTIFY_TG_BOT_TOKEN of @AI_Growth_Office_Bot) — no Telegram control of the office"
-          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_NOTIFY_TG_OWN=%s\nHQ_PUBLIC_URL=https://%s\nHQ_TG_BOT_TOKEN=%s\nHQ_TG_OWNER_IDS=%s\nHQ_CABINET_TOKEN=%s\n' \
-            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$OWN" "$DOMAIN" "$OWN_BOT" "$OFFICE_OWNERS" "$CABINET" \
+          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_NOTIFY_TG_OWN=%s\nHQ_PUBLIC_URL=https://%s\nHQ_TG_BOT_TOKEN=%s\nHQ_TG_OWNER_IDS=%s\nHQ_CABINET_TOKEN=%s\nHQ_REMAKE_TOKEN=%s\n' \
+            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$OWN" "$DOMAIN" "$OWN_BOT" "$OFFICE_OWNERS" "$CABINET" "$REMAKE_TOKEN" \
             | $SSH "umask 077 && cat > /opt/hq-office/assistant.env"
 
       - name: Keys of the morning agents

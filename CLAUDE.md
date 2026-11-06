@@ -232,5 +232,11 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
   (`scripts/social_stats.py`) и разбор, что сработало и что нет. В hq2 — агент `socialstats`, каждое утро сам.
 - `service-balances` — «Балансы и подписки»: балансы, лимиты и даты продления сервисов офиса (`scripts/balances.py`),
   предупреждения в Telegram. В hq2 — агент `billing`, каждое утро сам.
+- `competitor-ideas` — «Идеи у конкурентов»: 60 конкурентов Ильи (`references/competitors.csv`), свежие залёты через Apify только от
+  100 тыс. просмотров / 1000 комментариев / 1000 репостов → разбор и идеи. В hq2 — агент `competitors`.
+- `strategy-human-expert` / `strategy-volume-factory` — контент-стратегии по моделям @sashasence («Человек + эксперт») и @arina_alexx
+  («Конвейер объёма»). В hq2 — агенты `humanexpert` и `volumefactory`.
+- `chief-marketer` — «Главный маркетолог»: собирает идеи всех агентов контента в контент-план на сутки (`out/plan.json`), план — в
+  @instaoo_bot с ✅, одобренное — агентам с монтажом. В hq2 — агент `chiefmarketer`, каждое утро в 09:40 МСК.
 - `three-technical-illustration` — 3D-взрыв-схема в стиле инженерного мануала (Three.js + HTML-оверлей подписей):
   светлый фон, белый/серебристый металл, оранжевые и зелёные акценты, выноски. Шаблон — `assets/template.html`.

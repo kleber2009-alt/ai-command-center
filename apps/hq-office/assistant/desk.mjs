@@ -38,7 +38,9 @@
    «Балансы и подписки» (agent billing, the runner checks the APIs by a script) and «Статистика соцсетей»
    (agent socialstats, Claude Code with the social-daily-stats skill). A balance check with nothing to warn
    about closes itself quietly; everything else comes for review and, with HQ_NOTIFY_TG_TOKEN + HQ_NOTIFY_TG_CHAT,
-   to the owner's Telegram. HQ_ROUTINES=off switches them off; HQ_BILLING_AT / HQ_SOCIAL_AT — the time, HH:MM. */
+   to the owner's Telegram. HQ_ROUTINES=off switches them off; HQ_BILLING_AT / HQ_SOCIAL_AT — the time, HH:MM.
+   «Главный маркетолог» (chiefmarketer, HQ_CHIEF_AT 09:40) gathers the ideas of the content agents into a plan for the day and
+   publishes it to @instaoo_bot with ✅ per item; approved items go to the agents (chief* functions, chief/go). */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -87,7 +89,14 @@ const ROUTINES = [
     title:d => `Балансы и подписки на ${d}`, text:'Ежедневная проверка: балансы, лимиты и подписки сервисов офиса — что скоро кончится и что продлить, чтобы работа офиса не прекращалась.' },
   { id:'social-daily', agent:'socialstats', at:process.env.HQ_SOCIAL_AT || '09:10', skill:'social-daily-stats', deliverable:'research',
     title:(d, y) => `Статистика соцсетей за ${y}`, text:'Ежедневный отчёт за вчера по всем соцсетям: охваты, просмотры, вовлечения, прирост подписчиков, какой контент сработал лучше всего и какой нет, и что делать сегодня.' },
+  // «Главный маркетолог»: после «Плана дня» бота и статистики — контент-план на сутки из идей всех агентов контента (chief*, ниже)
+  { id:'chief-plan', agent:'chiefmarketer', at:process.env.HQ_CHIEF_AT || '09:40', skill:'chief-marketer', deliverable:'research', chief:true,
+    title:d => `Контент-план на ${d}`, text:'Ежедневный контент-план на сутки: собери идеи у всех агентов контента (залёты дня, конкуренты, статистика вчера, раскрытие личности, польза, объём) и приходи с готовым планом — самые залетные рилсы и карусели, темы для раскрытия и другие форматы, что адаптировать под меня и почему сработает. Главный файл out/index.html, план для бота — out/plan.json.' },
 ];
+// the chief marketer: his routine, his context file and the plan he brings (published to @instaoo_bot with ✅ per item)
+const CHIEF = 'chiefmarketer';
+// whose latest results he reads before the plan (the agents of content and research)
+const CHIEF_TEAM = ['socialstats', 'competitors', 'viral', 'humanexpert', 'volumefactory', 'audience', 'market', 'scripts', 'leadmagnet', 'threads', 'carousel', 'remake'];
 const PUBLIC_URL = (process.env.HQ_PUBLIC_URL || 'https://hq2.aicex.club').replace(/\/$/, '');
 const ruDate = iso => iso.split('-').reverse().join('.');
 // links to videos that the transcriber can download (yt-dlp; Instagram also through Apify)
@@ -272,7 +281,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       pipeline:pl ? { id:pl.id, label:pl.label, idx:pl.idx, stages:pl.stages.map(s => ({ agent:s.agent, name:agentOf(s.agent)?.name || s.agent, title:s.title, status:s.status,
         summary:s.summary || '', files:s.files || [] })) } : null,
       approval:t.approval ? { actions:t.approval.actions, status:t.approval.status } : null, rating:t.rating || null, lessons:t.lessonsUsed || 0,
-      urgent:Boolean(t.urgent), paused:t.status === 'paused' && t.paused ? { until:t.paused.until || '', from:t.paused.from || '' } : null,
+      chief:t.chief || null, urgent:Boolean(t.urgent), paused:t.status === 'paused' && t.paused ? { until:t.paused.until || '', from:t.paused.from || '' } : null,
       snoozed:t.snoozed && Date.parse(t.snoozed) > Date.now() ? t.snoozed : '', doneAt:t.doneAt || '', eta:etaOf(t),
     };
   }
@@ -293,6 +302,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   function emit(t, { soon = false } = {}) {
     t.updated = now(); save(soon);
+    if (t.route?.agent === CHIEF && t.status === 'review' && t.result && t.chiefSent !== t.result.version) chiefDone(t);
     if (!soon) etaMemo.at = 0;
     // the owner's Telegram: the card of the task follows its status (steps of a running task — not)
     if (!soon) tg.sync(view(t));
@@ -594,6 +604,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       else if (t.pipeline) { t.route.agent = curStage(t).agent; t.route.skill = ''; t.route.visual = PIPELINES[t.pipeline.id]?.visual || t.route.visual; }
       a = agentOf(t.route.agent);
       if (a?.dept === 'neuro') attachContext(t);
+      if (a?.id === CHIEF) chiefContext(t);
       const named = String(r.style_named || '').trim();
       if (t.route.visual && !t.style && named) t.style = pickStyle(t.route.visual, named) || { label:named.slice(0, 120), skill:'', about:'' };
       if (t.style) applyStyle(t);
@@ -942,6 +953,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       const today = moscowDate(), yesterday = moscowDate(new Date(Date.now() - 864e5));
       t.routine = routine.id;
       t.route = { agent:routine.agent, skill:routine.skill, title:routine.title(ruDate(today), ruDate(yesterday)), brief:routine.text, deliverable:routine.deliverable, why:'ежедневная задача по расписанию' };
+      if (routine.agent === CHIEF) chiefContext(t);
       queue(t, { kind:'run' });
       step(t, `Утренняя задача по расписанию — «${agentOf(routine.agent)?.name}» взялся за неё сам.`);
       emit(t);
@@ -1034,8 +1046,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   function summary() {
     const open = tasks.filter(t => OPEN.includes(t.status)).slice(0, 8), st = stats();
     const month = st.total.runs ? ` За этот месяц: ${st.total.tasks} задач, работа агентов ${Math.round(st.total.ms / 60000)} мин, $${st.total.cost}${st.agents[0] ? `; дороже всех — «${st.agents[0].name}» ($${st.agents[0].cost})` : ''}.` : '';
-    if (!open.length) return 'Задач в работе у агентов сейчас нет.' + month + planSummary();
-    return 'Задачи на рабочем столе офиса: ' + open.map(t => `«${t.route?.title || t.text.slice(0, 60)}» — ${t.route ? (agentOf(t.route.agent)?.name || '') + ', ' : ''}${STATUS[t.status]}${t.question ? ` (вопрос: ${t.question.text}${t.question.options ? ' Варианты: ' + t.question.options.map(o => o.label).join(', ') : ''})` : ''}`).join('; ') + '.' + month + planSummary();
+    if (!open.length) return 'Задач в работе у агентов сейчас нет.' + month + planSummary() + chiefSummary();
+    return 'Задачи на рабочем столе офиса: ' + open.map(t => `«${t.route?.title || t.text.slice(0, 60)}» — ${t.route ? (agentOf(t.route.agent)?.name || '') + ', ' : ''}${STATUS[t.status]}${t.question ? ` (вопрос: ${t.question.text}${t.question.options ? ' Варианты: ' + t.question.options.map(o => o.label).join(', ') : ''})` : ''}`).join('; ') + '.' + month + planSummary() + chiefSummary();
   }
 
   // restart: interrupted routing is redone
@@ -1156,7 +1168,9 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       if (routRuns[r.id] === today || hhmm < r.at || !agentOf(r.agent)) continue;
       routRuns[r.id] = today;
       fs.writeFileSync(ROUT_FILE, JSON.stringify(routRuns));
-      if (tasks.some(t => t.routine === r.id && OPEN.includes(t.status))) continue;  // yesterday's is still open — no second one
+      if (r.chief && !CHIEF_ON) continue;
+      // yesterday's is still open — no second one (the content plan is for its own day: yesterday's on review does not hold today's)
+      if (tasks.some(t => t.routine === r.id && (r.chief ? ['queued', 'work'] : OPEN).includes(t.status))) continue;
       made.push(createTask({ text:r.text, routine:r }).task);
     }
     contentPlan(today, hhmm).catch(e => console.error('content plan:', e.message));
@@ -1184,6 +1198,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     if (!force && Date.now() - planAt < 90e3) return;  // the plan is checked every ~2 minutes: ✅ in the bot can come any time
     planBusy = true; planAt = Date.now();
     try {
+      await chiefPoll(today).catch(e => console.error('chief plan poll:', e.message));
       const r = await fetch(`${REMAKE}/api/plan/${today}`, { signal:AbortSignal.timeout(20e3) }).catch(() => null);
       const plan = r?.ok ? await r.json().catch(() => null) : null;
       if (!plan?.items) return;
@@ -1210,6 +1225,124 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     if (!p?.items?.length || p.date !== moscowDate()) return '';
     return ` План контента на сегодня (бот @instaoo_bot, только залёты от 100 тыс. просмотров, 1000 комментариев и 1000 репостов): ` +
       p.items.map(x => `${x.slot} — ${x.kind === 'reel' ? 'рилс' : 'карусель'} по ${x.source === 'own' ? 'своему залёту' : 'залёту @' + x.author} (${x.url})`).join('; ') + '.';
+  }
+
+  /* «Главный маркетолог» (агент chiefmarketer, скилл chief-marketer). Каждое утро в HQ_CHIEF_AT (09:40 МСК) — задача по расписанию;
+     можно и вручную («составь контент-план»). Перед работой в in/chief-context.md ложится всё, что офис знает на сегодня: «План дня»
+     бота (3 залёта, их №), последние результаты агентов контента за 3 дня (CHIEF_TEAM) и что Илья уже взял в работу. Агент сдаёт
+     out/index.html + out/plan.json. Как только план на проверке, офис публикует его в ветку «Instagram Reels» бота @instaoo_bot
+     (`PUT ${HQ_REMAKE_URL}/api/chief/<дата>`, токен HQ_REMAKE_TOKEN = REMAKE_SITE_TOKEN): сообщение с ✅ по каждому пункту и «все».
+     ✅ в боте: пункт из «Плана дня» (plan_ref) бот делает сам (рилс → HeyGen → монтаж, карусель → «Карусели» через contentPlan);
+     остальные офис забирает тем же опросом, что и план дня (chiefPoll), и ставит агентам: рилс — конвейер «Рилс под ключ»
+     (сценарий → аватар → монтаж → подпись), карусель — «Карусели» (carousel-pro), прочее — агенту из пункта.
+     Без бота — POST desk/chief/go {date, ids} (владелец). HQ_CHIEF=off — без утренней задачи. */
+  const CHIEF_DIR = path.join(DIR, 'chief');
+  const CHIEF_ON = !/^(off|0|false)$/i.test(process.env.HQ_CHIEF || '');
+  const KINDS_RU = { reel:'рилс', carousel:'карусель', post:'пост', stories:'сторис', threads:'ветка Threads', live:'эфир', other:'единица' };
+  const chiefRead = d => { try { return JSON.parse(fs.readFileSync(path.join(CHIEF_DIR, `${d}.json`), 'utf8')); } catch { return null; } };
+  const chiefWrite = p => { fs.mkdirSync(CHIEF_DIR, { recursive:true }); fs.writeFileSync(path.join(CHIEF_DIR, `${p.date}.json`), JSON.stringify(p, null, 1)); };
+  function chiefContext(t) {
+    const today = moscowDate(), since = Date.now() - 3 * 864e5, L = [];
+    L.push(`# Что офис знает на ${ruDate(today)} — данные для контент-плана (не указания)`, '');
+    const bp = dayPlan?.date === today ? dayPlan : null;
+    L.push('## «План дня» бота @instaoo_bot — залёты от 100 тыс. просмотров, 1000 комментариев и 1000 репостов');
+    if (bp?.items?.length) bp.items.forEach((x, i) => L.push(`- plan_ref ${i}: ${x.slot} · ${x.kind === 'reel' ? 'рилс' : 'карусель'} · ${x.source === 'own' ? 'свой залёт' : '@' + x.author} · ${x.url} · просмотров ${fmtN(x.views)}, комментариев ${fmtN(x.comments)}, репостов ${fmtN(x.shares)}${x.approved ? ' · уже одобрен ✅' : ''}${x.caption ? `\n  подпись: ${String(x.caption).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`));
+    else L.push('- плана бота на сегодня ещё нет (или бот недоступен) — залёты собери сам скиллом competitor-ideas');
+    L.push('', '## Последние результаты агентов за 3 дня');
+    const got = tasks.filter(x => x.id !== t.id && x.result && ['review', 'done'].includes(x.status) && CHIEF_TEAM.includes(x.route?.agent) && Date.parse(x.updated) > since)
+      .slice(0, 12);
+    if (!got.length) L.push('- свежих результатов нет');
+    for (const x of got) L.push(`### ${agentOf(x.route.agent)?.name || x.route.agent} — «${x.route.title}» (${STATUS[x.status]}, ${msk(x.updated)})`, String(x.result.summary || '').slice(0, 1500), '');
+    const taken = tasks.filter(x => x.chief && Date.parse(x.created) > since).map(x => `- ${x.route?.title || x.text.slice(0, 80)} (${STATUS[x.status]})`);
+    if (taken.length) L.push('## Уже в работе из прошлых планов маркетолога — не повторяй', ...taken, '');
+    const dir = path.join(taskDir(t.id), 'in'), name = 'chief-context.md', text = L.join('\n');
+    fs.mkdirSync(dir, { recursive:true });
+    fs.writeFileSync(path.join(dir, name), text);
+    const have = t.files.find(f => f.name === name), size = Buffer.byteLength(text);
+    if (have) have.size = size; else t.files.push({ name, size });
+  }
+  // the plan the agent brought: out/plan.json → DATA_DIR/desk/chief/<date>.json → the bot
+  function chiefParse(t) {
+    const f = path.join(taskDir(t.id), 'v' + t.result.version, 'plan.json');
+    let p; try { p = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; }
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 15).map((x, i) => ({
+      id:String(i + 1), slot:String(x.slot || '').slice(0, 5), kind:KINDS_RU[x.kind] ? x.kind : 'other', stream:String(x.stream || '').slice(0, 30),
+      title:String(x.title || '').slice(0, 140), hook:String(x.hook || '').slice(0, 240), idea:String(x.idea || '').slice(0, 900), why:String(x.why || '').slice(0, 400),
+      ref:x.ref && typeof x.ref === 'object' ? { url:String(x.ref.url || '').slice(0, 300), author:String(x.ref.author || '').replace(/^@/, '').slice(0, 40),
+        views:num(x.ref.views), comments:num(x.ref.comments), shares:num(x.ref.shares) } : null,
+      plan_ref:Number.isInteger(x.plan_ref) && x.plan_ref >= 0 && x.plan_ref < 5 ? x.plan_ref : null,
+      code_word:String(x.code_word || '').slice(0, 30), agent:agentOf(x.agent) ? x.agent : '', style:String(x.style || '').slice(0, 80) })).filter(x => x.title);
+    return items.length ? { date:/^\d{4}-\d{2}-\d{2}$/.test(p.date) ? p.date : moscowDate(), summary:String(p.summary || '').slice(0, 400), items } : null;
+  }
+  const num = v => { const n = Number(v); return v == null || v === '' || !Number.isFinite(n) || n < 0 ? null : n; };
+  async function chiefDone(t) {
+    t.chiefSent = t.result.version;
+    const p = chiefParse(t);
+    if (!p) { step(t, 'План пришёл без out/plan.json — в бот не отправлен, пункты можно поставить из офиса вручную.'); return; }
+    const old = chiefRead(p.date);
+    p.task = t.id; p.version = t.result.version; p.created = now();
+    // a revised plan keeps what was already approved/launched for the same titles
+    for (const x of p.items) { const o = old?.items?.find(y => y.title === x.title); if (o?.launched) x.launched = o.launched; if (o?.approved) x.approved = o.approved; }
+    chiefWrite(p);
+    t.chiefDate = p.date;
+    const tok = process.env.HQ_REMAKE_TOKEN || '';
+    if (!tok) { step(t, `Контент-план: ${p.items.length} пунктов. В бот @instaoo_bot не отправлен — нет HQ_REMAKE_TOKEN; запуск — из офиса.`); return; }
+    const r = await fetch(`${REMAKE}/api/chief/${p.date}`, { method:'PUT', headers:{ authorization:'Bearer ' + tok, 'content-type':'application/json' },
+      body:JSON.stringify(p), signal:AbortSignal.timeout(20e3) }).catch(e => ({ ok:false, status:e.message }));
+    step(t, r.ok ? `Контент-план (${p.items.length} пунктов) — в ветке «Instagram Reels» бота @instaoo_bot: ✅ под пунктом — в работу с монтажом.`
+      : `Контент-план готов, но бот не принял его (${r.status}) — пункты можно запустить из офиса.`);
+    save();
+  }
+  // ✅ from the bot: approved items without a task go to the agents (the bot's own plan items — the bot does them itself)
+  async function chiefPoll(today) {
+    const tok = process.env.HQ_REMAKE_TOKEN || '';
+    if (!tok || !chiefRead(today)) return;
+    const r = await fetch(`${REMAKE}/api/chief/${today}`, { headers:{ authorization:'Bearer ' + tok }, signal:AbortSignal.timeout(20e3) }).catch(() => null);
+    const remote = r?.ok ? await r.json().catch(() => null) : null;
+    if (!remote?.items) return;
+    const ids = remote.items.filter(x => x.approved).map(x => x.id);
+    if (ids.length) chiefGo(today, ids, { from:'бот' });
+  }
+  function chiefGo(date, ids, { from = 'офис' } = {}) {
+    const p = chiefRead(date);
+    if (!p) return { error:'Плана маркетолога на эту дату нет.' };
+    const made = [];
+    for (const x of p.items) {
+      if (!ids.map(String).includes(x.id) || x.launched) continue;
+      x.approved = x.approved || now();
+      if (x.plan_ref != null && from === 'бот') { x.launched = 'bot'; continue; }  // a «План дня» item: the bot makes it (reel) or contentPlan (carousel)
+      const t = chiefLaunch(p, x);
+      x.launched = t?.id || 'none';
+      if (t) made.push(t);
+    }
+    chiefWrite(p);
+    return { ok:true, tasks:made.map(t => t.id) };
+  }
+  function chiefLaunch(p, x) {
+    const ref = x.ref?.url ? `\nРеференс: ${x.ref.url}${x.ref.author ? ` (@${x.ref.author})` : ''} — просмотров ${fmtN(x.ref.views)}, комментариев ${fmtN(x.ref.comments)}, репостов ${fmtN(x.ref.shares)}. Бери механику, не копируй.` : '';
+    const text = `Пункт ${x.id} контент-плана главного маркетолога на ${ruDate(p.date)}${x.slot ? ` — публикация в ${x.slot} МСК` : ''}: ${KINDS_RU[x.kind]}${x.stream ? ` (${x.stream})` : ''}.\n` +
+      `${x.title}\nХук на экране: ${x.hook || '—'}\nИдея: ${x.idea || '—'}\nПочему сработает: ${x.why || '—'}${x.code_word ? `\nКодовое слово: ${x.code_word} (бот @iliapaliybonus1_bot)` : ''}${x.style ? `\nСтиль: ${x.style}` : ''}${ref}\n` +
+      'Адаптируй под меня (@ilia.paliy, НЕЙРОЗАПУСК): мой голос, мои факты, ничего не выдумывай.';
+    const chief = { date:p.date, id:x.id };
+    let t;
+    if (x.kind === 'carousel' && agentOf('carousel')) {
+      t = createTask({ text, preset:{ agent:'carousel', skill:'carousel-pro', deliverable:'carousel', style:x.style || 'Тёмный @ilia.paliy',
+        title:`Карусель${x.slot ? ' ' + x.slot : ''} · ${x.title}`, why:'Контент-план главного маркетолога' } }).task;
+    } else if (x.kind === 'reel') {
+      t = createTask({ text:text + '\nСделай рилс целиком: сценарий → аватар HeyGen → монтаж → подпись.', pipeline:'reel', source:'office' }).task;
+    } else {
+      t = createTask({ text, agent:x.agent || '', source:'office' }).task;
+    }
+    t.chief = chief;
+    step(t, `Из контент-плана главного маркетолога (пункт ${x.id}).`);
+    emit(t);
+    return t;
+  }
+  function chiefSummary() {
+    const p = chiefRead(moscowDate());
+    if (!p?.items?.length) return '';
+    return ` Контент-план главного маркетолога на сегодня${p.summary ? ` («${p.summary}»)` : ''}: ` +
+      p.items.map(x => `${x.id}. ${x.slot ? x.slot + ' ' : ''}${KINDS_RU[x.kind]} — ${x.title}${x.launched ? ' (в работе)' : ''}`).join('; ') + '.';
   }
 
   setInterval(() => { try { tickRoutines(); } catch (e) { console.error('desk routines:', e.message); } }, 60e3).unref();
@@ -1485,6 +1618,17 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       const id = crypto.randomBytes(8).toString('hex'), name = safeName(url.searchParams.get('name'));
       const size = await saveBody(req, path.join(DIR, 'uploads', id, name));
       return json(res, 200, { id, name, size });
+    }
+    // the chief marketer's plan: GET chief[/<date>] — the plan with what is launched; POST chief/go {date, ids} — launch items from the office
+    if (M === 'GET' && /^chief(\/\d{4}-\d{2}-\d{2})?$/.test(rest)) {
+      if (!isOwner) return json(res, 403, { error:'Только для владельца.' });
+      return json(res, 200, chiefRead(rest.split('/')[1] || moscowDate()) || { items:[] });
+    }
+    if (M === 'POST' && rest === 'chief/go') {
+      if (!isOwner) return json(res, 403, { error:'Только для владельца.' });
+      const b = await readJson(req);
+      const r = chiefGo(String(b.date || moscowDate()), Array.isArray(b.ids) ? b.ids : []);
+      return json(res, r.error ? 404 : 200, r);
     }
     // the owner asks a control agent for the report now (the admin panel)
     if (M === 'POST' && rest === 'control') {
