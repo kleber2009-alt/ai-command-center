@@ -116,6 +116,13 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/api/studio/')) return await studio.handle(req, res, p, url);
     if (p === '/api/runs' && req.method === 'GET') return send(res, 200, listRuns());
     // «План дня» бота @instaoo_bot (reels-bot.mjs → scout.mjs): latest | YYYY-MM-DD; его забирает офис hq2 (desk.mjs)
+    // собрать план сейчас (как /scan в ветке): только по REMAKE_SITE_TOKEN — тест после выкладки (deploy-remake-site.yml, plan_now)
+    if (p === '/api/plan/scan' && req.method === 'POST') {
+      if (!authorized(req)) return send(res, TOKEN ? 401 : 403, { error: 'нужен токен' });
+      if (!reels.enabled) return send(res, 503, { error: 'ветка Reels выключена (нет REMAKE_TG_BOT_TOKEN)' });
+      reels.scan().catch((e) => console.error('plan scan:', e.message));
+      return send(res, 202, { ok: true, started: new Date().toISOString() });
+    }
     let pm = /^\/api\/plan(?:\/(latest|\d{4}-\d{2}-\d{2}))?$/.exec(p);
     if (pm && req.method === 'GET') {
       try { return send(res, 200, JSON.parse(fs.readFileSync(path.join(DATA, 'plan', `${pm[1] || 'latest'}.json`), 'utf8'))); }
