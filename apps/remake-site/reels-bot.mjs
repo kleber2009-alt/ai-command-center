@@ -24,7 +24,7 @@
    сделал /bind).
 
    Команды в ветке: /bind — эта ветка теперь «Instagram Reels» (бот переименует её; нужен админ с правом «Управление темами»)
-     /scan — собрать план сейчас · /plan — план на сегодня · /keywords [add|del слово, …] — поиск рилсов по теме · /competitors [add|del @ник …] — список конкурентов · /status · /help
+     /scan — собрать план сейчас · /plan — план на сегодня · /chief — контент-план главного маркетолога офиса · /keywords [add|del слово, …] — поиск рилсов по теме · /competitors [add|del @ник …] — список конкурентов · /status · /help
      ссылка на рилс в ветке — сразу в работу, как карточка из поиска.
 
    Env: REMAKE_TG_BOT_TOKEN (свой бот: getUpdates не делят с другим процессом) · REMAKE_TG_OWNER_IDS (id через запятую)
@@ -287,6 +287,70 @@ export function createReelsBot({ studio, data }) {
     fs.mkdirSync(path.join(data, 'plan'), { recursive: true });
     const latest = readPlan();
     for (const f of [`${p.date}.json`, ...(!latest || latest.date <= p.date ? ['latest.json'] : [])]) fs.writeFileSync(path.join(data, 'plan', f), JSON.stringify(p, null, 1));
+  }
+
+  /* ---------- the content plan of the office's «Главный маркетолог» (hq2: desk.mjs → chief*) ----------
+     The office PUTs /api/chief/<date> → one message in this topic: every item with why it will work, its hook and the
+     reference, ✅ per item and «все». An item from today's «План дня» (plan_ref) is approved here as the plan's own item
+     (a reel → HeyGen → montage, a carousel → the office's «Карусели»); the rest the office takes from GET /api/chief/<date>
+     and gives to its agents (a reel — «Рилс под ключ»: script → avatar → montage → caption). */
+  const KIND = { reel: '🎬 Рилс', carousel: '🖼 Карусель', post: '📝 Пост', stories: '📱 Сторис', threads: '🧵 Threads', live: '🎙 Эфир', other: '✨ Идея' };
+  function readChief(d = 'latest') { try { return JSON.parse(fs.readFileSync(path.join(data, 'chief', `${d}.json`), 'utf8')); } catch { return null; } }
+  function saveChief(p) {
+    fs.mkdirSync(path.join(data, 'chief'), { recursive: true });
+    const latest = readChief();
+    for (const f of [`${p.date}.json`, ...(!latest || latest.date <= p.date ? ['latest.json'] : [])]) fs.writeFileSync(path.join(data, 'chief', f), JSON.stringify(p, null, 1));
+  }
+  function chiefMsg(p) {
+    const head = `🧠 <b>Контент-план маркетолога на ${esc(ruDay(p.date))}</b>${p.summary ? `\n<i>${esc(p.summary)}</i>` : ''}`;
+    const parts = p.items.map((x, i) => {
+      const m = x.ref ? [x.ref.views != null && `${fmt(x.ref.views)} просм.`, x.ref.comments != null && `${fmt(x.ref.comments)} комм.`, x.ref.shares != null && `${fmt(x.ref.shares)} репостов`].filter(Boolean).join(' · ') : '';
+      return `${x.approved ? '✅' : `${i + 1}.`} ${x.slot ? `<b>${esc(x.slot)}</b> · ` : ''}${KIND[x.kind] || KIND.other}${x.stream ? ` · ${esc(x.stream)}` : ''}${x.plan_ref != null ? ' · 📋 из плана дня' : ''}\n` +
+        `<b>${esc(x.title)}</b>` + (x.hook ? `\nХук: «${esc(x.hook)}»` : '') + (x.why ? `\nПочему сработает: ${esc(x.why)}` : '') +
+        (x.code_word ? `\nКодовое слово: <b>${esc(x.code_word)}</b>` : '') + (x.ref?.url ? `\n<a href="${esc(x.ref.url)}">референс${x.ref.author ? ' @' + esc(x.ref.author) : ''}</a>${m ? ' — ' + esc(m) : ''}` : '');
+    });
+    const foot = '\n\n✅ — в работу: рилс — сценарий → аватар → монтаж → подпись, карусель — слайды. Готовое придёт сюда и в офис.';
+    let text = head;
+    for (const x of parts) { if ((text + '\n\n' + x + foot).length > 4000) { text += '\n\n…остальное — в офисе hq2'; break; } text += '\n\n' + x; }
+    return text + foot;
+  }
+  function chiefButtons(p) {
+    const left = p.items.map((x, i) => ({ x, i })).filter(({ x }) => !x.approved);
+    if (!left.length) return { inline_keyboard: [] };
+    const rows = [];
+    for (let k = 0; k < left.length; k += 2) rows.push(left.slice(k, k + 2).map(({ x, i }) => ({ text: `✅ ${i + 1} · ${(KIND[x.kind] || KIND.other).split(' ')[1]}${x.slot ? ' ' + x.slot : ''}`, callback_data: `c:ok:${p.date}:${i}` })));
+    if (left.length > 1) rows.push([{ text: `✅ Одобрить ${left.length === p.items.length ? 'все' : 'оставшиеся'} ${left.length}`, callback_data: `c:all:${p.date}` }]);
+    return { inline_keyboard: rows };
+  }
+  async function putChief(plan) {
+    const old = readChief(plan.date);
+    const p = { ...plan, received_at: new Date().toISOString(), msg: old?.msg || 0 };
+    for (const x of p.items) { const o = old?.items?.find((y) => y.title === x.title); if (o?.approved && !x.approved) x.approved = o.approved; }
+    saveChief(p);
+    if (p.msg) {
+      const ok = await tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text: chiefMsg(p), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: chiefButtons(p) })
+        .then(() => true).catch((e) => /not modified/.test(e.message));
+      if (ok) return p;
+    }
+    const m = await say(chiefMsg(p), { reply_markup: chiefButtons(p) });
+    if (m) { p.msg = m.message_id; saveChief(p); }
+    return p;
+  }
+  async function approveChief(date, idx) {
+    const p = readChief(date);
+    if (!p) return 'Этого контент-плана уже нет';
+    const fromPlan = [];
+    for (const i of idx) {
+      const x = p.items[i];
+      if (!x || x.approved) continue;
+      x.approved = new Date().toISOString();
+      if (x.plan_ref != null) fromPlan.push(x.plan_ref);
+    }
+    saveChief(p);
+    if (fromPlan.length && readPlan(date)) await approvePlan(date, fromPlan);
+    if (p.msg) await quiet(tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text: chiefMsg(p), parse_mode: 'HTML',
+      link_preview_options: { is_disabled: true }, reply_markup: chiefButtons(p) }));
+    return 'В работу';
   }
 
   function next() {
@@ -568,6 +632,12 @@ export function createReelsBot({ studio, data }) {
     const [, act, id, arg] = String(q.data || '').split(':');
     const answer = (text = '', alert = false) => quiet(tg('answerCallbackQuery', { callback_query_id: q.id, text, show_alert: alert }));
     if (!owners().has(q.from.id)) return answer('Кнопки — только у владельца', true);
+    if (String(q.data).startsWith('c:')) {  // the chief marketer's content plan
+      const p = readChief(id);
+      if (!p) return answer('Этого контент-плана уже нет');
+      const idx = act === 'all' ? p.items.map((_, i) => i) : [Number(arg)];
+      return answer(await approveChief(id, idx));
+    }
     if (String(q.data).startsWith('p:')) {  // the plan of the day
       const p = readPlan(id);
       if (!p) return answer('Этого плана уже нет');
@@ -668,7 +738,7 @@ export function createReelsBot({ studio, data }) {
     `Беру только залёты: от 100 тыс. просмотров, 1 000 комментариев и 1 000 репостов. Источники: 🔥 что летит у конкурентов за 3 дня, ` +
     `♻️ всё, что залетало у вас, — уникализировать, 🏆 лучшее конкурентов за всё время — адаптировать.\n` +
     `Рилсы — карточками сюда (✅ → аватар HeyGen, монтаж Кадрика, видео файлом). Карусели делает агент «Карусели» офиса — карточки в пульте офиса.\n\n` +
-    `/plan — план на сегодня\n/keywords add слово, слово — поиск рилсов по теме\n` +
+    `/plan — план на сегодня\n/chief — контент-план главного маркетолога\n/keywords add слово, слово — поиск рилсов по теме\n` +
     `/scan — собрать план сейчас\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
     `Ссылка на рилс сюда — сразу в работу.\n\nКнопки карточки — как в ветке Threads:\n✅ Одобрить — аватар, монтаж и видео сюда\n` +
     `✏️ Править — правка текстом или голосом: до ✅ — сценарий, под готовым видео — монтаж (со слова «сценарий» — новый текст и новый аватар)\n` +
@@ -705,6 +775,12 @@ export function createReelsBot({ studio, data }) {
     if (!isOwner) return;
     if (cmd === 'help' || cmd === 'start') return say(HELP);
     if (cmd === 'scan') { if (!S.apify) return say('⚠️ Нет APIFY_TOKEN — искать залёты нечем.'); return scan(true); }
+    if (cmd === 'chief') {
+      const p = readChief();
+      if (!p) return say('Контент-плана маркетолога ещё не было — офис hq2 присылает его каждое утро (09:40 МСК).');
+      p.msg = 0; saveChief(p);
+      return putChief(p);
+    }
     if (cmd === 'plan') {
       const p = readPlan();
       if (!p) return say('Плана ещё не было — /scan соберёт его сейчас.');
@@ -819,6 +895,6 @@ export function createReelsBot({ studio, data }) {
     if (j.reels.state === 'montage' && j.steps.montage?.state === 'done' && j.montage.video) deliver(j);
   }
 
-  return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, keywords: st.keywords.length, last_scan: st.last_scan, plan: readPlan()?.date || '' }),
+  return { enabled: true, putChief, readChief, approveChief, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, keywords: st.keywords.length, last_scan: st.last_scan, plan: readPlan()?.date || '' }),
     scan: () => scan(true), onCallback, stop: () => { stopped = true; } };
 }

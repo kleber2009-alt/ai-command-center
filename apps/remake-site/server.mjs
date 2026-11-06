@@ -11,6 +11,7 @@
      /api/studio/*                 студия: референс → расшифровка → сценарий → аватар HeyGen → монтаж Кадрика (studio.mjs, вход по паролю)
      Telegram                      ветка «Instagram Reels»: план дня (3 залёта, scout.mjs) → карточки → ✅ → готовый рилс файлом (reels-bot.mjs, REMAKE_TG_BOT_TOKEN)
      GET  /api/plan[/<YYYY-MM-DD>]   план дня — его забирает офис hq2 (карусели → агент «Карусели»)
+     PUT|GET /api/chief/<YYYY-MM-DD> контент-план «Главного маркетолога» офиса hq2: офис кладёт, бот шлёт с ✅, офис забирает одобренное — по токену
      Telegram                      ветка «Instagram Карусели»: карусель-залёты → план → ✅ → слайды альбомом (carousel-bot.mjs, CAROUSEL_TG_BOT_TOKEN)
 
    Env: REMAKE_SITE_TOKEN (без него запись выключена), DATA_DIR (runs/, media/, state.json; по умолчанию ./data),
@@ -127,6 +128,21 @@ const server = http.createServer(async (req, res) => {
     if (pm && req.method === 'GET') {
       try { return send(res, 200, JSON.parse(fs.readFileSync(path.join(DATA, 'plan', `${pm[1] || 'latest'}.json`), 'utf8'))); }
       catch { return send(res, 404, { error: 'плана ещё нет' }); }
+    }
+    // контент-план «Главного маркетолога» офиса hq2: офис кладёт план (PUT) и забирает одобренное ✅ (GET) — только по REMAKE_SITE_TOKEN
+    const cm = /^\/api\/chief(?:\/(latest|\d{4}-\d{2}-\d{2}))?$/.exec(p);
+    if (cm) {
+      if (!authorized(req)) return send(res, TOKEN ? 401 : 403, { error: 'нужен токен' });
+      if (!reels.enabled) return send(res, 503, { error: 'ветка Reels выключена (нет REMAKE_TG_BOT_TOKEN)' });
+      if (req.method === 'GET') return reels.readChief(cm[1] || 'latest') ? send(res, 200, reels.readChief(cm[1] || 'latest')) : send(res, 404, { error: 'плана ещё нет' });
+      if (req.method === 'PUT' && cm[1] && cm[1] !== 'latest') {
+        let body = '';
+        for await (const c of req) { body += c; if (body.length > 1e6) return send(res, 413, { error: 'слишком большой план' }); }
+        let plan; try { plan = JSON.parse(body); } catch { return send(res, 400, { error: 'нужен JSON' }); }
+        if (!Array.isArray(plan?.items) || !plan.items.length) return send(res, 400, { error: 'нет пунктов' });
+        const saved = await reels.putChief({ ...plan, date: cm[1], items: plan.items.slice(0, 15) });
+        return send(res, 200, { ok: true, msg: saved.msg || 0 });
+      }
     }
     let m = /^\/api\/runs\/([^/]+)$/.exec(p);
     if (m && req.method === 'PUT') {
