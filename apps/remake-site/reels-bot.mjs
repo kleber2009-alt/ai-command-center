@@ -38,7 +38,7 @@
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalize, candidates, planDay, planText, library, SOURCES, metricsLine } from './scout.mjs';
+import { normalize, candidates, planDay, planText, library, SOURCES, metricsLine, graphOwn, withGraph } from './scout.mjs';
 import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
@@ -133,6 +133,7 @@ export function createReelsBot({ studio, data }) {
   const FRESH = Number(env('SCOUT_FRESH_DAYS', '3')), DEEP_DAYS = Number(env('SCOUT_DEEP_DAYS', '7'));
   const DEEP_LIMIT = Number(env('SCOUT_DEEP_LIMIT', '150')), OWN_LIMIT = Number(env('SCOUT_OWN_LIMIT', '400'));
   const SEARCH_ACTOR = env('SCOUT_SEARCH_ACTOR', 'TxU0ZBQIHdR20dr9C');
+  const IG_TOKEN = env('IG_ACCESS_TOKEN');  // the owner's Instagram token: real reposts and views of own posts (scout.graphOwn)
   const PLAN_SLOTS = env('PLAN_SLOTS', '10:00,14:00,19:00').split(/[\s,]+/).filter((x) => /^\d{1,2}:\d{2}$/.test(x));
   if (!Array.isArray(st.keywords)) st.keywords = env('SCOUT_KEYWORDS').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
 
@@ -157,7 +158,16 @@ export function createReelsBot({ studio, data }) {
     const [a, b, c, ...kw] = await Promise.all([
       tryIt('конкуренты, свежее', () => posts(comp, { limit: 30, days: FRESH })),
       deep ? tryIt('конкуренты, лучшее', () => posts(comp, { limit: DEEP_LIMIT })) : [],
-      deep || !libOwn.all().length ? tryIt('свой аккаунт', () => posts([own], { limit: OWN_LIMIT, own: true })) : [],
+      // own: a deep pass, or once the Graph API is there and the library still has posts without its numbers
+      deep || !libOwn.all().length || (IG_TOKEN && libOwn.all().some((x) => !x.graph))
+        ? tryIt('свой аккаунт', async () => {
+          const list = await posts([own], { limit: OWN_LIMIT, own: true });
+          if (!IG_TOKEN) return list;
+          let g = null;
+          try { g = await graphOwn({ token: IG_TOKEN, userId: env('IG_USER_ID'), limit: OWN_LIMIT, base: env('IG_GRAPH_BASE') }); }
+          catch (e) { errors.push(`Instagram Graph API (репосты ваших постов): ${e.message}`); }
+          return withGraph(list, g);
+        }) : [],
       ...st.keywords.slice(0, 8).map((q) => tryIt(`поиск «${q}»`, async () => (await apifyActor(SEARCH_ACTOR, { query: q, maxPages: 2 }))
         .map((p) => normalize(p)).filter((x) => x && x.author !== own))),
     ]);
@@ -194,8 +204,7 @@ export function createReelsBot({ studio, data }) {
     const inPlan = new Set(plan.items.map((x) => x.code));
     st.pool = list.filter((x) => x.kind === 'reel' && !inPlan.has(x.code)).slice(0, 12).map(origin);
     save();
-    await say(planText(plan, { date: ruDay(date), slots, competitors: st.competitors.length, stats: saved.stats }) +
-      (g.errors.length ? `\n\n⚠️ ${esc(g.errors.join('; ').slice(0, 600))}` : ''));
+    await sendPlan(saved);
     plan.items.forEach((x, i) => {
       if (x.kind !== 'reel') return;
       const j = start(origin(x));
@@ -212,10 +221,49 @@ export function createReelsBot({ studio, data }) {
     const [h, m] = hhmm.split(':').map(Number);
     return slotChoices({ slots: [[h, m]], tz: TZ, taken: [], n: 1, lead: 0 })[0] || 0;
   }
+  // the plan message: direct links, ✅ per item and for all three; edited in place as items get approved
+  const planMsg = (p) => planText({ items: p.items, mix: p.mix, short: p.short }, { date: ruDay(p.date), slots: p.items.map((x) => x.slot),
+    competitors: st.competitors.length, stats: p.stats }) + (p.errors?.length ? `\n\n⚠️ ${esc(p.errors.join('; ').slice(0, 600))}` : '');
+  function planButtons(p) {
+    const left = p.items.map((x, i) => ({ x, i })).filter(({ x }) => !x.approved);
+    if (!left.length) return { inline_keyboard: [] };
+    const rows = left.map(({ x, i }) => [{ text: `✅ ${i + 1} · ${x.kind === 'reel' ? 'Рилс' : 'Карусель'} ${x.slot}`, callback_data: `p:ok:${p.date}:${i}` }]);
+    if (left.length > 1) rows.push([{ text: `✅ Одобрить ${left.length === p.items.length ? 'все' : 'оставшиеся'} ${left.length}`, callback_data: `p:all:${p.date}` }]);
+    return { inline_keyboard: rows };
+  }
+  async function sendPlan(p) {
+    const m = await say(planMsg(p), { reply_markup: planButtons(p) });
+    if (m) { p.msg = m.message_id; p.buttons = true; savePlan(p); }
+    return m;
+  }
+  // ✅ on the plan: a reel → its card goes to HeyGen and montage (now, or as soon as its script is ready);
+  // a carousel → marked approved in the plan, the office (desk.mjs → contentPlan) gives it to the «Карусели» agent
+  async function approvePlan(date, idx) {
+    const p = readPlan(date);
+    if (!p) return 'Этого плана уже нет';
+    const said = [];
+    for (const i of idx) {
+      const x = p.items[i];
+      if (!x || x.approved) continue;
+      x.approved = new Date().toISOString();
+      if (x.kind === 'reel') {
+        const j = S.list().find((y) => y.reels?.plan?.date === date && y.reels.plan.n === i + 1 && y.reels.state !== 'skip');
+        if (!j) { said.push(`№${i + 1}: карточки рилса нет — /scan соберёт заново`); continue; }
+        if (j.reels.state === 'card') approve(j).catch((e) => console.error('plan approve:', e.message));
+        else if (j.reels.state === 'prep') { j.reels.auto_ok = true; S.save(j); said.push(`№${i + 1}: сценарий ещё пишется — запущу сам, как будет готов`); }
+      }
+    }
+    savePlan(p);
+    if (p.msg) await quiet(tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text: planMsg(p).slice(0, 4096), parse_mode: 'HTML',
+      link_preview_options: { is_disabled: true }, reply_markup: planButtons(p) }));
+    if (said.length) await say(said.map(esc).join('\n'), p.msg ? { reply_parameters: { message_id: p.msg, allow_sending_without_reply: true } } : {});
+    return 'Одобрено';
+  }
   function readPlan(d = 'latest') { try { return JSON.parse(fs.readFileSync(path.join(data, 'plan', `${d}.json`), 'utf8')); } catch { return null; } }
   function savePlan(p) {
     fs.mkdirSync(path.join(data, 'plan'), { recursive: true });
-    for (const f of [`${p.date}.json`, 'latest.json']) fs.writeFileSync(path.join(data, 'plan', f), JSON.stringify(p, null, 1));
+    const latest = readPlan();
+    for (const f of [`${p.date}.json`, ...(!latest || latest.date <= p.date ? ['latest.json'] : [])]) fs.writeFileSync(path.join(data, 'plan', f), JSON.stringify(p, null, 1));
   }
 
   function next() {
@@ -397,6 +445,7 @@ export function createReelsBot({ studio, data }) {
       j.reels.state = 'card';
       if (!j.reels.slot) j.reels.slot = freeSlots(j)[0] || 0;
       S.save(j);
+      if (j.reels.auto_ok) { j.reels.auto_ok = false; S.save(j); return go(() => approve(j)); }  // ✅ on the plan came first
       return go(() => card(j));
     }
     if (id === 'avatar' && state === 'done' && j.reels.state === 'avatar') return go(() => montage(j));
@@ -496,6 +545,12 @@ export function createReelsBot({ studio, data }) {
     const [, act, id, arg] = String(q.data || '').split(':');
     const answer = (text = '', alert = false) => quiet(tg('answerCallbackQuery', { callback_query_id: q.id, text, show_alert: alert }));
     if (!owners().has(q.from.id)) return answer('Кнопки — только у владельца', true);
+    if (String(q.data).startsWith('p:')) {  // the plan of the day
+      const p = readPlan(id);
+      if (!p) return answer('Этого плана уже нет');
+      const idx = act === 'all' ? p.items.map((_, i) => i) : [Number(arg)];
+      return answer(await approvePlan(id, idx));
+    }
     const j = S.get(id);
     if (!j?.reels) return answer('Этого ролика уже нет');
     if (act === 'ok') {
@@ -630,9 +685,7 @@ export function createReelsBot({ studio, data }) {
     if (cmd === 'plan') {
       const p = readPlan();
       if (!p) return say('Плана ещё не было — /scan соберёт его сейчас.');
-      return say(`📋 <b>План на ${esc(ruDay(p.date))}</b>\n` + p.items.map((x, i) => `${i + 1}. <b>${esc(x.slot)}</b> · ${x.kind === 'reel' ? '🎬 Рилс' : '🎠 Карусель'} · ` +
-        `${SOURCES[x.source]?.icon || ''} <a href="${esc(x.url)}">@${esc(x.author)}</a> — ${esc(metricsLine({ ...x, gate: null }))}`).join('\n') +
-        (p.short ? `\n⚠️ Залётов хватило только на ${p.items.length}.` : ''));
+      return sendPlan(p);
     }
     if (cmd === 'keywords') {
       const [, op, ...rest] = text.split(/\s+/);
@@ -728,6 +781,12 @@ export function createReelsBot({ studio, data }) {
     if (st.chat_id && S.apify && st.last_scan !== today() && hourNow() >= HOUR) scan(false).catch((e) => console.error('reels scan:', e.message));
   }, 5 * 60e3).unref();
 
+  // today's plan sent before the ✅ buttons existed — once more, with the buttons and direct links
+  setTimeout(() => {
+    const p = readPlan();
+    if (st.chat_id && p?.date === today() && !p.buttons) sendPlan(p).catch((e) => console.error('reels plan resend:', e.message));
+  }, 5e3).unref();
+
   // after a restart: cards whose step finished while the process was down
   for (const j of S.list()) {
     if (!j.reels) continue;
@@ -737,5 +796,5 @@ export function createReelsBot({ studio, data }) {
   }
 
   return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, keywords: st.keywords.length, last_scan: st.last_scan, plan: readPlan()?.date || '' }),
-    scan: () => scan(true), stop: () => { stopped = true; } };
+    scan: () => scan(true), onCallback, stop: () => { stopped = true; } };
 }

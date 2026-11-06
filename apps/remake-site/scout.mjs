@@ -200,8 +200,10 @@ export function planText(plan, { date, slots = [], competitors = 0, stats = {} }
     const when = slots[i] ? `<b>${esc(slots[i])}</b> · ` : '';
     const what = x.kind === 'reel' ? '🎬 Рилс' : `🎠 Карусель${x.slides ? `, ${x.slides} слайдов` : ''}`;
     const topic = (x.caption || '').split('\n').find((l) => l.trim())?.slice(0, 110) || '';
-    return `${i + 1}. ${when}${what} · ${s.icon} ${s.label}\n   <a href="${esc(x.url)}">@${esc(x.author || '?')}</a> — ${esc(metricsLine(x))}` +
-      `${topic ? `\n   «${esc(topic)}»` : ''}\n   → ${esc(s.verb)}`;
+    const ok = x.approved ? '✅ ' : '';
+    const link = String(x.url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+    return `${ok}${i + 1}. ${when}${what} · ${s.icon} ${s.label}\n   🔗 <a href="${esc(x.url)}">${esc(link)}</a>\n   @${esc(x.author || '?')} — ${esc(metricsLine(x))}` +
+      `${topic ? `\n   «${esc(topic)}»` : ''}\n   → ${esc(s.verb)}` + (x.approved ? `\n   <b>Одобрено</b> — ${x.kind === 'reel' ? 'аватар и монтаж после сценария' : 'карусель у агента «Карусели» офиса'}` : '');
   });
   const tail = [];
   if (plan.short) {
@@ -209,7 +211,8 @@ export function planText(plan, { date, slots = [], competitors = 0, stats = {} }
       `Ниже порогов не беру. ${competitors < 10 ? `Конкурентов в списке ${competitors} — добавьте больше: /competitors add @ник @ник.` : 'Расширьте ключевые слова: /keywords add слово.'}`);
   }
   if (stats.scanned != null) tail.push(`🔎 Просмотрено постов: ${stats.scanned} · прошли пороги: ${stats.passed ?? '—'}${stats.hidden ? ` · без видимых метрик: ${stats.hidden}` : ''}`);
-  tail.push('Рилсы — карточками ниже (✅ → аватар и монтаж). Карусели собирает агент «Карусели» офиса — карточки придут в пульт офиса.');
+  tail.push(plan.items.every((x) => x.approved) ? 'Всё одобрено. Рилсы — карточками ниже, карусели — в пульте офиса.'
+    : '✅ — одобрить: рилс уходит в аватар HeyGen и монтаж, карусель — агенту «Карусели» офиса (карточка придёт в пульт офиса).');
   return [head, rows.join('\n\n'), tail.join('\n')].join('\n\n');
 }
 
@@ -221,7 +224,12 @@ export function library(dir) {
   return {
     // keep the freshest numbers; only posts that passed the gate stay (a hit stays a hit)
     add(posts) {
-      for (const x of posts) if (x?.code && gate(x).ok) lib[x.code] = { ...(lib[x.code] || {}), ...x, seen: new Date().toISOString() };
+      for (const x of posts) {
+        if (!x?.code) continue;
+        // a hit stays a hit; a post seen again with fresh numbers below the gate (e.g. real reposts from the Graph API) goes out
+        if (gate(x).ok) lib[x.code] = { ...(lib[x.code] || {}), ...x, seen: new Date().toISOString() };
+        else delete lib[x.code];
+      }
       const keep = Object.values(lib).sort((a, b) => (b.comments || 0) - (a.comments || 0)).slice(0, 2000);
       lib = Object.fromEntries(keep.map((x) => [x.code, x]));
       fs.mkdirSync(dir, { recursive: true });
@@ -233,3 +241,52 @@ export function library(dir) {
 }
 
 export const kindRu = (k) => KIND[k] || k;
+
+/* ---------- 7. own posts: real numbers from the Instagram Graph API ----------
+   The public scraper shows no reposts (and no carousel views); the owner's token does. IG_ACCESS_TOKEN — an Instagram
+   token (IG…, graph.instagram.com, «me») or a Facebook one with IG_USER_ID. → Map shortcode → { views, shares, comments, likes }:
+   shares = «Поделиться» + reposts (the new metric is asked separately — an unknown metric fails the whole request). */
+export async function graphOwn({ token, userId = '', version = 'v23.0', limit = 400, base = '', fetchFn = fetch } = {}) {
+  if (!token) return new Map();
+  const ig = token.startsWith('IG');
+  if (!ig && !userId) throw new Error('для токена Facebook нужен IG_USER_ID');
+  const root = (base || `https://graph.${ig ? 'instagram' : 'facebook'}.com`).replace(/\/$/, '') + '/' + version;
+  const get = async (url) => {
+    const r = await fetchFn(url, { signal: AbortSignal.timeout(60e3) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw new Error(`Graph API: ${d.error?.message || r.status}`);
+    return d;
+  };
+  const media = [];
+  let url = `${root}/${ig ? 'me' : userId}/media?` + new URLSearchParams({ fields: 'id,shortcode,permalink,media_type,comments_count,like_count', limit: '50', access_token: token });
+  while (url && media.length < limit) { const d = await get(url); media.push(...(d.data || [])); url = d.paging?.next || ''; }
+  const one = async (id, metric) => {
+    try {
+      const d = await get(`${root}/${id}/insights?` + new URLSearchParams({ metric, access_token: token }));
+      return Object.fromEntries((d.data || []).map((x) => [x.name, num(x.values?.[0]?.value ?? x.total_value?.value)]));
+    } catch { return null; }
+  };
+  const out = new Map();
+  const queue = media.slice(0, limit);
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    for (let m; (m = queue.shift());) {
+      const code = m.shortcode || sc(m.permalink);
+      if (!code) continue;
+      const ins = (await one(m.id, 'views,shares,saved')) || (await one(m.id, 'shares,saved')) || {};
+      const rep = (await one(m.id, 'reposts')) || {};
+      const shares = ins.shares == null && rep.reposts == null ? null : (ins.shares || 0) + (rep.reposts || 0);
+      out.set(code, { views: ins.views ?? null, shares, comments: num(m.comments_count), likes: num(m.like_count) });
+    }
+  }));
+  return out;
+}
+// the scraped own posts with the Graph numbers on top (a known number wins over an unknown one)
+export function withGraph(posts, g) {
+  if (!g?.size) return posts;
+  return posts.map((x) => {
+    const n = g.get(x.code);
+    if (!n) return x;
+    return { ...x, graph: true, shares: n.shares ?? x.shares, comments: n.comments ?? x.comments, likes: n.likes ?? x.likes,
+      views: x.kind === 'reel' ? n.views ?? x.views : x.views };
+  });
+}

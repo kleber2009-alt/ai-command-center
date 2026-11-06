@@ -1171,26 +1171,26 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     return made;
   }
   /* «План дня» бота @instaoo_bot (apps/remake-site: reels-bot.mjs + scout.mjs) — часть офиса, агент «Поиск залётов» (viral).
-     Каждое утро после HQ_PLAN_AT (09:20 МСК) офис забирает план (`${HQ_REMAKE_URL}/api/plan/<сегодня>`): 3 залёта на день,
-     1 рилс + 2 карусели или 2 рилса + 1 карусель. Рилсы делает сам бот (карточки → ✅ → HeyGen → монтаж), каждая карусель —
-     задача агенту «Карусели» по скиллу carousel-pro: свой залёт — ремикс, чужой — адаптация в стиле Ильи. Плана к 13:00 нет —
-     день пропускается. HQ_PLAN=off — выключить. Сам план — в знаниях ассистента (planSummary). */
+     С HQ_PLAN_AT (09:00 МСК) до 23:30 офис раз в ~2 минуты смотрит план (`${HQ_REMAKE_URL}/api/plan/<сегодня>`): 3 залёта на день,
+     1 рилс + 2 карусели или 2 рилса + 1 карусель. Рилсы делает сам бот (✅ → HeyGen → монтаж); каждая карусель, которую Илья
+     одобрил ✅ под планом в боте, — задача агенту «Карусели» по скиллу carousel-pro: свой залёт — ремикс, чужой — адаптация. HQ_PLAN=off — выключить. Сам план — в знаниях ассистента (planSummary). */
   const REMAKE = (process.env.HQ_REMAKE_URL || 'https://remake.aicex.club').replace(/\/$/, '');
   const PLAN_ON = !/^(off|0|false)$/i.test(process.env.HQ_PLAN || '');
   let dayPlan = null, planBusy = false;
   const fmtN = n => n == null ? 'не видно' : n >= 1e6 ? `${(n / 1e6).toFixed(1).replace('.0', '')} млн` : n >= 1e3 ? `${Math.round(n / 1e3)} тыс.` : String(n);
-  async function contentPlan(today, hhmm) {
-    if (!PLAN_ON || planBusy || routRuns['content-plan'] === today || hhmm < (process.env.HQ_PLAN_AT || '09:20')) return;
-    planBusy = true;
+  let planAt = 0;
+  async function contentPlan(today, hhmm, { force = false } = {}) {
+    if (!PLAN_ON || planBusy || hhmm < (process.env.HQ_PLAN_AT || '09:00') || hhmm > '23:30') return;
+    if (!force && Date.now() - planAt < 90e3) return;  // the plan is checked every ~2 minutes: ✅ in the bot can come any time
+    planBusy = true; planAt = Date.now();
     try {
       const r = await fetch(`${REMAKE}/api/plan/${today}`, { signal:AbortSignal.timeout(20e3) }).catch(() => null);
       const plan = r?.ok ? await r.json().catch(() => null) : null;
-      if (!plan?.items) { if (hhmm >= '13:00') { routRuns['content-plan'] = today; fs.writeFileSync(ROUT_FILE, JSON.stringify(routRuns)); } return; }
-      routRuns['content-plan'] = today; fs.writeFileSync(ROUT_FILE, JSON.stringify(routRuns));
+      if (!plan?.items) return;
       dayPlan = plan;
       if (!agentOf('carousel')) return;
       plan.items.forEach((x, i) => {
-        if (x.kind !== 'carousel' || tasks.some(t => t.plan?.code === x.code)) return;
+        if (x.kind !== 'carousel' || !x.approved || tasks.some(t => t.plan?.code === x.code)) return;  // only after ✅ in @instaoo_bot
         const own = x.own || x.source === 'own';
         const how = own
           ? 'Это мой собственный залёт — сделай ремикс по скиллу carousel-pro: сохрани суть и рабочие слайды, новая обложка и хук, новый порядок, новый CTA с кодовым словом.'
