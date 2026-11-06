@@ -129,8 +129,10 @@ jobs:
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
           tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
             | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
-          # the transcriber (agent «Транскрибатор»): the skill goes with the runner and into the bots' user ~/.claude/skills
-          mkdir -p apps/hq-office/runner/skills && cp -r .claude/skills/transcribe-reference .claude/skills/social-daily-stats .claude/skills/service-balances apps/hq-office/runner/skills/
+          # skills of the office's own agents (Транскрибатор, Статистика соцсетей, Балансы, Конкуренты, Человек + эксперт, Конвейер объёма):
+          # they go with the runner and into the bots' user ~/.claude/skills
+          mkdir -p apps/hq-office/runner/skills && cp -r .claude/skills/transcribe-reference .claude/skills/social-daily-stats .claude/skills/service-balances \
+            .claude/skills/competitor-ideas .claude/skills/strategy-human-expert .claude/skills/strategy-volume-factory apps/hq-office/runner/skills/
           tar -C apps/hq-office/runner -czf - . \
             | $SSH "mkdir -p /opt/hq-office/runner/releases/$REL && tar -xzf - -C /opt/hq-office/runner/releases/$REL"
 
