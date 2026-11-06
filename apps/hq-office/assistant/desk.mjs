@@ -1113,7 +1113,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
 
   // restart: interrupted routing is redone
-  for (const t of tasks) if (t.status === 'routing') route(t);
+  for (const t of tasks) if (t.status === 'routing') Promise.resolve().then(() => route(t)).catch(e => { t.status = 'error'; t.error = 'Не удалось распределить задачу после перезапуска: ' + (e?.message || e); try { emit(t); } catch {} });
 
   /* ---------- routines: the daily tasks the desk sets itself ---------- */
 
@@ -1125,7 +1125,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
      them). The facts come from the desk itself — tasks of the department's agents, what waits for the head and how long,
      what the head accepted or sent back, quality, costs, idle agents; Claude writes them up. The report is a task «на
      проверке» for the owner (office + Telegram), never published and invisible to heads. */
-  const CONTROLS = () => new Set(Object.entries(officeWindow(officeDir)?.OFFICE_AGENTS?.list || {}).filter(([, a]) => a.control).map(([id]) => id));
+  // a hoisted declaration: route() runs at startup (restart of interrupted routing) before this line is reached
+  function CONTROLS() { return new Set(Object.entries(officeWindow(officeDir)?.OFFICE_AGENTS?.list || {}).filter(([, a]) => a.control).map(([id]) => id)); }
   // dept → { id, head } of its control agent
   function controlAgents() {
     const L = officeWindow(officeDir)?.OFFICE_AGENTS?.list || {}, m = new Map();

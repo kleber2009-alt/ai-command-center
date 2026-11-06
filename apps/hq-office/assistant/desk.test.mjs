@@ -950,3 +950,23 @@ test('оценка времени: без истории — типичное в
   assert.ok(e && e.basis === 'history', JSON.stringify(e));
   assert.equal((await d.get(a)).eta, null, 'на проверке у владельца — без оценки');
 });
+
+test('restart with a task left in routing: the desk starts and routes it again', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-test-')); dirs.push(dataDir);
+  const msg = { create:async () => ({ content:[{ type:'text', text:'- правило' }] }) };
+  // the first server dies while the dispatcher thinks: the task stays «routing» on disk
+  const hang = { beta:{ messages:{ create:() => new Promise(() => {}) } }, messages:msg };
+  const first = createDesk({ claude:hang, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK });
+  const { task } = first.createTask({ text:'сделай слайды' });
+  await new Promise(r => setTimeout(r, 200));
+  const read = () => JSON.parse(fs.readFileSync(path.join(dataDir, 'desk', 'tasks.json'), 'utf8')).find(x => x.id === task.id);
+  assert.equal(read().status, 'routing');
+  // the restart: a new desk over the same data must start and finish the routing
+  const fake = { beta:{ messages:{ create:async () => ({ stop_reason:'end_turn', content:[{ type:'text', text:JSON.stringify(ROUTE) }] }) } }, messages:msg };
+  const second = createDesk({ claude:fake, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK });
+  assert.ok(second.handle);
+  await new Promise(r => setTimeout(r, 500));
+  const t = read();
+  assert.notEqual(t.status, 'routing');
+  assert.notEqual(t.status, 'error', t.error);
+});
