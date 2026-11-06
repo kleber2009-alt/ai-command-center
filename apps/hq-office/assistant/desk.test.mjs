@@ -24,12 +24,12 @@ after(() => { for (const s of servers) s.close(); for (const d of dirs) fs.rmSyn
 const ROUTE = { action:'assign', agent:'slides', skill:'', title:'Задача', brief:'сделай', deliverable:'slides', why:'по профилю', question:'',
   visual:'none', style_named:'', transcribe:false, pipeline:'none' };
 
-function setup({ claude = true, telegram } = {}) {
+function setup({ claude = true, telegram, linkKey = '' } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-test-')); dirs.push(dataDir);
   const routes = [];
   const fake = { beta:{ messages:{ create:async () => ({ stop_reason:'end_turn', content:[{ type:'text', text:JSON.stringify({ ...ROUTE, ...(routes.shift() || {}) }) }] }) } },
     messages:{ create:async () => ({ content:[{ type:'text', text:'- правило' }] }) } };
-  const desk = createDesk({ claude:claude ? fake : null, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK, telegram });
+  const desk = createDesk({ claude:claude ? fake : null, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK, telegram, linkKey });
   const srv = http.createServer((req, res) => desk.handle(req, res, req.url.split('?')[0].replace(/^\/desk\/?/, ''), req.headers['x-head'] ? { head:JSON.parse(decodeURIComponent(req.headers['x-head'])) } : req.headers['x-guest'] !== '1')).listen(0);
   servers.push(srv);
   const base = `http://127.0.0.1:${srv.address().port}/desk/`;
@@ -262,7 +262,7 @@ test('утренние задачи: проверка балансов без п
   const d = setup();
   const made = d.desk.tickRoutines(new Date('2026-11-04T07:00:00Z'));  // 10:00 МСК — обе задачи пора ставить
   process.env.HQ_ROUTINES = 'off';
-  assert.deepEqual(made.map(t => t.routine).sort(), ['billing-daily', 'chief-plan', 'social-daily']);
+  assert.deepEqual(made.map(t => t.routine).sort(), ['billing-daily', 'chief-plan', 'content-day', 'social-daily']);   // a Wednesday: no weekly or monthly report
   assert.equal(d.desk.tickRoutines(new Date('2026-11-04T08:00:00Z')).length, 0);  // второй раз за день — нет
   const billing = made.find(t => t.routine === 'billing-daily');
   let job;
@@ -368,6 +368,111 @@ test('конкуренты Ильи: агенту контента — in/compet
   const job2 = await d.claim();
   assert.equal(job2.id, id2);
   assert.ok(!(await d.get(id2)).files.includes('competitors.md'));
+});
+
+test('планер публикаций: «Опубликовать» → подпись и кодовое слово → вопрос «когда» → в срок выходит в Instagram и Threads; без ключа — вручную', async () => {
+  const calls = [];
+  const graph = http.createServer(async (req, res) => {
+    let b = ''; for await (const c of req) b += c;
+    const u = new URL(req.url, 'http://x'), q = Object.fromEntries(new URLSearchParams(req.method === 'POST' ? b : u.search.slice(1)));
+    calls.push({ m:req.method, p:u.pathname, q });
+    const send = j => { res.writeHead(200, { 'content-type':'application/json' }); res.end(JSON.stringify(j)); };
+    if (req.method === 'GET') return send(q.fields === 'permalink' ? { permalink:'https://www.instagram.com/reel/NEW/' } : { status_code:'FINISHED', status:'FINISHED' });
+    if (u.pathname.endsWith('_publish')) return send({ id:'P' + calls.length });
+    send({ id:'C' + calls.length });
+  }).listen(0);
+  servers.push(graph);
+  const base = `http://127.0.0.1:${graph.address().port}`;
+  process.env.HQ_IG_GRAPH_BASE = base; process.env.HQ_THREADS_GRAPH_BASE = base;
+  process.env.HQ_IG_ACCESS_TOKEN = 'IGtok'; process.env.HQ_THREADS_ACCESS_TOKEN = 'THtok';
+  const d = setup({ linkKey:'k' });
+  // a finished reel of the montage agent
+  d.routes.push({ agent:'avatar', deliverable:'other' });
+  const src = await d.task('запиши ролик аватаром');
+  let job = await d.claim();
+  assert.equal(job.id, src);
+  await d.deliver(job, { 'rils.mp4':'VIDEO', 'index.html':'<video>' });
+  const qa = await d.claim(); if (qa?.kind === 'qa') await d.finish(src, { result:'qa', verdict:'ok', notes:'ок' });
+  const srcV = await d.get(src);
+  assert.equal(srcV.status, 'review'); assert.equal(srcV.canPublish, true);
+  // «Опубликовать»
+  const r = await d.call('POST', `tasks/${src}/publish`, {});
+  assert.equal(r.status, 200);
+  const pid = r.j.task.id;
+  assert.equal(r.j.task.route.agent, 'planner'); assert.equal(r.j.task.route.skill, 'publish-planner');
+  assert.equal((await d.call('POST', `tasks/${src}/publish`, {})).j.task.id, pid);   // the second press — the same planner task
+  job = await d.claim();
+  assert.equal(job.id, pid);
+  assert.ok(job.files.includes('rils.mp4') && job.files.includes('source.md'));
+  const pj = { title:'Рилс про ИИ-офис', platforms:['instagram', 'threads'], caption:'Хук\n\nПиши ОФИС в комментарии — пришлю схему.', threads:'Короткий текст для Threads',
+    code_word:'ИИОФИС', replaced:{ from:'ОФИС', to:'ИИОФИС', why:'цепочки ОФИС нет' }, chain:{ found:true, name:'Схема ИИ-офиса', id:'a1' },
+    media:{ instagram:['in/rils.mp4'], threads:['in/rils.mp4'] }, slots:[{ at:new Date(Date.now() + 3 * 3600e3).toISOString(), why:'вечерний пик' }] };
+  await d.deliver(job, { 'index.html':'<h1>публикация</h1>', 'publish.json':JSON.stringify(pj) });
+  let v = await d.get(pid);
+  assert.equal(v.status, 'question'); assert.equal(v.question.from, 'schedule');
+  assert.match(v.question.text, /ОФИС — такой цепочки в ChatPlace нет, заменил на ИИОФИС/);
+  assert.ok(v.question.options.some(o => o.id === 'now') && v.question.options.some(o => o.id === 's1'));
+  assert.equal(v.publication.status, 'draft'); assert.equal(v.qa, null);
+  // a free answer that is not a time goes back to the planner
+  await d.call('POST', `tasks/${pid}/answer`, { text:'добавь в подпись про бонус' });
+  v = await d.get(pid); assert.equal(v.status, 'queued');
+  job = await d.claim(); assert.equal(job.id, pid);
+  await d.deliver(job, { 'index.html':'<h1>публикация v2</h1>', 'publish.json':JSON.stringify({ ...pj, caption:pj.caption + ' + бонус' }) });
+  v = await d.get(pid); assert.equal(v.status, 'question');
+  // time as text
+  await d.call('POST', `tasks/${pid}/answer`, { text:'завтра 19:00' });
+  v = await d.get(pid);
+  assert.equal(v.status, 'done'); assert.equal(v.publication.status, 'scheduled'); assert.match(v.publication.caption, /бонус/);
+  const list = (await d.call('GET', 'publications')).j.publications;
+  assert.equal(list.length, 1); assert.equal(list[0].status, 'scheduled');
+  // not yet
+  await d.desk.tickPubs(Date.now());
+  assert.equal(calls.length, 0);
+  // «Сейчас» from the planner card, then the time comes
+  assert.equal((await d.call('POST', `tasks/${pid}/pub`, { action:'now' })).status, 200);
+  await d.desk.tickPubs(Date.now() + 120e3);
+  v = await d.get(pid);
+  assert.equal(v.publication.status, 'published', JSON.stringify(v.publication.results));
+  assert.equal(v.publication.results.instagram.permalink, 'https://www.instagram.com/reel/NEW/');
+  const reel = calls.find(c => c.q.media_type === 'REELS');
+  assert.ok(reel && /\/api\/assistant\/desk\/files\//.test(reel.q.video_url) && /бонус/.test(reel.q.caption));
+  assert.ok(calls.some(c => c.p.endsWith('/me/threads') && c.q.media_type === 'VIDEO' && c.q.text === 'Короткий текст для Threads'));
+  // the planner's dossier: the links to what came out — open to guests too
+  const posts = (await d.call('GET', 'published.json', null, { 'x-guest':'1' })).j.posts;
+  assert.equal(posts.length, 1); assert.equal(posts[0].links.instagram, 'https://www.instagram.com/reel/NEW/'); assert.equal(posts[0].code_word, 'ИИОФИС');
+  // without the keys — manual: the files stay for the owner
+  delete process.env.HQ_IG_ACCESS_TOKEN; delete process.env.HQ_THREADS_ACCESS_TOKEN;
+  assert.equal((await d.call('POST', `tasks/${pid}/pub`, { action:'move', at:new Date(Date.now() + 60e3).toISOString() })).status, 400);  // already published
+  const r2 = await d.call('POST', `tasks/${src}/publish`, {});
+  const pid2 = r2.j.task.id; assert.notEqual(pid2, pid);
+  job = await d.claim(); await d.deliver(job, { 'index.html':'<h1>p</h1>', 'publish.json':JSON.stringify({ ...pj, replaced:null, code_word:'ОФИС', chain:{ found:false } }) });
+  v = await d.get(pid2); assert.match(v.question.text, /цепочки в ChatPlace не нашёл/);
+  await d.call('POST', `tasks/${pid2}/answer`, { text:'now' });
+  await d.desk.tickPubs(Date.now() + 120e3);
+  v = await d.get(pid2);
+  assert.equal(v.publication.status, 'manual'); assert.ok(v.publication.results.instagram.manual);
+  assert.ok(d.desk.pubFiles(pid2).some(f => f.endsWith('rils.mp4')));
+  delete process.env.HQ_IG_GRAPH_BASE; delete process.env.HQ_THREADS_GRAPH_BASE;
+});
+
+test('аналитика контента: отчёт за вчера каждый день, за неделю по понедельникам, за месяц 1-го — с данными планера в in/', async () => {
+  delete process.env.HQ_ROUTINES;
+  const d = setup();
+  const mon = d.desk.tickRoutines(new Date('2026-12-01T07:00:00Z'));   // вт 1 декабря, 10:00 МСК — день и месяц
+  process.env.HQ_ROUTINES = 'off';
+  const ids = mon.map(t => t.routine);
+  assert.ok(ids.includes('content-day') && ids.includes('content-month') && !ids.includes('content-week'));
+  const month = mon.find(t => t.routine === 'content-month');
+  assert.equal(month.route.agent, 'contentanalyst'); assert.equal(month.route.title, 'Аналитика контента за ноябрь');
+  assert.match(month.text, /с 01\.11\.2026 по 30\.11\.2026/);
+  assert.ok(month.files.some(f => f.name === 'content-data.json'));
+  const data = JSON.parse(fs.readFileSync(path.join(d.dataDir, 'desk', 'tasks', month.id, 'in', 'content-data.json'), 'utf8'));
+  assert.deepEqual([data.period.from, data.period.to, data.period.kind], ['2026-11-01', '2026-11-30', 'month']);
+  delete process.env.HQ_ROUTINES;
+  const d2 = setup();
+  const week = d2.desk.tickRoutines(new Date('2026-11-09T07:00:00Z')).find(t => t.routine === 'content-week');   // пн 9 ноября
+  process.env.HQ_ROUTINES = 'off';
+  assert.ok(week); assert.match(week.text, /с 02\.11\.2026 по 08\.11\.2026/);
 });
 
 /* ---------- pipelines, QA, approvals, lessons, usage ---------- */

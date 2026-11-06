@@ -863,6 +863,7 @@
   .thumbs button.on{border-color:#7cb4ff}
   .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
   @media (max-width:700px){ .vw-body iframe{height:56vh} .vw-bar a:first-of-type{display:none} .vw .doc{padding:14px} }
+.posts{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:10px}.posts li{display:grid;gap:4px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px}.posts small{opacity:.7}.posts .chipsrow a{text-decoration:none}
 </style>
 <script type="importmap">
 {"imports":{
@@ -3666,7 +3667,7 @@ function openDossier(id, tab = 'about') {
     $('dName').textContent = m.name;
     $('dRole').textContent = `${m.role} · ${m.dept?.name || ''}${m.dept && !m.dept.head.owner ? ' · руководитель ' + m.dept.head.name : ''}`;
     const counts = { tasks:tasksOfAgent(id).length, works:statTotal(worksStats(blocks, W)), skills:(c.skills || []).length, howto:(c.templates || []).length };
-    $('dTabs').innerHTML = DTABS.filter(([k]) => !guest() || !['skills', 'howto'].includes(k)).map(([k, l]) => `<button data-tab="${k}">${l}${counts[k] != null ? ` <span>${counts[k]}</span>` : ''}</button>`).join('');
+    $('dTabs').innerHTML = [...(id === 'planner' ? [['posts', 'Публикации']] : []), ...DTABS].filter(([k]) => !guest() || !['skills', 'howto'].includes(k)).map(([k, l]) => `<button data-tab="${k}">${l}${counts[k] != null ? ` <span>${counts[k]}</span>` : ''}</button>`).join('');
   }
   $('dossier').hidden = false;
   if (![...$('dTabs').children].some(b => b.dataset.tab === tab)) tab = 'about';
@@ -3700,6 +3701,9 @@ function showDossierTab(tab) {
     } else if (tab === 'tasks') {
       const list = tasksOfAgent(id);
       h = list.length ? `<ol class="tasks">${list.map(taskRowHTML).join('')}</ol>` : `<p class="empty">В истории пока нет задач с этим агентом.</p>`;
+    } else if (tab === 'posts') {
+      h = '<p class="empty">Загружаю публикации…</p>';
+      postsLoad(id);
     } else if (tab === 'works') {
       const { blocks, W } = agentWorks(id);
       h = worksHTML(blocks, W, color) || `<p class="empty">Готовых работ пока нет — как только агент сделает задачу с доказательством, она появится здесь.</p>`;
@@ -3714,6 +3718,18 @@ function showDossierTab(tab) {
   }
   $('dBody').innerHTML = h;
   $('dBody').scrollTop = 0;
+}
+// «Планер публикаций»: всё, что вышло через него, — с прямыми ссылками на посты (GET desk/published.json, публично)
+async function postsLoad(id) {
+  let list = [];
+  try { const r = await fetch(ASST_API + '/desk/published.json'); if (r.ok) list = (await r.json()).posts || []; } catch (e) {}
+  if (dossierId !== id || !$('dTabs').querySelector('[data-tab="posts"].on')) return;
+  const when = iso => new Date(iso).toLocaleString('ru-RU', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Moscow' });
+  const PL = { instagram:'Instagram', threads:'Threads' }, KD = { reel:'Рилс', carousel:'Карусель', image:'Пост' };
+  $('dBody').innerHTML = list.length ? `<p class="note">${list.length} ${word(list.length, 'публикация', 'публикации', 'публикаций')} через планер — свежие сверху.</p><ul class="posts">${list.map(p => `<li>
+      <b>${esc(p.title)}</b><small>${esc(KD[p.kind] || 'Пост')} · ${esc(when(p.at))}${p.code_word ? ` · кодовое слово ${esc(p.code_word)}` : ''}</small>
+      <span class="chipsrow">${Object.entries(p.links || {}).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(PL[k] || k)} ↗</a>`).join('')}</span></li>`).join('')}</ul>`
+    : '<p class="empty">Через планер ещё ничего не вышло — нажмите «Опубликовать» под готовым рилсом или каруселью.</p>';
 }
 function closeDossier() { $('dossier').hidden = true; $('dBody').innerHTML = ''; dossierId = null; setHash(''); }
 $('dTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showDossierTab(b.dataset.tab); });
@@ -4838,9 +4854,9 @@ function renderDeskTask() {
   // решение по результату — всегда внизу окна, без прокрутки
   setHTML($('kFoot'), t.status === 'review'
     ? t.control ? `<span id="kNote">Отчёт агента контроля — только для вас, в историю офиса не попадает</span><button class="btn-go" data-k="approve-quiet">Прочитано</button>`
-    : `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
+    : `<span id="kNote"></span><button data-k="cancel">Отклонить</button>${t.canPublish ? '<button data-k="publish">Опубликовать</button>' : ''}<button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
     : `<span id="kNote">${t.status === 'paused' ? (t.paused?.until ? `Отложено до ${new Date(t.paused.until).toLocaleString('ru-RU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })} — вернётся в очередь сама` : 'На паузе — агент продолжит с того же места') : t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
-    ${t.status === 'queued' || t.status === 'work' ? '<button data-k="pause">Пауза</button>' : ''}${t.status === 'paused' ? '<button class="btn-go" data-k="resume">Продолжить</button>' : ''}${t.status === 'queued' || t.status === 'paused' ? `<button data-k="urgent">${t.urgent ? 'Не срочно' : 'Срочно'}</button>` : ''}${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+    ${t.status === 'queued' || t.status === 'work' ? '<button data-k="pause">Пауза</button>' : ''}${t.status === 'paused' ? '<button class="btn-go" data-k="resume">Продолжить</button>' : ''}${t.status === 'queued' || t.status === 'paused' ? `<button data-k="urgent">${t.urgent ? 'Не срочно' : 'Срочно'}</button>` : ''}${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}${pubButtons(t)}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
   // чужой отдел у руководителя: всё видно, но решать нечего — ни ответа, ни приёма, ни правки
   if (!canManageT(t)) {
     const owner = t.by ? t.by.name : 'Илья';
@@ -4850,8 +4866,29 @@ function renderDeskTask() {
   }
 }
 // конвейер по этапам, вердикт контролёра, затраты по запускам
+// «Планер публикаций»: статус публикации, подпись, кодовое слово и ссылки на вышедшее (desk.mjs → pubView)
+const PUB_PL = { instagram:'Instagram', threads:'Threads' };
+const POST_ST = { draft:'ждёт времени', scheduled:'запланирована', publishing:'публикуется', published:'вышла', manual:'опубликуйте вручную', failed:'ошибка', cancelled:'снята' };
+function pubButtons(t) {
+  const s = t.publication?.status, out = [];
+  if (t.status === 'done' && t.canPublish) out.push('<button data-k="publish">Опубликовать</button>');
+  if (s === 'scheduled') out.push('<button class="btn-go" data-k="pub:now">Опубликовать сейчас</button><button data-k="pub:move">Другое время</button><button data-k="pub:cancel">Снять</button>');
+  if (s === 'failed') out.push('<button class="btn-go" data-k="pub:now">Ещё раз</button>');
+  return out.join('');
+}
+function pubHTML(t) {
+  const p = t.publication;
+  if (!p) return '';
+  const when = p.at ? new Date(p.at).toLocaleString('ru-RU', { weekday:'short', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Moscow' }) + ' МСК' : '';
+  const res = p.results ? Object.entries(p.results).map(([k, r]) => `<dt>${PUB_PL[k] || k}</dt><dd>${r.ok ? (r.permalink ? `<a href="${esc(r.permalink)}" target="_blank" rel="noopener">открыть пост</a>` : 'вышло') : r.manual ? esc('вручную — ' + r.why) : esc('ошибка — ' + r.error)}</dd>`).join('') : '';
+  const word = p.code_word ? `${esc(p.code_word)}${p.replaced ? ` <span class="note">(было ${esc(p.replaced.from)} — цепочки нет)</span>` : p.chain?.found ? ` <span class="note">· цепочка «${esc(p.chain.name || p.chain.id)}»</span>` : ' <span class="note">· цепочки в ChatPlace нет</span>'}` : '—';
+  return `<section class="kcard"><h4 style="--g:#7ab8ff"><i></i>Публикация · ${esc(POST_ST[p.status] || p.status)}</h4><dl class="kv">
+    <dt>Где</dt><dd>${(p.platforms || []).map(x => PUB_PL[x] || x).join(', ')}</dd>${when ? `<dt>Когда</dt><dd>${esc(when)}</dd>` : ''}<dt>Кодовое слово</dt><dd>${word}</dd>${res}</dl>
+    ${p.caption ? `<details class="brief"${p.status === 'draft' || p.status === 'scheduled' ? ' open' : ''}><summary>Подпись</summary><p style="white-space:pre-wrap">${esc(p.caption)}</p></details>` : ''}
+    ${p.threads && p.threads !== p.caption ? `<details class="brief"><summary>Текст для Threads</summary><p style="white-space:pre-wrap">${esc(p.threads)}</p></details>` : ''}</section>`;
+}
 function deskExtraHTML(t) {
-  let h = '';
+  let h = pubHTML(t);
   if (t.pipeline) h += `<section class="kcard"><h4 style="--g:#7cb4ff"><i></i>Конвейер «${esc(t.pipeline.label)}»</h4><ol class="pl">${t.pipeline.stages.map((x, i) => `<li class="${x.status}"><b>${i + 1}. ${esc(x.title)} · ${esc(x.name)}</b><small>${x.status === 'done' ? `готово${x.files.length ? ` · ${x.files.length} ${word(x.files.length, 'файл', 'файла', 'файлов')} передано дальше` : ''}` : x.status === 'now' ? 'сейчас на этом этапе' : 'ждёт своей очереди'}</small>${x.summary && i < t.pipeline.idx ? `<details><summary>Отчёт этапа</summary><div class="md report">${mdRich(x.summary)}</div></details>` : ''}</li>`).join('')}</ol></section>`;
   if (t.qa?.verdict && t.qa.verdict !== 'skip') h += `<section class="kcard"><h4 style="--g:#9be15d"><i></i>Контролёр качества</h4><span class="qa-v ${t.qa.verdict}">${t.qa.verdict === 'ok' ? 'Проверено — замечаний нет' : 'Вернул на доработку — агент исправил'}</span>${t.qa.notes ? `<details class="brief"${t.qa.verdict === 'fix' ? ' open' : ''}><summary>Что проверил и нашёл</summary><div class="md report">${mdRich(t.qa.notes)}</div></details>` : ''}</section>`;
   if (t.runs?.length) h += `<section class="kcard"><h4 style="--g:#9aa3b5"><i></i>Затраты</h4><table class="runs"><tbody>${t.runs.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(RUNK[r.kind] || r.kind)}</td><td>${fmtDur(r.ms)}</td><td>${r.cost ? fmtUsd(r.cost) : '—'}</td></tr>`).join('')}<tr class="sum"><td>Итого</td><td>${t.usage.runs} ${word(t.usage.runs, 'запуск', 'запуска', 'запусков')}</td><td>${fmtDur(t.usage.ms)}</td><td>${t.usage.cost ? fmtUsd(t.usage.cost) : '—'}</td></tr></tbody></table></section>`;
@@ -4916,6 +4953,16 @@ async function deskAct(k) {
     document.querySelectorAll('#kActs [data-k^="rate:"]').forEach(b => b.classList.toggle('on', b.dataset.k === 'rate:' + desk.rate[t.id]));
     if (desk.rate[t.id] === 'down') $('kRate')?.focus();
     return;
+  }
+  if (k === 'publish' || k.startsWith('pub:')) {
+    if (desk.busy) return;
+    desk.busy = true; deskNote(k === 'publish' ? 'Отдаю планеру…' : 'Отправляю…');
+    const r = await deskPost(`/tasks/${t.id}/${k === 'publish' ? 'publish' : 'pub'}`, k === 'publish' ? {} : { action:k.slice(4) });
+    desk.busy = false;
+    if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось — попробуйте ещё раз.', true);
+    deskUpsert(r.j.task);
+    if (k === 'publish') { toast('Планер публикаций готовит подпись, кодовое слово и время'); return openDeskTask(r.j.task.id); }
+    return renderDeskTask();
   }
   let p = k, body = {};
   if (k.startsWith('style:') || k.startsWith('opt:')) {
