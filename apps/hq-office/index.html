@@ -4434,13 +4434,20 @@ function deskSum() {
   const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)).length, need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t)).length;
   return `${open} ${word(open, 'задача', 'задачи', 'задач')} в работе${need ? ` · ${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас` : ''}${desk.runner && !desk.runner.online ? ' · исполнитель не на связи' : ''}`;
 }
+// a publication's state colours the task: a failed one is red, a scheduled one blue — not the green «готово»
+function stColor(t) {
+  const p = t.publication?.status;
+  if (t.status === 'done' && (p === 'failed' || p === 'manual')) return DST.error;
+  if (t.status === 'done' && (p === 'scheduled' || p === 'publishing')) return DST.queued;
+  return DST[t.status] || '#9aa3b5';
+}
 function deskCardHTML(t) {
   const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1), src = deskSource(t);
   const need = (t.status === 'question' || t.status === 'review') && canManageT(t), open = DESK_OPEN.includes(t.status);
   const st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : t.statusText;
   const cta = !canManageT(t) ? (t.by ? `ведёт ${esc(t.by.name)}` : '') : t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : t.question?.from === 'approval' ? 'Разрешить действия' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
   const line = t.status === 'question' ? t.question?.text : t.status === 'error' ? t.error : t.status === 'review' ? (t.result?.summary || last?.text) : last?.text;
-  return `<li><button class="dkc${need ? ' need' : ''}${t.status === 'error' ? ' bad' : ''}${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${open ? '' : ' closed'}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
+  return `<li><button class="dkc${need ? ' need' : ''}${t.status === 'error' ? ' bad' : ''}${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${open ? '' : ' closed'}" data-desk="${esc(t.id)}" style="--s:${stColor(t)}">
     <span class="dkc-av">${orbHTML(m?.color || '#7fd3ff')}</span>
     <span class="dkc-main">
       <span class="dkc-top"><em class="pill">${esc(st)}</em><span class="dkc-src">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
@@ -4814,7 +4821,7 @@ function renderDeskTask() {
   const m = t.agent ? agentMeta(t.agent.id) : null, A = t.route ? agentMeta(t.route.agent) : m, res = t.result, src = deskSource(t);
   const when = new Date(t.created);
   setHTML($('kHead'), `<div class="kh">${orbHTML(A?.color || '#7fd3ff')}
-    <div class="kh-meta"><em class="pill" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я` : ''}</em>
+    <div class="kh-meta"><em class="pill" style="--s:${stColor(t)}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я` : ''}</em>
       <span class="src-chip">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time></div>
     <h2>${esc(deskTitle(t))}</h2>
     <div class="kh-meta">${t.pipeline ? `<span class="chip">${esc(t.pipeline.label)}</span>` : ''}${A ? `<span class="chip">${esc(A.name)}</span>` : '<span class="chip">диспетчер выбирает агента</span>'}${t.route?.skill ? `<span class="chip"><code>${esc(t.route.skill)}</code></span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.versions > 1 && !t.pipeline ? `<span class="chip">версия ${t.result?.version || t.versions}</span>` : ''}${t.usage ? `<span class="chip" title="Время работы агентов и стоимость Claude по этой задаче">${esc(usageText(t.usage))}</span>` : ''}${t.eta ? `<span class="chip" title="Оценка по прошлым задачам этого агента и очереди исполнителя">${esc(etaText(t.eta, true))}</span>` : ''}${t.qa?.verdict === 'ok' ? '<span class="chip">проверено контролёром</span>' : t.qa?.verdict === 'fix' ? '<span class="chip">доработано по замечаниям контролёра</span>' : ''}${t.lessons ? `<span class="chip" title="Агент получил уроки из ваших прошлых правок и оценок">учёл уроков: ${t.lessons}</span>` : ''}</div></div>`);
@@ -4873,7 +4880,7 @@ function pubButtons(t) {
   const s = t.publication?.status, out = [];
   if (t.status === 'done' && t.canPublish) out.push('<button data-k="publish">Опубликовать</button>');
   if (s === 'scheduled') out.push('<button class="btn-go" data-k="pub:now">Опубликовать сейчас</button><button data-k="pub:move">Другое время</button><button data-k="pub:cancel">Снять</button>');
-  if (s === 'failed') out.push('<button class="btn-go" data-k="pub:now">Ещё раз</button>');
+  if (s === 'failed' || s === 'manual') out.push('<button class="btn-go" data-k="pub:now">Ещё раз</button><button data-k="pub:move">Другое время</button>');
   return out.join('');
 }
 function pubHTML(t) {
@@ -5222,7 +5229,7 @@ function pubCardHTML(t) {
   const m = t.agent ? agentMeta(t.agent.id) : null, st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : PUB_ST[t.status] || t.statusText;
   const title = t.route?.title || 'Новая задача — диспетчер разбирает';
   const tag = t.history ? 'button' : 'div';
-  return `<li><${tag} class="dkc${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${t.status === 'done' ? ' closed' : ''}"${t.history ? ` data-task="${esc(t.history)}"` : ''} style="--s:${DST[t.status] || '#9aa3b5'}">
+  return `<li><${tag} class="dkc${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${t.status === 'done' ? ' closed' : ''}"${t.history ? ` data-task="${esc(t.history)}"` : ''} style="--s:${stColor(t)}">
     <span class="dkc-av">${orbHTML(m?.color || '#7fd3ff')}</span>
     <span class="dkc-main">
       <span class="dkc-top"><em class="pill">${esc(st)}</em><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>

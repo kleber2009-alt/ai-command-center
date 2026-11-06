@@ -8,6 +8,7 @@
    Нет ключа площадки — publishAll возвращает { manual:true } для неё: офис напомнит в Telegram и пришлёт файлы и подпись. */
 
 const env = (k, d = '') => String(process.env[k] || d).trim();
+import { sources } from './tokens.mjs';
 const VER = () => env('HQ_IG_GRAPH_VERSION', 'v23.0');
 export const IMG = /\.(jpe?g|png|webp)$/i, JPG = /\.jpe?g$/i, VID = /\.(mp4|mov|m4v)$/i;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -16,9 +17,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let source = null;
 export const useTokens = t => { source = t; };
 export function keys() {
+  const s = sources();
   return {
-    ig:source?.get('ig') || env('HQ_IG_ACCESS_TOKEN') || env('IG_ACCESS_TOKEN'), igUser:env('HQ_IG_USER_ID') || env('IG_USER_ID'),
-    threads:source?.get('threads') || env('HQ_THREADS_ACCESS_TOKEN') || env('THREADS_ACCESS_TOKEN'),
+    ig:source?.get('ig') || s.ig, igUser:source?.igUser?.() || env('HQ_IG_USER_ID') || env('IG_USER_ID'),
+    threads:source?.get('threads') || s.threads,
   };
 }
 
@@ -44,8 +46,13 @@ async function ready(fetchFn, url, token, field, { tries = 60, every = 10e3 } = 
 /* media: [{ url, kind:'video'|'image', name }] — в порядке слайдов */
 export async function publishInstagram({ token, userId = '', caption = '', media, fetchFn = fetch, base = '', wait = {} }) {
   const ig = token.startsWith('IG');
-  if (!ig && !userId) throw new Error('для токена Facebook нужен HQ_IG_USER_ID');
-  const root = (base || `https://graph.${ig ? 'instagram' : 'facebook'}.com`).replace(/\/$/, '') + '/' + VER(), me = ig ? 'me' : userId;
+  const root = (base || `https://graph.${ig ? 'instagram' : 'facebook'}.com`).replace(/\/$/, '') + '/' + VER();
+  if (!ig && !userId) {   // a Facebook token: the Instagram account is the one linked to the token's page
+    const d = await call(fetchFn, 'GET', `${root}/me/accounts`, { fields:'instagram_business_account{id,username}', access_token:token });
+    userId = (d.data || []).map(x => x.instagram_business_account?.id).find(Boolean) || '';
+    if (!userId) throw new Error('к токену Facebook не привязан профессиональный аккаунт Instagram — нужен токен Instagram (IG…) или HQ_IG_USER_ID');
+  }
+  const me = ig ? 'me' : userId;
   const video = media.find(m => m.kind === 'video'), images = media.filter(m => m.kind === 'image');
   if (!video && !images.length) throw new Error('нет видео или картинок для Instagram');
   const nonJpg = images.filter(m => !JPG.test(m.name || m.url.split('?')[0]));

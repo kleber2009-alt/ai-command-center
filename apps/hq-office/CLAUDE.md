@@ -224,6 +224,10 @@
   пока в секретах тот же исходный токен (новый секрет — с него). Публикации берут его через `useTokens`, исполнитель — в ответе на
   `claim` (`keys` → `update_keys` в `runner.py` → `~/hq-runner/keys.env` для скрипта аналитики). Не продлевается, а до конца < 7 дней
   (или сбой 2 дня) — сообщение владельцу в Telegram раз в сутки. Токен Facebook («EAA…») так не продлевается.
+  Токены распознаются по виду, а не по имени секрета (`sources`: `IG…` — Instagram, `TH…` — Threads, `EAA…` — Facebook; перепутанные
+  секреты, пробелы, кавычки, переносы и «Bearer» не мешают); для токена Facebook id Instagram находится сам (`me/accounts` →
+  `instagram_business_account`). `check` при старте и раз в 6 ч: рабочий ли токен и чей аккаунт, нерабочий — сообщение владельцу.
+  Задача планера в статусе «готово» показывает статус публикации (`pubStatusText`: «опубликовано», «ошибка публикации»…, цвет — `stColor`).
   **«Аналитика контента»** `contentanalyst` — скилл `content-report` (`scripts/content_metrics.py`: Instagram Graph API или Apify, Threads API):
   утренние задачи `content-day` (`HQ_CONTENT_AT` 09:25, за вчера), `content-week` (пн, `HQ_CONTENT_WEEK_AT` 09:35, 7 дней) и
   `content-month` (1-го, `HQ_CONTENT_MONTH_AT` 09:45, прошлый месяц) — поле `when` у `ROUTINES`, период `reportPeriod`. В `in/content-data.json`

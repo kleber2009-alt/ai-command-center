@@ -372,8 +372,10 @@ test('конкуренты Ильи: агенту контента — in/compet
 
 test('планер публикаций: «Опубликовать» → подпись и кодовое слово → вопрос «когда» → в срок выходит в Instagram и Threads; без ключа — вручную', async () => {
   const calls = [];
+  let graphFail = false;
   const graph = http.createServer(async (req, res) => {
     let b = ''; for await (const c of req) b += c;
+    if (graphFail) { res.writeHead(400, { 'content-type':'application/json' }); return res.end(JSON.stringify({ error:{ message:'Invalid OAuth access token - Cannot parse access token' } })); }
     const u = new URL(req.url, 'http://x'), q = Object.fromEntries(new URLSearchParams(req.method === 'POST' ? b : u.search.slice(1)));
     calls.push({ m:req.method, p:u.pathname, q });
     const send = j => { res.writeHead(200, { 'content-type':'application/json' }); res.end(JSON.stringify(j)); };
@@ -451,6 +453,16 @@ test('планер публикаций: «Опубликовать» → под
   await d.desk.tickPubs(Date.now() + 120e3);
   v = await d.get(pid2);
   assert.equal(v.publication.status, 'manual'); assert.ok(v.publication.results.instagram.manual);
+  assert.equal(v.statusText, 'опубликуйте вручную');   // not «готово»
+  // a failed post does not look published: the card says «ошибка публикации» and the step tells what to fix
+  process.env.HQ_IG_ACCESS_TOKEN = 'EAAbroken'; process.env.HQ_THREADS_ACCESS_TOKEN = 'THbroken';
+  graphFail = true;
+  await d.call('POST', `tasks/${pid2}/pub`, { action:'now' });
+  await d.desk.tickPubs(Date.now() + 120e3);
+  v = await d.get(pid2);
+  assert.equal(v.publication.status, 'failed'); assert.equal(v.statusText, 'ошибка публикации');
+  assert.match(v.steps.at(-1).text, /проверьте токен/);
+  delete process.env.HQ_IG_ACCESS_TOKEN; delete process.env.HQ_THREADS_ACCESS_TOKEN;
   assert.ok(d.desk.pubFiles(pid2).some(f => f.endsWith('rils.mp4')));
   delete process.env.HQ_IG_GRAPH_BASE; delete process.env.HQ_THREADS_GRAPH_BASE;
 });
