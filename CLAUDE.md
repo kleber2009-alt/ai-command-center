@@ -241,5 +241,10 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
   («Конвейер объёма»). В hq2 — агенты `humanexpert` и `volumefactory`.
 - `chief-marketer` — «Главный маркетолог»: собирает идеи всех агентов контента в контент-план на сутки (`out/plan.json`), план — в
   @instaoo_bot с ✅, одобренное — агентам с монтажом. В hq2 — агент `chiefmarketer`, каждое утро в 09:40 МСК.
+- `publish-planner` — «Планер публикаций»: подпись Instagram и текст Threads, сверка кодового слова с цепочками ChatPlace (нет цепочки — слово
+  существующей), JPEG слайдов, три времени выхода → `out/publish.json`; публикует офис hq2 в срок (`apps/hq-office/assistant/publish.mjs`).
+  В hq2 — агент `planner`, кнопка «Опубликовать» под готовой работой.
+- `content-report` — «Аналитика контента»: отчёт по вышедшему за день / неделю / месяц (кодовые слова и заявки, репосты, хуки, темы,
+  цепочки, просмотры и комментарии; `scripts/content_metrics.py`). В hq2 — агент `contentanalyst`, утром сам.
 - `three-technical-illustration` — 3D-взрыв-схема в стиле инженерного мануала (Three.js + HTML-оверлей подписей):
   светлый фон, белый/серебристый металл, оранжевые и зелёные акценты, выноски. Шаблон — `assets/template.html`.

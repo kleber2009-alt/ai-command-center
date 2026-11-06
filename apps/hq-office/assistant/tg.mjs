@@ -83,6 +83,7 @@ export function reportBrief(summary) {
 
 export function topicOf(v) {
   if (v.status === 'error') return 'errors';
+  if (['manual', 'failed'].includes(v.publication?.status)) return 'inbox';   // the publication waits for the owner
   if (v.routine && v.status !== 'question') return 'morning';
   if ((v.status === 'question' || v.status === 'review') && !v.snoozed) return 'inbox';
   if (v.status === 'done' || v.status === 'cancelled') return 'done';
@@ -118,11 +119,25 @@ export function cardText(v, site) {
     const last = v.steps?.at(-1)?.text;
     if (last) L.push(`<i>${esc(cut(last, 300))}</i>`);
   }
+  if (v.publication) L.push('', ...pubLines(v.publication));
   if (v.usage) L.push('', `⏱ ${Math.max(1, Math.round(v.usage.ms / 60000))} мин${v.usage.cost ? ` · $${v.usage.cost.toFixed(2)}` : ''}`);
   if (site) L.push(`<a href="${esc(site)}/#desk-${esc(v.id)}">Открыть в офисе</a>`);
   return cut(L.join('\n').replace(/\n{3,}/g, '\n\n'), 4000);
 }
 const B = (text, data) => ({ text, callback_data:data });
+const PL = { instagram:'Instagram', threads:'Threads' };
+// the state of a publication of the planner (desk.mjs → pub*): when it goes out, what came out, what waits for the owner
+export function pubLines(p) {
+  const where = (p.platforms || []).map(x => PL[x] || x).join(' и '), L = [];
+  if (p.status === 'scheduled') L.push(`🗓 <b>Выйдет ${esc(mskText(p.at))}</b> · ${esc(where)}`);
+  else if (p.status === 'publishing') L.push(`📤 Публикую · ${esc(where)}…`);
+  else if (p.status === 'cancelled') L.push('🚫 Снято с публикации.');
+  else if (p.results) for (const [k, r] of Object.entries(p.results)) L.push(r.ok ? `✅ ${PL[k] || k}: вышло${r.permalink ? ` — <a href="${esc(r.permalink)}">ссылка</a>` : ''}`
+    : r.manual ? `✋ ${PL[k] || k}: опубликуйте вручную — ${esc(r.why)}. «📎 Файлы и подпись» — пришлю всё.` : `⚠️ ${PL[k] || k}: ${esc(cut(r.error, 300))}`);
+  if (p.code_word) L.push(`🔑 ${esc(p.code_word)}${p.replaced ? ` (было ${esc(p.replaced.from)} — цепочки нет)` : p.chain?.found ? ` · цепочка «${esc(p.chain.name || p.chain.id)}»` : ' · цепочки в ChatPlace нет'}`);
+  if (p.caption && ['draft', 'scheduled'].includes(p.status)) L.push('', `<i>${esc(cut(p.caption, 700))}</i>`);
+  return L;
+}
 export function cardKeyboard(v, { mode = '', site = '', webApp = false } = {}) {
   const id = v.id, rows = [];
   // «Открыть» — the mini app of the office (app/index.html, #t=<id>); in a group Telegram allows web_app buttons only as links
@@ -142,6 +157,7 @@ export function cardKeyboard(v, { mode = '', site = '', webApp = false } = {}) {
     rows.push([B('✅ Принять', `ok:${id}`), B('👍', `up:${id}`), B('👎', `dn:${id}`)]);
     rows.push([B('✏️ Правка', `rv:${id}`), B('📎 Файлы', `f:${id}`), B('⏰ Отложить', `z:${id}`)]);
     rows.push([B('Принять без публикации', `okp:${id}`), B('✖️ Отменить', `x:${id}`)]);
+    if (v.canPublish) rows.push([B('📤 Опубликовать', `pb:${id}`)]);
   } else if (v.status === 'queued') {
     rows.push([B('⏸ Пауза', `p:${id}`), B(v.urgent ? 'Не срочно' : '⚡ Срочно', `u:${id}`), B('⏰ Отложить', `z:${id}`)]);
     rows.push([B('✖️ Отменить', `x:${id}`)]);
@@ -154,14 +170,18 @@ export function cardKeyboard(v, { mode = '', site = '', webApp = false } = {}) {
   } else if (v.status === 'error') {
     rows.push([B('🔁 Повторить', `rt:${id}`)]);
   } else if (v.status === 'done') {
-    rows.push([B('📎 Файлы', `f:${id}`), B('✏️ Правка', `rv:${id}`)]);
+    const ps = v.publication?.status;
+    if (ps === 'scheduled') rows.push([B('🚀 Сейчас', `pn:${id}`), B('🗓 Другое время', `pm:${id}`), B('✖️ Снять', `pc:${id}`)]);
+    else if (ps === 'manual' || ps === 'failed') rows.push([B('📎 Файлы и подпись', `pf:${id}`), B('🔁 Ещё раз', `pn:${id}`)]);
+    else rows.push([B('📎 Файлы', `f:${id}`), B('✏️ Правка', `rv:${id}`)]);
+    if (v.canPublish) rows.push([B('📤 Опубликовать', `pb:${id}`)]);
   }
   if (open && v.status !== 'cancelled') rows.push([open]);
   return { inline_keyboard:rows };
 }
 // what is not shown in the card's last step: changes of these redraw the card at once
 const sigOf = v => JSON.stringify([v.status, v.agent?.id, v.question?.text, v.question?.options?.length, v.result?.version, v.result?.note, v.urgent, v.paused, v.snoozed,
-  v.pipeline?.idx, v.style, v.error, v.rating, v.published, v.queuePos]);
+  v.pipeline?.idx, v.style, v.error, v.rating, v.published, v.queuePos, v.publication?.status, v.publication?.at, v.canPublish]);
 
 /* ---------- the bot ---------- */
 
@@ -524,6 +544,11 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
       case 'b': await cardMode(id, ''); return answer();
       case 'rt': return ack(desk.act(id, 'retry'));
       case 'f': answer('Отправляю файлы…'); return files(id);
+      case 'pb': { const r = desk.act(id, 'publish'); return answer(r.error || 'Планер готовит подпись, кодовое слово и время — карточка придёт сюда.', Boolean(r.error)); }
+      case 'pn': return ack(desk.act(id, 'pub-now'));
+      case 'pm': return ack(desk.act(id, 'pub-move'));
+      case 'pc': return ack(desk.act(id, 'pub-cancel'));
+      case 'pf': answer('Отправляю файлы и подпись…'); return pubSend(id);
       case 'c': { const c = st.cards[id]; if (c) { await dropCard(c); delete st.cards[id]; } await sync(id, true); return answer(); }
       case 'l': await list(id, m.message_thread_id); return answer();
       case 'pult': await pultNow(); return answer('Обновлено');
@@ -557,6 +582,25 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
       const file = desk.resultFile(id, f.path);
       if (file) await quiet(sendFile(k, file, `${all.length > 1 ? `${n + 1}/${all.length} · ` : ''}<code>${esc(f.path)}</code> · ${mb(f.size)}`, { disable_notification:true }, true));
     }
+  }
+
+  // manual publishing: the caption as text (to copy) and the files in their original quality
+  async function pubSend(id) {
+    const v = desk.get(id), p = v?.publication;
+    if (!p) return;
+    const k = topicOf(v);
+    if (p.caption) await quiet(send(k, `📝 <b>Подпись для Instagram</b>\n\n<code>${esc(cut(p.caption, 3500))}</code>`));
+    if (p.threads && p.threads !== p.caption) await quiet(send(k, `🧵 <b>Текст для Threads</b>\n\n<code>${esc(cut(p.threads, 3500))}</code>`));
+    const list = desk.pubFiles(id);
+    for (const [n, f] of list.entries()) await quiet(sendFile(k, f, `${list.length > 1 ? `${n + 1}/${list.length} · ` : ''}<code>${esc(path.basename(f))}</code>`, { disable_notification:true }, true));
+  }
+  // a publication that has to go out by hand: once, the files and the caption come by themselves
+  const pubNoticed = () => (st.pubNoticed ||= {});
+  function pubWatch(t) {
+    const v = desk.get(t.id), p = v?.publication;
+    if (!p || p.status !== 'manual' || pubNoticed()[t.id] === p.at) return;
+    pubNoticed()[t.id] = p.at; save();
+    pubSend(t.id).catch(e => console.error('telegram publication:', e.message));
   }
 
   /* ----- reminders and digests ----- */
@@ -603,7 +647,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
   }
 
   let running = true, conflicts = 0;
-  const off = desk.onChange(t => { sync(t.id); pultLater(); });
+  const off = desk.onChange(t => { sync(t.id); pultLater(); pubWatch(t); });
   async function loop() {
     try {
       const me = await tg('getMe'); st.me = me.username || ''; save();
