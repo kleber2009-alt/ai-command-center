@@ -38,7 +38,7 @@
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalize, candidates, planDay, planText, library, SOURCES, metricsLine, graphOwn, withGraph } from './scout.mjs';
+import { normalize, candidates, planDay, planText, library, SOURCES, metricsLine, graphOwn, withGraph, sharedCompetitors } from './scout.mjs';
 import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
@@ -74,6 +74,14 @@ export function createReelsBot({ studio, data }) {
   st = { chat_id: Number(env('REMAKE_TG_CHAT_ID')) || 0, topic_id: Number(env('REMAKE_TG_TOPIC_ID')) || 0, owners: [], offset: 0,
     competitors: env('REELS_COMPETITORS').split(/[\s,]+/).map(nick).filter((x) => NICK.test(x)), used: {}, pool: [], last_scan: '', styles_n: 0, ...st };
   const save = () => { fs.writeFileSync(FILE + '.part', JSON.stringify(st, null, 1)); fs.renameSync(FILE + '.part', FILE); };
+  // the shared list (.claude/skills/competitors): a new version of it is merged in once; /competitors del of the owner stays
+  const shared = sharedCompetitors();
+  if (shared.nicks.length && st.competitors_from !== shared.checked + ':' + shared.nicks.length) {
+    const removed = new Set(st.competitors_removed || []);
+    st.competitors = [...new Set([...st.competitors, ...shared.nicks.filter((x) => !removed.has(x))])];
+    st.competitors_from = shared.checked + ':' + shared.nicks.length;
+    save();
+  }
   const owners = () => new Set([...env('REMAKE_TG_OWNER_IDS').split(/[\s,]+/).filter(Boolean).map(Number), ...(st.owners || [])]);
 
   // ---------- Telegram ----------
@@ -131,7 +139,7 @@ export function createReelsBot({ studio, data }) {
   const SCOUT = path.join(data, 'scout');
   const libComp = library(path.join(SCOUT, 'competitors')), libOwn = library(path.join(SCOUT, 'own'));
   const FRESH = Number(env('SCOUT_FRESH_DAYS', '3')), DEEP_DAYS = Number(env('SCOUT_DEEP_DAYS', '7'));
-  const DEEP_LIMIT = Number(env('SCOUT_DEEP_LIMIT', '150')), OWN_LIMIT = Number(env('SCOUT_OWN_LIMIT', '400'));
+  const DEEP_LIMIT = Number(env('SCOUT_DEEP_LIMIT', '60')), OWN_LIMIT = Number(env('SCOUT_OWN_LIMIT', '400'));
   const SEARCH_ACTOR = env('SCOUT_SEARCH_ACTOR', 'TxU0ZBQIHdR20dr9C');
   const IG_TOKEN = env('IG_ACCESS_TOKEN');  // the owner's Instagram token: real reposts and views of own posts (scout.graphOwn)
   const PLAN_SLOTS = env('PLAN_SLOTS', '10:00,14:00,19:00').split(/[\s,]+/).filter((x) => /^\d{1,2}:\d{2}$/.test(x));
@@ -145,13 +153,28 @@ export function createReelsBot({ studio, data }) {
     if (!r.ok || !Array.isArray(d)) throw new Error(`Apify ${actor}: ${r.status} ${JSON.stringify(d || {}).slice(0, 200)}`);
     return d;
   }
-  const posts = async (accounts, { limit, days, own = false }) => !accounts.length ? [] :
-    (await apify({ directUrls: accounts.map((u) => `https://www.instagram.com/${u}/`), resultsType: 'posts', resultsLimit: limit,
-      ...(days ? { onlyPostsNewerThan: `${days} days` } : {}) })).map((p) => normalize(p, { own })).filter(Boolean);
+  // 8 accounts per Apify run, 3 runs at a time: one sync run over 60 accounts would not fit its 5 minutes
+  async function posts(accounts, { limit, days, own = false }) {
+    const parts = [];
+    for (let i = 0; i < accounts.length; i += 8) parts.push(accounts.slice(i, i + 8));
+    const out = [], fails = [];
+    await Promise.all(Array.from({ length: Math.min(3, parts.length) }, async () => {
+      for (let part; (part = parts.shift());) {
+        try {
+          out.push(...(await apify({ directUrls: part.map((u) => `https://www.instagram.com/${u}/`), resultsType: 'posts', resultsLimit: limit,
+            ...(days ? { onlyPostsNewerThan: `${days} days` } : {}) })));
+        } catch (e) { fails.push(e.message); }
+      }
+    }));
+    if (fails.length && !out.length) throw new Error(fails[0]);
+    return out.map((p) => normalize(p, { own })).filter(Boolean);
+  }
 
   async function gather() {
     const own = nick(S.skillConfig().instagram?.username || 'ilia.paliy');
-    const deep = !st.deep_at || Date.now() - Date.parse(st.deep_at) > DEEP_DAYS * 864e5;
+    const compKey = [...st.competitors].sort().join(',');
+    // a deep pass once a week — and at once when the list of competitors changed (their best of all time is not in the library yet)
+    const deep = !st.deep_at || Date.now() - Date.parse(st.deep_at) > DEEP_DAYS * 864e5 || st.deep_for !== compKey;
     const errors = [], fresh = [];
     const tryIt = async (what, f) => { try { return await f(); } catch (e) { errors.push(`${what}: ${e.message}`); return []; } };
     const comp = st.competitors.filter((x) => x !== own);
@@ -174,7 +197,7 @@ export function createReelsBot({ studio, data }) {
     fresh.push(...a, ...kw.flat());
     libComp.add([...fresh, ...b]);
     libOwn.add(c);
-    if (deep && !errors.length) st.deep_at = new Date().toISOString();
+    if (deep && !errors.length) { st.deep_at = new Date().toISOString(); st.deep_for = compKey; }
     const seenToday = new Set([...fresh, ...b, ...c].map((x) => x.code));
     // a CDN video link lives a few hours: a post not seen today goes to the studio by its page link
     const stale = (x) => seenToday.has(x.code) ? x : { ...x, video_url: '' };
@@ -776,7 +799,8 @@ export function createReelsBot({ studio, data }) {
       const [, op, ...rest] = text.split(/\s+/);
       const names = rest.map(nick).filter((x) => NICK.test(x));
       if (op === 'add') st.competitors = [...new Set([...st.competitors, ...names])];
-      if (op === 'del' || op === 'rm') st.competitors = st.competitors.filter((x) => !names.includes(x));
+      if (op === 'del' || op === 'rm') { st.competitors = st.competitors.filter((x) => !names.includes(x)); st.competitors_removed = [...new Set([...(st.competitors_removed || []), ...names])]; }
+      if (op === 'add') st.competitors_removed = (st.competitors_removed || []).filter((x) => !names.includes(x));
       save();
       return say(st.competitors.length ? `Конкуренты (${st.competitors.length}): ${st.competitors.map((x) => '@' + esc(x)).join(', ')}`
         : `Конкурентов нет — ищу залёты в вашем аккаунте @${esc(nick(S.skillConfig().instagram?.username))}.\nДобавить: /competitors add @ник @ник`);

@@ -232,7 +232,10 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
   (`scripts/social_stats.py`) и разбор, что сработало и что нет. В hq2 — агент `socialstats`, каждое утро сам.
 - `service-balances` — «Балансы и подписки»: балансы, лимиты и даты продления сервисов офиса (`scripts/balances.py`),
   предупреждения в Telegram. В hq2 — агент `billing`, каждое утро сам.
-- `competitor-ideas` — «Идеи у конкурентов»: 60 конкурентов Ильи (`references/competitors.csv`), свежие залёты через Apify только от
+- `competitors` — «Конкуренты»: общий список конкурентов Ильи в Instagram (60 аккаунтов: Reels + ИИ + набор аудитории,
+  GPT/Claude/маркетинг; `competitors.json` + таблица + исходный xlsx). Один источник для @instaoo_bot («План дня»), офиса hq2
+  (агенты контента получают `in/competitors.md`, двойник знает список) и скиллов контента. Правка — здесь, пуш в `main`.
+- `competitor-ideas` — «Идеи у конкурентов»: по общему списку `competitors`, свежие залёты через Apify только от
   100 тыс. просмотров / 1000 комментариев / 1000 репостов → разбор и идеи. В hq2 — агент `competitors`.
 - `strategy-human-expert` / `strategy-volume-factory` — контент-стратегии по моделям @sashasence («Человек + эксперт») и @arina_alexx
   («Конвейер объёма»). В hq2 — агенты `humanexpert` и `volumefactory`.

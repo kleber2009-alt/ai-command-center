@@ -10,7 +10,8 @@
   • репосты публичный парсер отдаёт не всегда: неизвестные репосты → `shares_unknown: true`, такой ролик проходит по
     остальным порогам, но ранжируется ниже проверенных (--shares-unknown fail — выкинуть такие совсем).
 
-Список конкурентов — references/competitors.csv (60 аккаунтов, таблица Ильи от 06.11.2026), --accounts @a,@b — свои.
+Список конкурентов — общий скилл competitors (competitors.json: 60 аккаунтов, таблица Ильи от 06.11.2026; рядом с этим
+скиллом или в ~/.claude/skills/competitors), --list — другой файл, --accounts @a,@b — свои ники.
 Данные — Apify (apify~instagram-scraper, APIFY_TOKEN из окружения, ~/hq-runner/keys.env или ~/.bashrc / ~/.profile).
 Без ключа (или с --offline) — только разбор самой таблицы: кто залетает сильнее своего размера, у кого стабильно.
 
@@ -19,7 +20,6 @@
 Только stdlib.
 """
 import argparse
-import csv
 import datetime as dt
 import json
 import math
@@ -30,7 +30,8 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-LIST = HERE.parent / "references" / "competitors.csv"
+LISTS = [HERE.parent.parent / "competitors" / "competitors.json", Path.home() / ".claude/skills/competitors/competitors.json"]
+GROUPS = {"reels-ai": "Reels + ИИ + набор аудитории", "gpt-claude-marketing": "GPT, Claude, маркетинг"}
 RC = (".zshrc", ".zprofile", ".zshenv", ".bash_profile", ".bashrc", ".profile")
 KEYS_FILE = Path(os.path.expanduser(os.environ.get("HQ_KEYS_FILE", "~/hq-runner/keys.env")))
 
@@ -83,13 +84,22 @@ def first(*vals):
     return None
 
 
-def load_list(path=LIST):
-    with open(path, newline="", encoding="utf-8") as f:
-        rows = list(csv.DictReader(f))
-    for r in rows:
-        for k in ("followers", "top1", "top2", "top3", "top4", "best_to_followers"):
-            r[k] = num(r.get(k))
-    return rows
+def load_list(path=None):
+    """Общий список конкурентов (скилл competitors) → строки с полями, которые ждёт разбор."""
+    for p in ([Path(path)] if path else LISTS):
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            break
+    else:
+        raise SystemExit("нет competitors.json — нужен скилл competitors рядом (или --list путь)")
+    rows = []
+    for a in data.get("accounts", []):
+        reels = (list(a.get("reels") or []) + [None] * 4)[:4]
+        rows.append({"handle": str(a.get("nick", "")).lstrip("@"), "group": GROUPS.get(a.get("group"), a.get("group") or ""),
+                     "market": a.get("market") or "", "followers": num(a.get("followers")), "theme": a.get("topic") or "",
+                     "top1": num(reels[0]), "top2": num(reels[1]), "top3": num(reels[2]), "top4": num(reels[3]),
+                     "best_to_followers": num(a.get("best_x_followers")), "funnel": a.get("funnel") or "", "note": a.get("note") or ""})
+    return [r for r in rows if r["handle"]]
 
 
 def apify_posts(token, handles, per_account, timeout=300):
@@ -159,6 +169,7 @@ def main():
     ap.add_argument("--days", type=int, default=int(os.environ.get("COMP_DAYS", "30")), help="брать публикации не старше N дней")
     ap.add_argument("--per-account", type=int, default=12)
     ap.add_argument("--accounts", default="", help="@a,@b — вместо списка")
+    ap.add_argument("--list", default="", help="другой competitors.json")
     ap.add_argument("--market", default="", help="RU или EN")
     ap.add_argument("--group", default="", help="часть названия листа таблицы")
     ap.add_argument("--top", type=int, default=30)
@@ -170,7 +181,7 @@ def main():
     ap.add_argument("--offline", action="store_true", help="без Apify — только разбор таблицы")
     a = ap.parse_args()
 
-    rows = load_list()
+    rows = load_list(a.list or None)
     if a.accounts:
         want = [h.strip().lstrip("@").lower() for h in re.split(r"[\s,]+", a.accounts) if h.strip()]
         known = {r["handle"].lower(): r for r in rows}
