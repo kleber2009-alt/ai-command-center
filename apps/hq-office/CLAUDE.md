@@ -98,7 +98,11 @@
   «Балансы и подписки» (`billing`, 08:50 — исполнитель без Claude запускает скилл `service-balances`: ключи Anthropic/OpenAI/
   ElevenLabs/HeyGen/Apify/Deepgram/kie.ai/Meta Ads + `HQ_SUBSCRIPTIONS_JSON`; нет предупреждений — задача закрывается сама,
   без публикации) и «Статистика соцсетей» (`socialstats`, 09:10 — Claude Code по скиллу `social-daily-stats`, снимки для
-  приростов в `~/.local/state/aicex-social`). Итоги, предупреждения и ошибки утренних задач — в Telegram владельца ботом
+  приростов в `~/.local/state/aicex-social`). **План контента на день** (`contentPlan`, агент «Поиск залётов» `viral`, после
+  `HQ_PLAN_AT` 09:20 МСК, `HQ_PLAN=off` — выключить): офис забирает план бота @instaoo_bot (`${HQ_REMAKE_URL}/api/plan/<сегодня>`,
+  `apps/remake-site/scout.mjs` — 3 залёта, 1R+2C или 2R+1C, от 100 тыс. просмотров / 1000 комментариев / 1000 репостов) и ставит каждую
+  карусель агенту «Карусели» готовым маршрутом (`createTask({ preset })`: без диспетчера и вопроса о стиле, «Тёмный @ilia.paliy», дальше
+  контролёр и ваша проверка); рилсы плана делает сам бот. План — в знаниях ассистента и двойника (`planSummary` в `summary()`). Итоги, предупреждения и ошибки утренних задач — в Telegram владельца ботом
   Office Worker (`HQ_NOTIFY_TG_TOKEN`/`HQ_NOTIFY_TG_CHAT` в `assistant.env`). Ключи этих скриптов — `~/hq-runner/keys.env`
   (`HQ_KEYS_FILE`, пишет шаг «Keys of the morning agents»), в окружение исполнителя и Claude Code не попадают.
   **Материалы** — файлы прикрепляются к новой задаче, к правке и к ответу на вопрос (кнопкой, перетаскиванием или Ctrl+V — скриншот/скопированный файл, `deskPaste`; текст из Word/страниц вставляется текстом; `PUT desk/upload` → `uploads` в

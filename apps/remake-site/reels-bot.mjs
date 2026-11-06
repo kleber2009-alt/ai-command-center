@@ -1,8 +1,11 @@
-/* Ветка «Instagram Reels» в Telegram — связка как у Threads: каждый день карточки залётов → ✅ Одобрено → готовый рилс файлом.
+/* Ветка «Instagram Reels» в Telegram (@instaoo_bot) — «План дня» и связка как у Threads: карточки → ✅ Одобрено → готовый рилс файлом.
+
+   Каждое утро (REELS_HOUR) — план ровно из 3 единиц: 1 рилс + 2 карусели или 2 рилса + 1 карусель (scout.mjs): только залёты
+   от 100 000 просмотров, 1 000 комментариев и 1 000 репостов из трёх источников — 🔥 конкуренты за 3 дня (+ поиск по /keywords),
+   ♻️ свои залёты за всё время, 🏆 лучшее конкурентов. План — сообщением в ветку и GET /api/plan; карусели плана забирает офис
+   hq2 (агент «Карусели», desk.mjs → contentPlan), рилсы — сюда, по цепочке ниже. Запас (♻️ Другой) — следующие прошедшие рилсы.
 
    Цепочка на каждый рилс (шаги — студии, studio.mjs):
-     поиск залётов (Apify): конкуренты из списка, а пока его нет — свой аккаунт (instagram.username из config.json скилла);
-     сила = просмотры / медиана просмотров автора (как xn в Threads), не младше REELS_MIN_AGE_DAYS дней, уже взятые — мимо
      → видео → расшифровка (мало речи — не говорящая голова, берём следующего) → «Сценарий 2.0» Claude с новым хуком
        по правилам скилла remake-top-reel и его проверкой → карточка в ветку
      → ✅ Одобрено → аватар HeyGen (образ, голос и движок — из config.json скилла) → монтаж стилем Кадрика
@@ -21,7 +24,7 @@
    сделал /bind).
 
    Команды в ветке: /bind — эта ветка теперь «Instagram Reels» (бот переименует её; нужен админ с правом «Управление темами»)
-     /scan — найти залёты сейчас · /competitors [add|del @ник …] — список конкурентов · /status · /help
+     /scan — собрать план сейчас · /plan — план на сегодня · /keywords [add|del слово, …] — поиск рилсов по теме · /competitors [add|del @ник …] — список конкурентов · /status · /help
      ссылка на рилс в ветке — сразу в работу, как карточка из поиска.
 
    Env: REMAKE_TG_BOT_TOKEN (свой бот: getUpdates не делят с другим процессом) · REMAKE_TG_OWNER_IDS (id через запятую)
@@ -35,6 +38,7 @@
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalize, candidates, planDay, planText, library, SOURCES, metricsLine } from './scout.mjs';
 import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
@@ -120,47 +124,98 @@ export function createReelsBot({ studio, data }) {
     return d;
   }
 
-  async function scanAccounts(list, days) {
-    const items = await apify({ directUrls: list.map((u) => `https://www.instagram.com/${u}/`), resultsType: 'posts', resultsLimit: 40, onlyPostsNewerThan: `${days} days` });
-    const reels = items.filter((p) => p.videoUrl || p.type === 'Video' || p.productType === 'clips').map((p) => ({
-      url: p.url || (p.shortCode ? `https://www.instagram.com/reel/${p.shortCode}/` : ''), code: p.shortCode || shortcode(p.url),
-      author: (p.ownerUsername || '').toLowerCase(), caption: p.caption || '', video_url: p.videoUrl || '', thumb: p.displayUrl || '',
-      views: p.videoPlayCount ?? p.videoViewCount ?? null, likes: p.likesCount ?? null, comments: p.commentsCount ?? null,
-      duration: p.videoDuration ?? null, date: p.timestamp || '' })).filter((r) => r.code);
-    // strength like Threads' xn: views over the author's median, so a small competitor's hit counts as much as a big one's
-    const by = {};
-    for (const r of reels) (by[r.author] ||= []).push(r.views ?? r.likes ?? 0);
-    const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2 : 0; };
-    const med = Object.fromEntries(Object.entries(by).map(([a, v]) => [a, median(v) || 1]));
-    const minAge = Date.now() - MIN_AGE * 864e5;
-    return reels.filter((r) => !r.date || Date.parse(r.date) <= minAge)
-      .filter((r) => !r.duration || (r.duration >= 12 && r.duration <= 120))
-      .map((r) => ({ ...r, xn: Math.round(((r.views ?? r.likes ?? 0) / med[r.author]) * 10) / 10, median: med[r.author] }))
-      .sort((a, b) => b.xn - a.xn || (b.views || 0) - (a.views || 0));
+  /* «План дня» (scout.mjs): три источника → жёсткие пороги → ровно 3 единицы (1R+2C или 2R+1C).
+     Конкуренты: свежие посты каждый день (SCOUT_FRESH_DAYS), глубокий проход раз в SCOUT_DEEP_DAYS (их лучшее за всё время
+     копится в библиотеке); свой аккаунт — глубокий проход раз в SCOUT_DEEP_DAYS; рилсы по ключевым словам (/keywords) —
+     актор поиска рилсов (SCOUT_SEARCH_ACTOR), он отдаёт и репосты. */
+  const SCOUT = path.join(data, 'scout');
+  const libComp = library(path.join(SCOUT, 'competitors')), libOwn = library(path.join(SCOUT, 'own'));
+  const FRESH = Number(env('SCOUT_FRESH_DAYS', '3')), DEEP_DAYS = Number(env('SCOUT_DEEP_DAYS', '7'));
+  const DEEP_LIMIT = Number(env('SCOUT_DEEP_LIMIT', '150')), OWN_LIMIT = Number(env('SCOUT_OWN_LIMIT', '400'));
+  const SEARCH_ACTOR = env('SCOUT_SEARCH_ACTOR', 'TxU0ZBQIHdR20dr9C');
+  const PLAN_SLOTS = env('PLAN_SLOTS', '10:00,14:00,19:00').split(/[\s,]+/).filter((x) => /^\d{1,2}:\d{2}$/.test(x));
+  if (!Array.isArray(st.keywords)) st.keywords = env('SCOUT_KEYWORDS').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+
+  async function apifyActor(actor, input) {
+    if (!S.apify) throw new Error('нет APIFY_TOKEN — искать залёты нечем');
+    const r = await fetch(`${APIFY_BASE}/v2/acts/${actor}/run-sync-get-dataset-items?token=${encodeURIComponent(S.apify)}&timeout=280`,
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(300e3) });
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !Array.isArray(d)) throw new Error(`Apify ${actor}: ${r.status} ${JSON.stringify(d || {}).slice(0, 200)}`);
+    return d;
+  }
+  const posts = async (accounts, { limit, days, own = false }) => !accounts.length ? [] :
+    (await apify({ directUrls: accounts.map((u) => `https://www.instagram.com/${u}/`), resultsType: 'posts', resultsLimit: limit,
+      ...(days ? { onlyPostsNewerThan: `${days} days` } : {}) })).map((p) => normalize(p, { own })).filter(Boolean);
+
+  async function gather() {
+    const own = nick(S.skillConfig().instagram?.username || 'ilia.paliy');
+    const deep = !st.deep_at || Date.now() - Date.parse(st.deep_at) > DEEP_DAYS * 864e5;
+    const errors = [], fresh = [];
+    const tryIt = async (what, f) => { try { return await f(); } catch (e) { errors.push(`${what}: ${e.message}`); return []; } };
+    const comp = st.competitors.filter((x) => x !== own);
+    const [a, b, c, ...kw] = await Promise.all([
+      tryIt('конкуренты, свежее', () => posts(comp, { limit: 30, days: FRESH })),
+      deep ? tryIt('конкуренты, лучшее', () => posts(comp, { limit: DEEP_LIMIT })) : [],
+      deep || !libOwn.all().length ? tryIt('свой аккаунт', () => posts([own], { limit: OWN_LIMIT, own: true })) : [],
+      ...st.keywords.slice(0, 8).map((q) => tryIt(`поиск «${q}»`, async () => (await apifyActor(SEARCH_ACTOR, { query: q, maxPages: 2 }))
+        .map((p) => normalize(p)).filter((x) => x && x.author !== own))),
+    ]);
+    fresh.push(...a, ...kw.flat());
+    libComp.add([...fresh, ...b]);
+    libOwn.add(c);
+    if (deep && !errors.length) st.deep_at = new Date().toISOString();
+    const seenToday = new Set([...fresh, ...b, ...c].map((x) => x.code));
+    // a CDN video link lives a few hours: a post not seen today goes to the studio by its page link
+    const stale = (x) => seenToday.has(x.code) ? x : { ...x, video_url: '' };
+    return { all: [...fresh, ...libComp.all().map(stale), ...libOwn.all().map(stale)], scanned: fresh.length + b.length + c.length, errors, own };
   }
 
   async function scan(manual = false) {
-    const cfg = S.skillConfig();
-    const own = nick(cfg.instagram?.username || 'ilia.paliy');
-    const mode = st.competitors.length ? 'competitors' : 'own';
-    const accounts = mode === 'competitors' ? st.competitors : [own];
-    const days = mode === 'competitors' ? DAYS : cfg.scan?.days || 180;
-    const reuse = Date.now() - (cfg.scan?.reuse_after_days || 60) * 864e5;
     st.last_scan = today();
     save();
-    let found;
-    try { found = await scanAccounts(accounts, days); }
-    catch (e) { await say(`⚠️ Поиск залётов не удался: ${esc(e.message)}`); return; }
-    const fresh = found.filter((r) => !st.used[r.code] || Date.parse(st.used[r.code]) < reuse);
-    if (mode === 'competitors' && fresh.length < PER_DAY) {  // competitors have nothing new — top up from the own account
-      try { fresh.push(...(await scanAccounts([own], cfg.scan?.days || 180)).filter((r) => !st.used[r.code] || Date.parse(st.used[r.code]) < reuse)); } catch {}
-    }
-    st.pool = fresh.slice(0, 15);
+    if (manual) await say('🔎 Собираю план дня: конкуренты за 3 дня, ваши залёты за всё время, лучшее конкурентов… Это 2–5 минут.');
+    let g;
+    try { g = await gather(); } catch (e) { await say(`⚠️ Поиск залётов не удался: ${esc(e.message)}`); return; }
+    const prev = st.plans?.[Object.keys(st.plans || {}).sort().pop()];
+    const { list, rejected } = candidates(g.all, { used: st.used });
+    const plan = planDay(list, { yesterdayAuthors: prev?.authors || [] });
+    const date = today();
+    const slots = PLAN_SLOTS.length >= 3 ? PLAN_SLOTS : ['10:00', '14:00', '19:00'];
+    const saved = { date, created_at: new Date().toISOString(), mix: plan.mix, short: plan.short, errors: g.errors,
+      stats: { scanned: g.scanned, library: g.all.length, passed: list.length, hidden: rejected.hidden },
+      items: plan.items.map((x, i) => ({ slot: slots[i], kind: x.kind, source: x.source, url: x.url, code: x.code, author: x.author, own: x.own,
+        caption: x.caption.slice(0, 600), views: x.views, comments: x.comments, shares: x.shares, likes: x.likes, slides: x.slides,
+        date: x.date, score: x.score, unknown: x.gate.unknown })) };
+    savePlan(saved);
+    st.plans = { ...Object.fromEntries(Object.entries(st.plans || {}).sort().slice(-13)), [date]: { authors: plan.items.map((x) => x.author) } };
+    for (const x of plan.items) st.used[x.code] = new Date().toISOString();
+    // reserve for ♻️ «Другой» and for a reel that turns out not to be a talking head: the next real hits, reels only
+    const inPlan = new Set(plan.items.map((x) => x.code));
+    st.pool = list.filter((x) => x.kind === 'reel' && !inPlan.has(x.code)).slice(0, 12).map(origin);
     save();
-    if (!st.pool.length) { await say(`Новых залётов не нашёл (${mode === 'competitors' ? 'конкуренты: ' + esc(accounts.map((a) => '@' + a).join(', ')) : '@' + esc(own)}).`); return; }
-    await say(`🔎 ${manual ? 'Ищу' : 'Утренний поиск'}: ${mode === 'competitors' ? 'конкуренты ' + esc(accounts.map((a) => '@' + a).join(', ')) : 'конкурентов нет — беру свой @' + esc(own)} · ` +
-      `найдено рилсов: ${found.length}, беру самых залетевших: ${Math.min(PER_DAY, st.pool.length)}. Карточки придут, как будут готовы сценарии.`);
-    for (let i = 0; i < PER_DAY; i++) next();
+    await say(planText(plan, { date: ruDay(date), slots, competitors: st.competitors.length, stats: saved.stats }) +
+      (g.errors.length ? `\n\n⚠️ ${esc(g.errors.join('; ').slice(0, 600))}` : ''));
+    plan.items.forEach((x, i) => {
+      if (x.kind !== 'reel') return;
+      const j = start(origin(x));
+      j.reels.slot = slotAt(slots[i]);
+      j.reels.plan = { date, n: i + 1, source: x.source };
+      S.save(j);
+    });
+  }
+  const origin = (x) => ({ url: x.url, code: x.code, author: x.author, caption: x.caption, video_url: x.video_url || '', thumb: x.thumb,
+    views: x.views, likes: x.likes, comments: x.comments, shares: x.shares, duration: x.duration, date: x.date, source: x.source, own: x.own, score: x.score });
+  const ruDay = (d) => d.split('-').reverse().join('.');
+  // «14:00» today (REELS_TZ) → ms
+  function slotAt(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return slotChoices({ slots: [[h, m]], tz: TZ, taken: [], n: 1, lead: 0 })[0] || 0;
+  }
+  function readPlan(d = 'latest') { try { return JSON.parse(fs.readFileSync(path.join(data, 'plan', `${d}.json`), 'utf8')); } catch { return null; } }
+  function savePlan(p) {
+    fs.mkdirSync(path.join(data, 'plan'), { recursive: true });
+    for (const f of [`${p.date}.json`, 'latest.json']) fs.writeFileSync(path.join(data, 'plan', f), JSON.stringify(p, null, 1));
   }
 
   function next() {
@@ -188,8 +243,11 @@ export function createReelsBot({ studio, data }) {
 
   function cardText(j) {
     const r = j.reels.origin, sc = j.script, c = j.check;
-    const stats = [r.views != null && `${fmt(r.views)} просмотров`, r.comments != null && `${fmt(r.comments)} комм.`, r.likes != null && `${fmt(r.likes)} лайков`].filter(Boolean).join(' · ');
-    const head = `🎬 <b>Залёт @${esc(r.author || '?')}</b>${r.xn ? ` · ×${r.xn} к медиане` : ''}\n${stats ? esc(stats) + '\n' : ''}<a href="${esc(r.url)}">оригинал</a>`;
+    const stats = r.source ? metricsLine({ ...r, kind: 'reel' }) : [r.views != null && `${fmt(r.views)} просмотров`, r.comments != null && `${fmt(r.comments)} комм.`, r.likes != null && `${fmt(r.likes)} лайков`].filter(Boolean).join(' · ');
+    const src = SOURCES[r.source];
+    const plan = j.reels.plan ? `📋 План ${esc(j.reels.plan.date.split('-').reverse().join('.'))}, №${j.reels.plan.n} · ` : '';
+    const head = `🎬 <b>Залёт @${esc(r.author || '?')}</b>${src ? ` · ${plan}${src.icon} ${src.label}` : ''}\n${stats ? esc(stats) + '\n' : ''}<a href="${esc(r.url)}">оригинал</a>` +
+      (src ? `\n<i>${esc(src.verb)}</i>` : '');
     const why = (sc.analysis || []).slice(0, 4).map((x) => '• ' + esc(x)).join('\n');
     const hook = sc.hook_from || sc.hook_to ? `<b>Хук:</b> ${esc(sc.hook_from || '?')} → <b>${esc(sc.hook_to || '?')}</b>` : '';
     const check = c ? `Проверка скилла: <b>${c.result}</b>${c.overlap != null ? ` · совпадение с оригиналом ${Math.round(c.overlap * 100)}%` : ''}${c.est_sec ? ` · ≈${Math.round(c.est_sec)} с` : ''}` +
@@ -528,9 +586,12 @@ export function createReelsBot({ studio, data }) {
     return answer();
   }
 
-  const HELP = `<b>Instagram Reels</b> — связка как у Threads.\nКаждый день в ${HOUR}:00 (${esc(TZ)}) ищу залёты у конкурентов (нет конкурентов — в вашем аккаунте), ` +
-    `уникализирую хук и сценарий и присылаю карточки. ✅ Одобрено — аватар HeyGen, монтаж Кадрика и готовое видео файлом сюда.\n\n` +
-    `/scan — найти залёты сейчас\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
+  const HELP = `<b>Instagram Reels · План дня</b>\nКаждый день в ${HOUR}:00 (${esc(TZ)}) собираю план: <b>ровно 3 единицы</b> — 1 рилс + 2 карусели или 2 рилса + 1 карусель. ` +
+    `Беру только залёты: от 100 тыс. просмотров, 1 000 комментариев и 1 000 репостов. Источники: 🔥 что летит у конкурентов за 3 дня, ` +
+    `♻️ всё, что залетало у вас, — уникализировать, 🏆 лучшее конкурентов за всё время — адаптировать.\n` +
+    `Рилсы — карточками сюда (✅ → аватар HeyGen, монтаж Кадрика, видео файлом). Карусели делает агент «Карусели» офиса — карточки в пульте офиса.\n\n` +
+    `/plan — план на сегодня\n/keywords add слово, слово — поиск рилсов по теме\n` +
+    `/scan — собрать план сейчас\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
     `Ссылка на рилс сюда — сразу в работу.\n\nКнопки карточки — как в ветке Threads:\n✅ Одобрить — аватар, монтаж и видео сюда\n` +
     `✏️ Править — правка текстом или голосом: до ✅ — сценарий, под готовым видео — монтаж (со слова «сценарий» — новый текст и новый аватар)\n` +
     `🔄 Хук — другие хуки на выбор · ♻️ Другой — следующий залёт в тот же слот · 📎 Материалы — ваша история или цифры в сценарий\n` +
@@ -566,6 +627,22 @@ export function createReelsBot({ studio, data }) {
     if (!isOwner) return;
     if (cmd === 'help' || cmd === 'start') return say(HELP);
     if (cmd === 'scan') { if (!S.apify) return say('⚠️ Нет APIFY_TOKEN — искать залёты нечем.'); return scan(true); }
+    if (cmd === 'plan') {
+      const p = readPlan();
+      if (!p) return say('Плана ещё не было — /scan соберёт его сейчас.');
+      return say(`📋 <b>План на ${esc(ruDay(p.date))}</b>\n` + p.items.map((x, i) => `${i + 1}. <b>${esc(x.slot)}</b> · ${x.kind === 'reel' ? '🎬 Рилс' : '🎠 Карусель'} · ` +
+        `${SOURCES[x.source]?.icon || ''} <a href="${esc(x.url)}">@${esc(x.author)}</a> — ${esc(metricsLine({ ...x, gate: null }))}`).join('\n') +
+        (p.short ? `\n⚠️ Залётов хватило только на ${p.items.length}.` : ''));
+    }
+    if (cmd === 'keywords') {
+      const [, op, ...rest] = text.split(/\s+/);
+      const words = rest.join(' ').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+      if (op === 'add') st.keywords = [...new Set([...st.keywords, ...words])].slice(0, 8);
+      if (op === 'del' || op === 'rm') st.keywords = st.keywords.filter((x) => !words.includes(x));
+      save();
+      return say(st.keywords.length ? `Ключевые слова поиска рилсов (${st.keywords.length}/8): ${st.keywords.map(esc).join(', ')}`
+        : 'Ключевых слов нет — ищу только у конкурентов и у вас.\nДобавить: /keywords add нейросети, claude, ии для бизнеса');
+    }
     if (cmd === 'competitors') {
       const [, op, ...rest] = text.split(/\s+/);
       const names = rest.map(nick).filter((x) => NICK.test(x));
@@ -659,5 +736,6 @@ export function createReelsBot({ studio, data }) {
     if (j.reels.state === 'montage' && j.steps.montage?.state === 'done' && j.montage.video) deliver(j);
   }
 
-  return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
+  return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, keywords: st.keywords.length, last_scan: st.last_scan, plan: readPlan()?.date || '' }),
+    scan: () => scan(true), stop: () => { stopped = true; } };
 }

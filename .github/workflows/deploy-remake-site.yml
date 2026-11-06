@@ -40,6 +40,11 @@ on:
       - '.claude/skills/carousel-pro/references/carousel-rules.md'
       - '.github/workflows/deploy-remake-site.yml'
   workflow_dispatch:
+    inputs:
+      plan_now:
+        description: 'После выкладки собрать «План дня» @instaoo_bot сейчас (пост в ветку Reels + /api/plan)'
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-remake-site
@@ -65,6 +70,8 @@ jobs:
           node --check apps/remake-site/reels-bot.mjs
           node --check apps/remake-site/carousel-bot.mjs
           node --check apps/remake-site/tg-branch.mjs
+          node --check apps/remake-site/scout.mjs
+          (cd apps/remake-site && node --test scout.test.mjs)
           test -f apps/remake-site/dist/carousel-skill/config.json && test -f apps/remake-site/dist/carousel-skill/references/carousel-rules.md
           python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' apps/remake-site/dist/skill/scripts/*.py
           test -f apps/remake-site/dist/Dockerfile && test -f apps/remake-site/dist/skill/references/script-rules.md
@@ -161,3 +168,18 @@ jobs:
           done
           curl -sS "https://$DOMAIN/api/health"; echo
           curl -sS "https://$DOMAIN/api/studio/me"; echo
+
+      - name: Plan of the day now (test)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.plan_now }}
+        env:
+          TOKEN: ${{ secrets.REMAKE_SITE_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::error::REMAKE_SITE_TOKEN is not set"; exit 1; }
+          curl -sS -f -X POST -H "authorization: Bearer $TOKEN" "https://$DOMAIN/api/plan/scan"; echo
+          day=$(TZ=Europe/Moscow date +%F)
+          for i in $(seq 1 60); do
+            sleep 10
+            body=$(curl -sS "https://$DOMAIN/api/plan/$day" || true)
+            if echo "$body" | grep -q '"items"'; then echo "$body"; exit 0; fi
+          done
+          echo "::error::plan for $day did not appear in 10 minutes"; curl -sS "https://$DOMAIN/api/health"; exit 1
