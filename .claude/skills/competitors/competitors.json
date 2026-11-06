@@ -1,0 +1,1131 @@
+{
+ "_about": "Конкуренты Ильи (@ilia.paliy): Reels + ИИ + набор аудитории, GPT/Claude/маркетинг. Источник — references/konkurenty_reels_ai.xlsx (проверено в Instagram 06.11.2026). Один список на все проекты контента: @instaoo_bot (План дня), офис hq2, скиллы. Правка — здесь, пуш в main.",
+ "checked": "2026-11-06",
+ "count": 60,
+ "accounts": [
+  {
+   "nick": "juli_ivanova.a",
+   "market": "RU",
+   "url": "https://www.instagram.com/juli_ivanova.a/",
+   "followers": 279000,
+   "topic": "ИИ + монтаж рилс",
+   "reels": [
+    1600000,
+    302000,
+    284000,
+    152000
+   ],
+   "best": 1600000,
+   "best_x_followers": 5.73,
+   "avg4": 584500,
+   "funnel": "Бот Syntx в шапке",
+   "note": "Стабильно: несколько сильных роликов подряд",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "misterr_alex",
+   "market": "RU",
+   "url": "https://www.instagram.com/misterr_alex/",
+   "followers": 329000,
+   "topic": "Обучение рилс",
+   "reels": [
+    3000000,
+    1600000,
+    311000,
+    279000
+   ],
+   "best": 3000000,
+   "best_x_followers": 9.12,
+   "avg4": 1297500,
+   "funnel": "TG-канал",
+   "note": "Стабильно сильные",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "liza.tkachyk",
+   "market": "RU",
+   "url": "https://www.instagram.com/liza.tkachyk/",
+   "followers": 379000,
+   "topic": "Рилс + нейросети",
+   "reels": [
+    489000,
+    333000,
+    237000,
+    151000
+   ],
+   "best": 489000,
+   "best_x_followers": 1.29,
+   "avg4": 302500,
+   "funnel": "МК / спринт",
+   "note": "Ориентир от Ильи",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "potapovfx",
+   "market": "RU",
+   "url": "https://www.instagram.com/potapovfx/",
+   "followers": 409000,
+   "topic": "Рост через контент",
+   "reels": [
+    380000,
+    232000,
+    160000,
+    110000
+   ],
+   "best": 380000,
+   "best_x_followers": 0.93,
+   "avg4": 220500,
+   "funnel": "Тест-драйв связки",
+   "note": "Ориентир от Ильи",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "kateinamerica",
+   "market": "RU",
+   "url": "https://www.instagram.com/kateinamerica/",
+   "followers": 117000,
+   "topic": "Захват внимания в рилс",
+   "reels": [
+    33100000,
+    6100000,
+    3800000,
+    705000
+   ],
+   "best": 33100000,
+   "best_x_followers": 282.91,
+   "avg4": 10926250,
+   "funnel": "Продукты в шапке",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "andrey.fram",
+   "market": "RU",
+   "url": "https://www.instagram.com/andrey.fram/",
+   "followers": 37500,
+   "topic": "Нейросети → доход",
+   "reels": [
+    3600000,
+    298000,
+    260000,
+    221000
+   ],
+   "best": 3600000,
+   "best_x_followers": 96,
+   "avg4": 1094750,
+   "funnel": "TG-бот",
+   "note": "Близко к модели польза + бот",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "ythemark",
+   "market": "RU",
+   "url": "https://www.instagram.com/ythemark/",
+   "followers": 278000,
+   "topic": "ИИ контент-завод",
+   "reels": [
+    6500000,
+    325000,
+    58000
+   ],
+   "best": 6500000,
+   "best_x_followers": 23.38,
+   "avg4": 2294333,
+   "funnel": "Пак ИИ-инструментов",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "alexandro_ai",
+   "market": "RU",
+   "url": "https://www.instagram.com/alexandro_ai/",
+   "followers": 43200,
+   "topic": "ИИ-контент",
+   "reels": [
+    167000,
+    139000,
+    102000,
+    59000
+   ],
+   "best": 167000,
+   "best_x_followers": 3.87,
+   "avg4": 116750,
+   "funnel": "TG-канал",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "rita.pro.ai",
+   "market": "RU",
+   "url": "https://www.instagram.com/rita.pro.ai/",
+   "followers": 71500,
+   "topic": "ИИ-туториалы",
+   "reels": [
+    1200000,
+    952000,
+    109000
+   ],
+   "best": 1200000,
+   "best_x_followers": 16.78,
+   "avg4": 753667,
+   "funnel": "Taplink → TG",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "zhilnikov_it",
+   "market": "RU",
+   "url": "https://www.instagram.com/zhilnikov_it/",
+   "followers": 29600,
+   "topic": "Нейросети, вайбкодинг",
+   "reels": [
+    458000,
+    386000,
+    372000,
+    150000
+   ],
+   "best": 458000,
+   "best_x_followers": 15.47,
+   "avg4": 341500,
+   "funnel": "TG-канал",
+   "note": "Стабильно сильные",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "oireels",
+   "market": "RU",
+   "url": "https://www.instagram.com/oireels/",
+   "followers": 61900,
+   "topic": "ИИ для блога",
+   "reels": [
+    448000,
+    388000,
+    77000
+   ],
+   "best": 448000,
+   "best_x_followers": 7.24,
+   "avg4": 304333,
+   "funnel": "TG-бот, клуб 890₽",
+   "note": "Близко к модели польза + бот",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "golyginayulia",
+   "market": "RU",
+   "url": "https://www.instagram.com/golyginayulia/",
+   "followers": 257000,
+   "topic": "Нейросети для блога и продаж",
+   "reels": [
+    12700000,
+    9000000,
+    1000000
+   ],
+   "best": 12700000,
+   "best_x_followers": 49.42,
+   "avg4": 7566667,
+   "funnel": "Академия ИИ",
+   "note": "Пики, вероятно, закреплённые; свежие слабее",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "viktoririi",
+   "market": "RU",
+   "url": "https://www.instagram.com/viktoririi/",
+   "followers": 67700,
+   "topic": "AI-креатор",
+   "reels": [
+    97000,
+    87000,
+    37000
+   ],
+   "best": 97000,
+   "best_x_followers": 1.43,
+   "avg4": 73667,
+   "funnel": "Актуальное «секрет»",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "alice.merash",
+   "market": "RU",
+   "url": "https://www.instagram.com/alice.merash/",
+   "followers": 80900,
+   "topic": "AI-контент, вайбкодинг",
+   "reels": [
+    3300000,
+    2000000,
+    1300000
+   ],
+   "best": 3300000,
+   "best_x_followers": 40.79,
+   "avg4": 2200000,
+   "funnel": "Клуб prof-ai.pro",
+   "note": "Пики, вероятно, закреплённые; свежие ~10–27K",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "sebastien",
+   "market": "EN",
+   "url": "https://www.instagram.com/sebastien/",
+   "followers": 778000,
+   "topic": "ИИ для креаторов",
+   "reels": [
+    1100000,
+    512000,
+    290000,
+    136000
+   ],
+   "best": 1100000,
+   "best_x_followers": 1.41,
+   "avg4": 509500,
+   "funnel": "Skool-сообщество",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "gannon.meyer",
+   "market": "EN",
+   "url": "https://www.instagram.com/gannon.meyer/",
+   "followers": 203000,
+   "topic": "ManyChat + ИИ",
+   "reels": [
+    165000,
+    157000,
+    76000
+   ],
+   "best": 165000,
+   "best_x_followers": 0.81,
+   "avg4": 132667,
+   "funnel": "Коммент → директ → email",
+   "note": "Ровно модель Ильи",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "theaigeekk",
+   "market": "EN",
+   "url": "https://www.instagram.com/theaigeekk/",
+   "followers": 20900,
+   "topic": "Gen AI",
+   "reels": [
+    1100000,
+    541000,
+    265000,
+    139000
+   ],
+   "best": 1100000,
+   "best_x_followers": 52.63,
+   "avg4": 511250,
+   "funnel": "Директ",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "tenfoldmarc",
+   "market": "EN",
+   "url": "https://www.instagram.com/tenfoldmarc/",
+   "followers": 124000,
+   "topic": "ИИ и Claude для нетехнарей",
+   "reels": [
+    738000,
+    96000,
+    50000
+   ],
+   "best": 738000,
+   "best_x_followers": 5.95,
+   "avg4": 294667,
+   "funnel": "Платный продукт",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "nathanhodgson.ai",
+   "market": "EN",
+   "url": "https://www.instagram.com/nathanhodgson.ai/",
+   "followers": 160000,
+   "topic": "ИИ-продуктивность",
+   "reels": [
+    746000,
+    68000
+   ],
+   "best": 746000,
+   "best_x_followers": 4.66,
+   "avg4": 407000,
+   "funnel": "Консалтинг",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "andremass.ai",
+   "market": "EN",
+   "url": "https://www.instagram.com/andremass.ai/",
+   "followers": 69000,
+   "topic": "ИИ-инструменты",
+   "reels": [
+    820000,
+    68000,
+    66000
+   ],
+   "best": 820000,
+   "best_x_followers": 11.88,
+   "avg4": 318000,
+   "funnel": "Рассылка",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "denkiselef",
+   "market": "RU",
+   "url": "https://www.instagram.com/denkiselef/",
+   "followers": 503000,
+   "topic": "Обучение Reels",
+   "reels": [
+    320000,
+    190000,
+    164000,
+    133000
+   ],
+   "best": 320000,
+   "best_x_followers": 0.64,
+   "avg4": 201750,
+   "funnel": "Курс в шапке",
+   "note": "Стабильно: все 12 роликов от 52K",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "vtrembach",
+   "market": "RU",
+   "url": "https://www.instagram.com/vtrembach/",
+   "followers": 915000,
+   "topic": "Видеоконтент на телефон",
+   "reels": [
+    11500000,
+    811000,
+    381000,
+    330000
+   ],
+   "best": 11500000,
+   "best_x_followers": 12.57,
+   "avg4": 3255500,
+   "funnel": "Обучение съёмке",
+   "note": "Стабильно сильные",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "tanushka_ll",
+   "market": "RU",
+   "url": "https://www.instagram.com/tanushka_ll/",
+   "followers": 28500,
+   "topic": "ИИ-креатор, ИИ-видео",
+   "reels": [
+    335000,
+    297000,
+    272000,
+    88000
+   ],
+   "best": 335000,
+   "best_x_followers": 11.75,
+   "avg4": 248000,
+   "funnel": "Клуб по ИИ",
+   "note": "Сильно для своего размера",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "ilshat.mx",
+   "market": "RU",
+   "url": "https://www.instagram.com/ilshat.mx/",
+   "followers": 9856,
+   "topic": "ИИ для бизнеса и блога (Claude, ChatGPT)",
+   "reels": [
+    463000,
+    157000,
+    151000,
+    112000
+   ],
+   "best": 463000,
+   "best_x_followers": 46.98,
+   "avg4": 220750,
+   "funnel": "Гайд в шапке → TG",
+   "note": "Маленький аккаунт, но залетает",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "abramov_aicreator",
+   "market": "RU",
+   "url": "https://www.instagram.com/abramov_aicreator/",
+   "followers": 241000,
+   "topic": "Нейросети, ИИ-агенты, AI-аватары",
+   "reels": [
+    2000000,
+    1800000,
+    1200000,
+    27800
+   ],
+   "best": 2000000,
+   "best_x_followers": 8.3,
+   "avg4": 1256950,
+   "funnel": "Автоконтент / аватары",
+   "note": "Пики, вероятно, закреплённые",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "anysit_neuro",
+   "market": "RU",
+   "url": "https://www.instagram.com/anysit_neuro/",
+   "followers": 64200,
+   "topic": "Нейросети без розовых очков",
+   "reels": [
+    445000,
+    226000,
+    128000,
+    23400
+   ],
+   "best": 445000,
+   "best_x_followers": 6.93,
+   "avg4": 205600,
+   "funnel": null,
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "t.koval.a",
+   "market": "RU",
+   "url": "https://www.instagram.com/t.koval.a/",
+   "followers": 90200,
+   "topic": "ИИ-тренды за 2 минуты",
+   "reels": [
+    859000,
+    23300,
+    22300,
+    15500
+   ],
+   "best": 859000,
+   "best_x_followers": 9.52,
+   "avg4": 230025,
+   "funnel": "TG с промтами",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "lena.pro.online",
+   "market": "RU",
+   "url": "https://www.instagram.com/lena.pro.online/",
+   "followers": 24100,
+   "topic": "ChatGPT для блога и Reels",
+   "reels": [
+    802000,
+    356000,
+    51800,
+    14400
+   ],
+   "best": 802000,
+   "best_x_followers": 33.28,
+   "avg4": 306050,
+   "funnel": "Инструкции и промпты",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "neironovvai",
+   "market": "RU",
+   "url": "https://www.instagram.com/neironovvai/",
+   "followers": 14100,
+   "topic": "40+ нейросетей в одной подписке",
+   "reels": [
+    479000,
+    115000,
+    8700
+   ],
+   "best": 479000,
+   "best_x_followers": 33.97,
+   "avg4": 200900,
+   "funnel": "Партнёрская ссылка",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "natalia.aivideo",
+   "market": "RU",
+   "url": "https://www.instagram.com/natalia.aivideo/",
+   "followers": 23400,
+   "topic": "ИИ-сериалы и ролики",
+   "reels": [
+    650000,
+    200000,
+    107000,
+    46100
+   ],
+   "best": 650000,
+   "best_x_followers": 27.78,
+   "avg4": 250775,
+   "funnel": "Обучение",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "ai.creator_kris",
+   "market": "RU",
+   "url": "https://www.instagram.com/ai.creator_kris/",
+   "followers": 40300,
+   "topic": "ИИ-сериалы и мультфильмы",
+   "reels": [
+    198000,
+    124000,
+    63800,
+    61400
+   ],
+   "best": 198000,
+   "best_x_followers": 4.91,
+   "avg4": 111800,
+   "funnel": "Обучение, директ / TG",
+   "note": "Стабильно",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "alexazakarian",
+   "market": "RU",
+   "url": "https://www.instagram.com/alexazakarian/",
+   "followers": 60800,
+   "topic": "AI-кампании для брендов",
+   "reels": [
+    851000,
+    760000,
+    298000,
+    203000
+   ],
+   "best": 851000,
+   "best_x_followers": 14.0,
+   "avg4": 528000,
+   "funnel": "Коллабы с Higgsfield, Kling",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "faina_raevskayaa",
+   "market": "RU",
+   "url": "https://www.instagram.com/faina_raevskayaa/",
+   "followers": 206000,
+   "topic": "Полностью ИИ-блогер (биохакинг)",
+   "reels": [
+    11500000,
+    4400000,
+    4300000,
+    95400
+   ],
+   "best": 11500000,
+   "best_x_followers": 55.83,
+   "avg4": 5073850,
+   "funnel": "Продукт в шапке",
+   "note": "Пример ИИ-аватара без лица автора",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "shipovalov_pavel",
+   "market": "RU",
+   "url": "https://www.instagram.com/shipovalov_pavel/",
+   "followers": 152000,
+   "topic": "Съёмка и продвижение Reels",
+   "reels": [
+    129000,
+    55100,
+    35600,
+    33800
+   ],
+   "best": 129000,
+   "best_x_followers": 0.85,
+   "avg4": 63375,
+   "funnel": "TG-бот, набор потока",
+   "note": "Стабильно",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "solvane31",
+   "market": "RU",
+   "url": "https://www.instagram.com/solvane31/",
+   "followers": 34000,
+   "topic": "UGC, вирусные Reels, тесты ИИ",
+   "reels": [
+    245000,
+    157000,
+    72100,
+    67900
+   ],
+   "best": 245000,
+   "best_x_followers": 7.21,
+   "avg4": 135500,
+   "funnel": "Материалы из рилсов в шапке",
+   "note": "Стабильно",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "polya.gahan",
+   "market": "RU",
+   "url": "https://www.instagram.com/polya.gahan/",
+   "followers": 60100,
+   "topic": "SMM + ИИ, фриланс",
+   "reels": [
+    378000,
+    72700,
+    24600,
+    21700
+   ],
+   "best": 378000,
+   "best_x_followers": 6.29,
+   "avg4": 124250,
+   "funnel": "Академия",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "mike.mozg",
+   "market": "RU",
+   "url": "https://www.instagram.com/mike.mozg/",
+   "followers": 12900,
+   "topic": "Нейросети, вайбкодинг",
+   "reels": [
+    252000,
+    149000,
+    43400
+   ],
+   "best": 252000,
+   "best_x_followers": 19.53,
+   "avg4": 148133,
+   "funnel": "ИИ-боты, аудит воронки",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "reelsmentor_ai",
+   "market": "RU",
+   "url": "https://www.instagram.com/reelsmentor_ai/",
+   "followers": 50900,
+   "topic": "ИИ-система для трафика",
+   "reels": [
+    221000,
+    193000,
+    150000
+   ],
+   "best": 221000,
+   "best_x_followers": 4.34,
+   "avg4": 188000,
+   "funnel": "Кодовое слово в шапке",
+   "note": "Свежие ролики слабые",
+   "group": "reels-ai"
+  },
+  {
+   "nick": "create.withana",
+   "market": "EN",
+   "url": "https://www.instagram.com/create.withana/",
+   "followers": 66400,
+   "topic": "AI-инфлюенсер, ИИ-видео",
+   "reels": [
+    1800000,
+    1100000,
+    138000
+   ],
+   "best": 1800000,
+   "best_x_followers": 27.11,
+   "avg4": 1012667,
+   "funnel": "Партнёрка Higgsfield",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "princegupta.ai",
+   "market": "EN",
+   "url": "https://www.instagram.com/princegupta.ai/",
+   "followers": 14000,
+   "topic": "ИИ-агенты и системы",
+   "reels": [
+    527000,
+    254000,
+    193000,
+    54300
+   ],
+   "best": 527000,
+   "best_x_followers": 37.64,
+   "avg4": 257075,
+   "funnel": "Директ / почта",
+   "note": null,
+   "group": "reels-ai"
+  },
+  {
+   "nick": "rpn",
+   "market": "EN",
+   "url": "https://www.instagram.com/rpn/",
+   "followers": 965000,
+   "topic": "ИИ, гид в эпоху ИИ",
+   "reels": [
+    6800000,
+    5700000,
+    5300000,
+    3800000
+   ],
+   "best": 6800000,
+   "best_x_followers": 7.05,
+   "avg4": 5400000,
+   "funnel": "Партнёрства",
+   "note": "Самый стабильный: почти все ролики 1M+",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "chase.h.ai",
+   "market": "EN",
+   "url": "https://www.instagram.com/chase.h.ai/",
+   "followers": 244000,
+   "topic": "Claude Code, ИИ простым языком",
+   "reels": [
+    1500000,
+    147000,
+    131000,
+    88800
+   ],
+   "best": 1500000,
+   "best_x_followers": 6.15,
+   "avg4": 466700,
+   "funnel": "DM «Ready» → менторство",
+   "note": "Кодовое слово в директ",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "millee.md",
+   "market": "EN",
+   "url": "https://www.instagram.com/millee.md/",
+   "followers": 33900,
+   "topic": "Личный бренд с ИИ и Claude",
+   "reels": [
+    3100000,
+    1200000,
+    270000,
+    57200
+   ],
+   "best": 3100000,
+   "best_x_followers": 91.45,
+   "avg4": 1156800,
+   "funnel": "Комьюнити",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "imanoubou",
+   "market": "EN",
+   "url": "https://www.instagram.com/imanoubou/",
+   "followers": 85400,
+   "topic": "Личный бренд через ИИ-аватар",
+   "reels": [
+    226000,
+    93900,
+    92400,
+    88100
+   ],
+   "best": 226000,
+   "best_x_followers": 2.65,
+   "avg4": 125100,
+   "funnel": "Обучение",
+   "note": "Стабильно ~60–90K, близко к теме аватаров",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "jesserurka",
+   "market": "EN",
+   "url": "https://www.instagram.com/jesserurka/",
+   "followers": 39100,
+   "topic": "ИИ и growth-инжиниринг",
+   "reels": [
+    1500000,
+    209000,
+    197000,
+    159000
+   ],
+   "best": 1500000,
+   "best_x_followers": 38.36,
+   "avg4": 516250,
+   "funnel": "Beacons",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "buildwithnico",
+   "market": "EN",
+   "url": "https://www.instagram.com/buildwithnico/",
+   "followers": 58700,
+   "topic": "Маркетинг и запуск приложений",
+   "reels": [
+    2300000,
+    197000,
+    111000,
+    49300
+   ],
+   "best": 2300000,
+   "best_x_followers": 39.18,
+   "avg4": 664325,
+   "funnel": "Мини-курс",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "benkaluza",
+   "market": "EN",
+   "url": "https://www.instagram.com/benkaluza/",
+   "followers": 360000,
+   "topic": "Контент, техника, ИИ",
+   "reels": [
+    242000,
+    40100,
+    39300,
+    24000
+   ],
+   "best": 242000,
+   "best_x_followers": 0.67,
+   "avg4": 86350,
+   "funnel": "Студия",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "ai.withphil",
+   "market": "EN",
+   "url": "https://www.instagram.com/ai.withphil/",
+   "followers": 135000,
+   "topic": "ИИ-инструменты (Adobe Firefly)",
+   "reels": [
+    84400,
+    52700,
+    31000,
+    14700
+   ],
+   "best": 84400,
+   "best_x_followers": 0.63,
+   "avg4": 45700,
+   "funnel": "Ссылки в шапке",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "marketingharry",
+   "market": "EN",
+   "url": "https://www.instagram.com/marketingharry/",
+   "followers": 634000,
+   "topic": "Маркетинг в соцсетях",
+   "reels": [
+    2500000,
+    737000,
+    114000,
+    20700
+   ],
+   "best": 2500000,
+   "best_x_followers": 3.94,
+   "avg4": 842925,
+   "funnel": "Уроки",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "thepostprotocol",
+   "market": "EN",
+   "url": "https://www.instagram.com/thepostprotocol/",
+   "followers": 336000,
+   "topic": "Психология вирусного контента",
+   "reels": [
+    3100000,
+    128000,
+    127000,
+    105000
+   ],
+   "best": 3100000,
+   "best_x_followers": 9.23,
+   "avg4": 865000,
+   "funnel": "Агентство",
+   "note": "Стабильно",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "brock11johnson",
+   "market": "EN",
+   "url": "https://www.instagram.com/brock11johnson/",
+   "followers": 1000000,
+   "topic": "Рост в Instagram",
+   "reels": [
+    359000,
+    341000,
+    174000,
+    92900
+   ],
+   "best": 359000,
+   "best_x_followers": 0.36,
+   "avg4": 241725,
+   "funnel": "Академия",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "matthgray",
+   "market": "EN",
+   "url": "https://www.instagram.com/matthgray/",
+   "followers": 974000,
+   "topic": "Бизнес-система для брендов",
+   "reels": [
+    276000,
+    173000,
+    32600
+   ],
+   "best": 276000,
+   "best_x_followers": 0.28,
+   "avg4": 160533,
+   "funnel": "Вебинар",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "marketing.with.m",
+   "market": "EN",
+   "url": "https://www.instagram.com/marketing.with.m/",
+   "followers": 301000,
+   "topic": "Агентство: SMM, бренд, ИИ",
+   "reels": [
+    72900,
+    37600,
+    34000,
+    24700
+   ],
+   "best": 72900,
+   "best_x_followers": 0.24,
+   "avg4": 42300,
+   "funnel": "Агентство",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "createcontent.club",
+   "market": "EN",
+   "url": "https://www.instagram.com/createcontent.club/",
+   "followers": 439000,
+   "topic": "Контент для бизнеса",
+   "reels": [
+    40400000,
+    19700,
+    15500,
+    12800
+   ],
+   "best": 40400000,
+   "best_x_followers": 92.03,
+   "avg4": 10112000,
+   "funnel": "Агентство",
+   "note": "Один гигантский ролик, остальные слабые",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "art.senatorov",
+   "market": "RU",
+   "url": "https://www.instagram.com/art.senatorov/",
+   "followers": 1400000,
+   "topic": "Личный бренд, книги, видео",
+   "reels": [
+    10100000,
+    7900000,
+    6400000,
+    998000
+   ],
+   "best": 10100000,
+   "best_x_followers": 7.21,
+   "avg4": 6349500,
+   "funnel": "Белая Комната, LAB",
+   "note": "Стабильно сильные",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "petrosipov1",
+   "market": "RU",
+   "url": "https://www.instagram.com/petrosipov1/",
+   "followers": 1800000,
+   "topic": "Бизнес и смыслы",
+   "reels": [
+    7900000,
+    5900000,
+    5000000,
+    382000
+   ],
+   "best": 7900000,
+   "best_x_followers": 4.39,
+   "avg4": 4795500,
+   "funnel": "Онлайн-продукт «Метацель»",
+   "note": "Пики, вероятно, закреплённые",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "vitaly.vlada",
+   "market": "RU",
+   "url": "https://www.instagram.com/vitaly.vlada/",
+   "followers": 132000,
+   "topic": "AI-маркетинг и мини-продукты",
+   "reels": [
+    3800000,
+    3600000,
+    3000000,
+    20200
+   ],
+   "best": 3800000,
+   "best_x_followers": 28.79,
+   "avg4": 2605050,
+   "funnel": "Мини-продукты",
+   "note": "Пики закреплённые; свежие слабые",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "dmitriev.ai",
+   "market": "RU",
+   "url": "https://www.instagram.com/dmitriev.ai/",
+   "followers": 61100,
+   "topic": "Маркетинг, ViralPay",
+   "reels": [
+    1100000,
+    475000,
+    81000,
+    44300
+   ],
+   "best": 1100000,
+   "best_x_followers": 18.0,
+   "avg4": 425075,
+   "funnel": "TG-бот",
+   "note": null,
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "julia_rodochinskaya",
+   "market": "RU",
+   "url": "https://www.instagram.com/julia_rodochinskaya/",
+   "followers": 300000,
+   "topic": "Маркетинг и нейросети",
+   "reels": [
+    214000,
+    47900,
+    8300,
+    7000
+   ],
+   "best": 214000,
+   "best_x_followers": 0.71,
+   "avg4": 69300,
+   "funnel": "Нейроклуб 2990₽/мес",
+   "note": "Свежие слабые",
+   "group": "gpt-claude-marketing"
+  },
+  {
+   "nick": "nata_smart.life",
+   "market": "RU",
+   "url": "https://www.instagram.com/nata_smart.life/",
+   "followers": 655000,
+   "topic": "Удалённые профессии, нейросети",
+   "reels": [
+    80700,
+    50500,
+    24200,
+    20500
+   ],
+   "best": 80700,
+   "best_x_followers": 0.12,
+   "avg4": 43975,
+   "funnel": "МК по нейросетям",
+   "note": "Свежие слабые",
+   "group": "gpt-claude-marketing"
+  }
+ ]
+}

@@ -31,6 +31,7 @@
    Одна ветка — один бот (tg-branch.mjs): слышит только свою ветку, команды с @другим_ботом не его, ветку Reels не привязать,
    токен совпал с REMAKE_TG_BOT_TOKEN — ветка выключена. После ✅ под карточкой — статус шагов, обновляется сам.
    Состояние — DATA_DIR/carousels/state.json, карусели — DATA_DIR/carousels/<id>/, готовые слайды — DATA_DIR/media/<id>-*.jpg. */
+import { sharedCompetitors } from './scout.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -346,7 +347,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   let st = {};
   try { st = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
   st = { chat_id: Number(env('CAROUSEL_TG_CHAT_ID')) || 0, topic_id: Number(env('CAROUSEL_TG_TOPIC_ID')) || 0, owners: [], offset: 0,
-    competitors: (env('CAROUSEL_COMPETITORS') || env('REELS_COMPETITORS')).split(/[\s,]+/).map(nick).filter((x) => NICK.test(x)),
+    competitors: (env('CAROUSEL_COMPETITORS') || env('REELS_COMPETITORS') || sharedCompetitors().nicks.join(',')).split(/[\s,]+/).map(nick).filter((x) => NICK.test(x)),
     used: {}, pool: [], last_scan: '', own_found: null, ...st };
   const save = () => { fs.writeFileSync(FILE + '.part', JSON.stringify(st, null, 1)); fs.renameSync(FILE + '.part', FILE); };
   const ownerEnv = env('CAROUSEL_TG_OWNER_IDS') || env('REMAKE_TG_OWNER_IDS');

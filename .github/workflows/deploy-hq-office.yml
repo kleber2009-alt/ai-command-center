@@ -102,7 +102,7 @@ jobs:
           npm ci --omit=dev --no-audit --no-fund
           cp ../../../CLAUDE.md project-map.md
           # knowledge of the twin (twin/): the rules of the content skills, next to the server
-          for f in remake-top-reel/references/script-rules.md remake-top-reel/references/styles.md carousel-pro/references/carousel-rules.md; do
+          for f in remake-top-reel/references/script-rules.md remake-top-reel/references/styles.md carousel-pro/references/carousel-rules.md competitors/references/competitors.md; do
             mkdir -p "twin-skills/$(dirname "$f")" && cp "../../../.claude/skills/$f" "twin-skills/$f"
           done
           node -e 'import("./twin.mjs").then(m => { const t = m.loadTwin(); if (t.sources.length < 4) throw new Error("twin knowledge is incomplete"); console.log(t.sources.length + " twin sources, " + t.text.length + " chars"); })'
@@ -130,7 +130,7 @@ jobs:
           tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
             | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
           # the transcriber (agent «Транскрибатор»): the skill goes with the runner and into the bots' user ~/.claude/skills
-          mkdir -p apps/hq-office/runner/skills && cp -r .claude/skills/transcribe-reference .claude/skills/social-daily-stats .claude/skills/service-balances apps/hq-office/runner/skills/
+          mkdir -p apps/hq-office/runner/skills && cp -r .claude/skills/transcribe-reference .claude/skills/social-daily-stats .claude/skills/service-balances .claude/skills/competitors apps/hq-office/runner/skills/
           tar -C apps/hq-office/runner -czf - . \
             | $SSH "mkdir -p /opt/hq-office/runner/releases/$REL && tar -xzf - -C /opt/hq-office/runner/releases/$REL"
 

@@ -17,6 +17,7 @@ const SKILL_FILES = [
   ['remake-top-reel/references/script-rules.md', 'Как Илья пишет сценарии рилсов (скилл remake-top-reel)'],
   ['remake-top-reel/references/styles.md', 'Стили монтажа «Студии Кадрика»'],
   ['carousel-pro/references/carousel-rules.md', 'Правила каруселей @ilia.paliy (скилл carousel-pro)'],
+  ['competitors/references/competitors.md', 'Конкуренты Ильи в Instagram — 60 аккаунтов (скилл competitors)'],
 ];
 
 // sections of the twin's memory: id → title (the first four fill the «(заполняет Илья)» gaps of the profile)

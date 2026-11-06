@@ -297,6 +297,22 @@ test('план дня @instaoo_bot: одобренные карусели ухо
   assert.match(full.text, /адаптируй/); assert.match(full.text, /репостов не видно/);
 });
 
+test('конкуренты Ильи: агенту контента — in/competitors.md и строка в промпте, другим — нет', async () => {
+  const d = setup();
+  d.routes.push({ agent:'scripts', deliverable:'script' });
+  const id = await d.task('напиши сценарий рилса');
+  const job = await d.claim();
+  assert.equal(job.id, id);
+  assert.ok((await d.get(id)).files.includes('competitors.md'));
+  assert.match(job.prompt, /in\/competitors\.md/);
+  await d.finish(id, { result:'error', error:'x' });
+  d.routes.push({ agent:'slides', deliverable:'slides' });
+  const id2 = await d.task('сделай презентацию');
+  const job2 = await d.claim();
+  assert.equal(job2.id, id2);
+  assert.ok(!(await d.get(id2)).files.includes('competitors.md'));
+});
+
 /* ---------- pipelines, QA, approvals, lessons, usage ---------- */
 
 test('конвейер «Оффер → лендинг»: этапы передают файлы, контролёр возвращает один раз', async () => {
