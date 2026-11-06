@@ -219,6 +219,11 @@
   сам присылает подпись и файлы (`pubSend`, кнопка «📎 Файлы и подпись»). Управление — «🚀 Сейчас / 🗓 Другое время / ✖️ Снять» (`pn/pm/pc`,
   `POST desk/tasks/<id>/pub {action}`), список — `GET desk/publications`, вышедшее с прямыми ссылками — `GET desk/published.json` (публично):
   вкладка «Публикации» в досье планера (`postsLoad`). Тест — «планер публикаций» в `desk.test.mjs`.
+  **Автопродление токенов** (`assistant/tokens.mjs`, тест `tokens.test.mjs`): раз в неделю офис продлевает токены Instagram («IG…»,
+  `ig_refresh_token`) и Threads (`th_refresh_token`) официальным запросом Meta; продлённый — в `DATA_DIR/tokens.json` (600), действует,
+  пока в секретах тот же исходный токен (новый секрет — с него). Публикации берут его через `useTokens`, исполнитель — в ответе на
+  `claim` (`keys` → `update_keys` в `runner.py` → `~/hq-runner/keys.env` для скрипта аналитики). Не продлевается, а до конца < 7 дней
+  (или сбой 2 дня) — сообщение владельцу в Telegram раз в сутки. Токен Facebook («EAA…») так не продлевается.
   **«Аналитика контента»** `contentanalyst` — скилл `content-report` (`scripts/content_metrics.py`: Instagram Graph API или Apify, Threads API):
   утренние задачи `content-day` (`HQ_CONTENT_AT` 09:25, за вчера), `content-week` (пн, `HQ_CONTENT_WEEK_AT` 09:35, 7 дней) и
   `content-month` (1-го, `HQ_CONTENT_MONTH_AT` 09:45, прошлый месяц) — поле `when` у `ROUTINES`, период `reportPeriod`. В `in/content-data.json`

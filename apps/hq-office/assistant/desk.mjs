@@ -809,7 +809,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   // the office «Нейроворонка»: its agents get the plan of the project, the state of the cabinet and the knowledge of the main office
   // as files in in/ (server.mjs → setContext → cabinet.contextFiles); refreshed every time the task goes to an agent of that office
-  let contextOf = null;
+  let contextOf = null, runnerKeys = null;   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
   function attachContext(t) {
     if (!contextOf) return;
     let files = [];
@@ -1713,7 +1713,8 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
           res.writeHead(204); return res.end();
         }
         t.worker = worker; t.workAt = now();
-        const extra = { purge:purge.map(x => x.id), heavy:isHeavy(t),
+        const rk = runnerKeys ? runnerKeys() : null;
+        const extra = { purge:purge.map(x => x.id), heavy:isHeavy(t), ...(rk && Object.keys(rk).length ? { keys:rk } : {}),
           // the result of a continuation: the runner downloads into out/ only what is missing there — its job folder may be
           // gone (purge, or the runner freed disk space on its own); files that are there stay untouched
           ...(t.result && ['revise', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
@@ -1962,7 +1963,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     return notFound(res);
   }
 
-  return { handle, createTask, setContext:fn => { contextOf = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view), publishTask, tickPubs, pubFiles, publications:() => pubs,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };
