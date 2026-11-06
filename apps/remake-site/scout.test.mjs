@@ -92,3 +92,38 @@ test('мало залётов: план честно говорит, чего н
   assert.equal(plan.items.length, 2); assert.equal(plan.short.missing, 'каруселей');
   assert.match(planText(plan, { date: 'd', competitors: 2 }), /только на 2/);
 });
+
+test('Graph API: настоящие репосты своих постов (поделиться + репосты), карусель ниже порога уходит из библиотеки', async () => {
+  const { graphOwn, withGraph, library } = await import('./scout.mjs');
+  const calls = [];
+  const fetchFn = async (url) => {
+    calls.push(url);
+    const u = new URL(url), j = (d) => ({ ok: true, json: async () => d });
+    if (u.pathname.endsWith('/me/media')) return j({ data: [{ id: '1', shortcode: 'OWN1', comments_count: 3000, like_count: 10 }, { id: '2', permalink: 'https://www.instagram.com/p/OWN2/', comments_count: 2000 }] });
+    const metric = u.searchParams.get('metric'), id = u.pathname.split('/')[2];
+    if (metric === 'reposts') return j({ data: [{ name: 'reposts', values: [{ value: id === '1' ? 300 : 0 }] }] });
+    return j({ data: [{ name: 'views', values: [{ value: 500000 }] }, { name: 'shares', values: [{ value: id === '1' ? 900 : 200 }] }] });
+  };
+  const g = await graphOwn({ token: 'IGtok', fetchFn, base: 'https://g' });
+  assert.equal(g.get('OWN1').shares, 1200); assert.equal(g.get('OWN2').shares, 200);
+  assert.ok(calls[0].startsWith('https://g/v23.0/me/media'));
+  const a = norm(reel({ shortCode: 'OWN1', reshareCount: undefined }), true), b = norm(car({ shortCode: 'OWN2', reshareCount: undefined }), true);
+  const [ra, rb] = withGraph([a, b], g);
+  assert.equal(ra.shares, 1200); assert.equal(ra.graph, true); assert.equal(gate(ra).ok, true);
+  assert.equal(rb.shares, 200); assert.equal(gate(rb).ok, false);
+  const dir = (await import('node:fs')).mkdtempSync((await import('node:os')).tmpdir() + '/lib-');
+  const lib = library(dir);
+  lib.add([a, b]);              // without reposts both pass (hidden)
+  assert.equal(lib.all().length, 2);
+  lib.add([ra, rb]);            // with real reposts the carousel is out
+  assert.deepEqual(lib.all().map((x) => x.code), ['OWN1']);
+});
+
+test('план: видимые прямые ссылки и отметка «одобрено»', () => {
+  const posts = [norm(reel({ ownerUsername: 'a' })), norm(car({ ownerUsername: 'b' })), norm(car({ ownerUsername: 'c' }))];
+  const plan = planDay(candidates(posts, { now: NOW }).list);
+  plan.items[0].approved = 'x';
+  const t = planText(plan, { date: 'd' });
+  assert.match(t, /🔗 <a href="https:\/\/www\.instagram\.com\/[^"]+">instagram\.com\/(reel|p)\/[A-Za-z0-9]+<\/a>/);
+  assert.match(t, /^✅ 1\./m); assert.match(t, /Одобрено/);
+});

@@ -118,6 +118,8 @@ jobs:
           TG_CHAT: ${{ vars.REMAKE_TG_CHAT_ID }}
           TG_TOPIC: ${{ vars.REMAKE_TG_TOPIC_ID }}
           COMPETITORS: ${{ vars.REELS_COMPETITORS }}
+          IG_TOKEN: ${{ secrets.REMAKE_IG_ACCESS_TOKEN || secrets.HQ_IG_ACCESS_TOKEN }}
+          IG_USER: ${{ vars.REMAKE_IG_USER_ID || vars.HQ_IG_USER_ID }}
           PER_DAY: ${{ vars.REELS_PER_DAY }}
           HOUR: ${{ vars.REELS_HOUR }}
           C_OWNERS: ${{ vars.CAROUSEL_TG_OWNER_IDS }}
@@ -132,6 +134,7 @@ jobs:
           [ -n "$HEYGEN" ] || echo "::warning::no HeyGen key (REMAKE_HEYGEN_API_KEY) — the studio can't render the avatar"
           [ -n "$ANTHROPIC" ] || echo "::warning::no Anthropic key (REMAKE_ANTHROPIC_API_KEY) — no «Сценарий 2.0», manual script only"
           [ -n "$TG_TOKEN" ] || echo "::warning::REMAKE_TG_BOT_TOKEN is not set — the «Instagram Reels» Telegram topic is off"
+          [ -n "$IG_TOKEN" ] || echo "::warning::no Instagram token (REMAKE_IG_ACCESS_TOKEN / HQ_IG_ACCESS_TOKEN) — reposts of own posts stay hidden in «План дня»"
           line() { local x="${!2}"; printf '%s=%s\n' "$1" "${x//[$'\r\n']/}"; }  # a pasted secret may end with a line break
           {
             line REMAKE_SITE_TOKEN TOKEN
@@ -146,6 +149,8 @@ jobs:
             line REMAKE_TG_CHAT_ID TG_CHAT
             line REMAKE_TG_TOPIC_ID TG_TOPIC
             line REELS_COMPETITORS COMPETITORS
+            line IG_ACCESS_TOKEN IG_TOKEN
+            line IG_USER_ID IG_USER
             line REELS_PER_DAY PER_DAY
             line REELS_HOUR HOUR
             line CAROUSEL_TG_OWNER_IDS C_OWNERS

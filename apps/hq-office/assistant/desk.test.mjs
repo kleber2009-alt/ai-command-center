@@ -272,7 +272,7 @@ test('утренние задачи: проверка балансов без п
   assert.equal(t.status, 'done'); assert.equal(t.published, false); assert.equal(t.qa, null);
 });
 
-test('план дня @instaoo_bot: карусели из плана уходят агенту «Карусели» сразу, рилсы — нет, второй раз — нет', async () => {
+test('план дня @instaoo_bot: одобренные карусели уходят агенту «Карусели», рилсы — нет, второй раз — нет', async () => {
   const plan = { date:'2026-11-04', mix:[1, 2], items:[
     { slot:'10:00', kind:'carousel', source:'own', own:true, url:'https://www.instagram.com/p/AAA/', code:'AAA', author:'ilia.paliy', comments:2400, shares:3100, slides:9, caption:'5 нейросетей' },
     { slot:'14:00', kind:'reel', source:'fresh', url:'https://www.instagram.com/reel/BBB/', code:'BBB', author:'rival', views:900000, comments:5000, shares:7000 },
@@ -282,9 +282,12 @@ test('план дня @instaoo_bot: карусели из плана уходя�
   process.env.HQ_REMAKE_URL = `http://127.0.0.1:${srv.address().port}`; delete process.env.HQ_PLAN;
   const d = setup();
   process.env.HQ_PLAN = 'off';
-  await d.desk.contentPlan('2026-11-03', '09:00');  // ещё рано
-  await d.desk.contentPlan('2026-11-04', '09:30');
-  await d.desk.contentPlan('2026-11-04', '10:30');  // второй раз за день — ничего
+  await d.desk.contentPlan('2026-11-04', '08:30', { force:true });  // ещё рано
+  await d.desk.contentPlan('2026-11-04', '09:30', { force:true });  // не одобрено — ничего
+  assert.equal((await d.call('GET', 'tasks')).j.tasks.filter(t => t.route?.agent === 'carousel').length, 0);
+  plan.items[0].approved = plan.items[2].approved = plan.items[1].approved = '2026-11-04T07:00:00Z';
+  await d.desk.contentPlan('2026-11-04', '09:32', { force:true });
+  await d.desk.contentPlan('2026-11-04', '10:30', { force:true });  // второй раз — тех же задач не ставит
   const list = (await d.call('GET', 'tasks')).j.tasks.filter(t => t.route?.agent === 'carousel');
   assert.equal(list.length, 2);
   const own = list.find(t => /ремикс/.test(t.route.title)), comp = list.find(t => /@rival2/.test(t.route.title));
