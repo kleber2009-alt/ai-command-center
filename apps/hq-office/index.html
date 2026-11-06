@@ -908,7 +908,7 @@
     <button class="hide-btn" id="teamHide" aria-label="Скрыть панель"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>Скрыть</button>
   </header>
   <nav class="ptabs" id="ptabs" role="tablist" aria-label="Разделы">
-    <button data-tab="live" role="tab" id="liveTab" hidden>В работе</button><button data-tab="tasks" role="tab">Задачи</button><button data-tab="works" role="tab">Работы</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab" id="skillsTab">Скиллы</button>
+    <button data-tab="live" role="tab" id="liveTab" hidden>В работе</button><button data-tab="tasks" role="tab">Задачи</button><button data-tab="works" role="tab">Работы</button><button data-tab="mats" role="tab" id="matsTab" hidden>Материалы</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab" id="skillsTab">Скиллы</button>
   </nav>
   <nav class="filters" id="filters" aria-label="Отделы"></nav>
   <div class="search"><input id="q" type="search" placeholder="Найти: монтаж, воронка, PR…" aria-label="Поиск по задачам" autocomplete="off"></div>
@@ -3459,13 +3459,13 @@ async function neuroMatsLoad() {
     const r = await fetch(ASST_API + '/cabinet/neuro/materials', { credentials:'same-origin' });
     if (!r.ok) return;
     const j = await r.json(); Object.assign(neuroMats, { kinds:j.kinds || {}, items:j.items || [], ok:true });
-    if (ptab === 'works') renderPanel();
+    $('matsTab').hidden = !neuroMats.items.length;
+    if (['works', 'mats'].includes(ptab)) renderPanel();
   } catch {}
 }
 function neuroMatsHTML(q) {
-  if (!NEURO || pdept !== 'all') return '';
   const items = neuroMats.items.filter(m => !q || (m.title + ' ' + (m.note || '')).toLowerCase().includes(q));
-  if (!items.length) return '';
+  if (!items.length) return `<p class="empty">${neuroMats.items.length ? 'Ничего не нашлось — измените запрос.' : 'Материалы загружаются…'}</p>`;
   const card = m => {
     const draft = m.status !== 'ready' ? '<em class="nm-st">черновик</em>' : '';
     if (/\.mp4$/i.test(m.url)) return `<li class="nm-c nm-v"><video controls controlslist="nodownload" preload="none" playsinline src="${esc(m.url)}"${m.preview ? ` poster="${esc(m.preview)}"` : ''}></video>
@@ -3475,13 +3475,13 @@ function neuroMatsHTML(q) {
       <span class="nm-t"><b>${esc(m.title)}</b> ${draft}${m.note ? `<p>${esc(m.note)}</p>` : ''}</span></a></li>`;
   };
   const groups = Object.entries(neuroMats.kinds).map(([k, name]) => [name, items.filter(m => m.kind === k)]).filter(([, l]) => l.length);
-  return `<h3 class="eyebrow" style="--c:#5fe0d4"><i class="dd"></i>Материалы проекта · ${items.length}</h3>`
+  return `<p class="note">Всё готовое по Нейроворонке: сайт и лендинги, VSL и уроки, курс, бот, лид-магниты, контент и документы. Тот же список агенты получают с каждой задачей.</p>`
     + groups.map(([name, l]) => `<h4 class="nm-h">${esc(name)}</h4><ul class="nm">${l.map(card).join('')}</ul>`).join('');
 }
 // вкладка «Работы»: у каждого агента — сколько и чего сделано и превью; клик открывает все работы
 function worksPanelHTML() {
   const q = pquery.toLowerCase();
-  const rows = [neuroMatsHTML(q), `<p class="note">${guest() ? 'Что агенты уже сделали: ролики, картинки, страницы и сайты. Нажмите на агента, чтобы посмотреть все его работы.' : 'Что агенты уже сделали: ролики, картинки, страницы, документы и код — из досье и истории задач. Нажмите на агента, чтобы открыть все его работы.'}</p>`];
+  const rows = [`<p class="note">${guest() ? 'Что агенты уже сделали: ролики, картинки, страницы и сайты. Нажмите на агента, чтобы посмотреть все его работы.' : 'Что агенты уже сделали: ролики, картинки, страницы, документы и код — из досье и истории задач. Нажмите на агента, чтобы открыть все его работы.'}</p>`];
   for (const d of panelDepts()) {
     if (pdept !== 'all' && pdept !== d.id) continue;
     const ids = d.agentIds.filter(id => { const m = agentMeta(id); if (guest()) { const { blocks, W } = agentWorks(id); if (!statTotal(worksStats(blocks, W))) return false; } return !q || (m.name + ' ' + m.role).toLowerCase().includes(q); });
@@ -3537,7 +3537,9 @@ function renderPanel() {
   for (const b of $('filters').children) b.classList.toggle('on', b.dataset.f === pdept);
   if (ptab === 'live' && !desk.on && !desk.pubOk) ptab = 'tasks';
   if (ptab === 'skills' && guest()) ptab = 'tasks';
-  const body = ptab === 'live' ? (desk.on ? liveHTML() : pubLiveHTML()) : ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
+  if (ptab === 'mats' && !(NEURO && neuroMats.items.length)) ptab = 'works';
+  $('filters').style.display = ptab === 'mats' ? 'none' : '';
+  const body = ptab === 'live' ? (desk.on ? liveHTML() : pubLiveHTML()) : ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'mats' ? neuroMatsHTML(pquery.toLowerCase()) : ptab === 'team' ? teamHTML() : skillsHTML();
   $('pbody').innerHTML = body;
   const n = visibleTasks().length;
   let sum = `${SKILLS.length} скиллов · ${LIB_NAMES.size} в библиотеке`;
@@ -3548,7 +3550,10 @@ function renderPanel() {
     const ids = panelDepts().flatMap(d => d.agentIds), totals = ids.map(id => { const { blocks, W } = agentWorks(id); return statTotal(worksStats(blocks, W)); });
     const all = totals.reduce((a, b) => a + b, 0), busy = totals.filter(Boolean).length;
     sum = `${all} ${word(all, 'работа', 'работы', 'работ')} · у ${busy} из ${ids.length} агентов`;
-    if (NEURO && neuroMats.items.length) sum = `${neuroMats.items.length} ${word(neuroMats.items.length, 'материал', 'материала', 'материалов')} проекта · ` + sum;
+  }
+  if (ptab === 'mats') {
+    const n = neuroMats.items.length, d = neuroMats.items.filter(m => m.status !== 'ready').length;
+    sum = `${n} ${word(n, 'материал', 'материала', 'материалов')} проекта${d ? ` · ${d} в работе` : ''}`;
   }
   $('teamSum').textContent = sum;
   $('teamShow').textContent = `История задач · ${TASKS.length}`;
