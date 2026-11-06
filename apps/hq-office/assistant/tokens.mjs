@@ -15,7 +15,19 @@ const env = k => String(process.env[k] || '').trim();
 const sha = s => crypto.createHash('sha256').update(String(s)).digest('hex').slice(0, 24);
 const DAY = 864e5;
 const NAME = { ig:'Instagram', threads:'Threads' };
-const SRC = { ig:() => env('HQ_IG_ACCESS_TOKEN') || env('IG_ACCESS_TOKEN'), threads:() => env('HQ_THREADS_ACCESS_TOKEN') || env('THREADS_ACCESS_TOKEN') };
+/* A pasted secret often carries spaces, quotes, a line break or «Bearer»; and the two tokens get swapped. A token tells what it is by
+   its start — IG… (Instagram login), TH… (Threads), EAA… (Facebook login with Instagram) — so it is used for its platform whatever
+   secret it was put in. */
+export const cleanToken = s => String(s || '').trim().replace(/^bearer\s+/i, '').replace(/^['"«]+|['"»]+$/g, '').replace(/\s+/g, '');
+export const tokenKind = t => /^TH/.test(t) ? 'threads' : /^IG/.test(t) ? 'ig' : /^EAA/.test(t) ? 'fb' : '';
+export function sources() {
+  const a = cleanToken(env('HQ_IG_ACCESS_TOKEN') || env('IG_ACCESS_TOKEN')), b = cleanToken(env('HQ_THREADS_ACCESS_TOKEN') || env('THREADS_ACCESS_TOKEN'));
+  const all = [a, b].filter(Boolean);
+  const ig = all.find(t => tokenKind(t) === 'ig') || all.find(t => tokenKind(t) === 'fb') || (a && !tokenKind(a) ? a : '');
+  const threads = all.find(t => tokenKind(t) === 'threads') || (b && !tokenKind(b) ? b : '');
+  return { ig, threads, swapped:Boolean(a && tokenKind(a) === 'threads') || Boolean(b && ['ig', 'fb'].includes(tokenKind(b))) };
+}
+const SRC = { ig:() => sources().ig, threads:() => sources().threads };
 
 export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch, now = () => Date.now(), every = 7 * DAY } = {}) {
   const FILE = path.join(dataDir, 'tokens.json');
@@ -37,7 +49,7 @@ export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch
     if (!src) return { skipped:'нет токена' };
     let s = st[k];
     if (!s || s.from !== sha(src)) s = st[k] = { from:sha(src), token:'', refreshedAt:0, expiresAt:0, error:'', failingSince:0, warnedAt:0 };
-    if (k === 'ig' && !src.startsWith('IG')) {
+    if (k === 'ig' && tokenKind(src) === 'fb') {
       s.error = 'токен Facebook (EAA…) продлевается через приложение Meta — автопродление только для токена входа через Instagram (IG…)';
       save(); return { skipped:s.error };
     }
@@ -62,18 +74,50 @@ export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch
       return { error:s.error };
     }
   }
+  /* does the token work, and for which account: on start and with every tick; a broken one — one message a day with what to do */
+  async function check(k) {
+    const tok = get(k);
+    if (!tok) return null;
+    const s = st[k] ||= { from:sha(SRC[k]()) };
+    const url = k === 'threads' ? `${base('threads')}/v1.0/me?` + new URLSearchParams({ fields:'id,username', access_token:tok })
+      : tokenKind(tok) === 'fb' ? `${env('HQ_FB_GRAPH_BASE') || 'https://graph.facebook.com'}/v23.0/me/accounts?` + new URLSearchParams({ fields:'instagram_business_account{id,username}', access_token:tok })
+      : `${base('ig')}/v23.0/me?` + new URLSearchParams({ fields:'user_id,username', access_token:tok });
+    try {
+      const r = await fetchFn(url, { signal:AbortSignal.timeout(30e3) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.error) throw new Error(j.error?.message || `HTTP ${r.status}`);
+      const acc = k === 'ig' && tokenKind(tok) === 'fb' ? (j.data || []).map(x => x.instagram_business_account).find(Boolean) : j;
+      if (!acc) throw new Error('к токену Facebook не привязан профессиональный аккаунт Instagram');
+      Object.assign(s, { account:acc.username || '', accountId:String(acc.user_id || acc.id || ''), checkError:'', checkedAt:now() });
+      save();
+      return { ok:true, account:s.account };
+    } catch (e) {
+      s.checkError = String(e.message || e).slice(0, 300); s.checkedAt = now(); save();
+      if (now() - (s.checkWarnedAt || 0) > DAY) {
+        s.checkWarnedAt = now(); save();
+        const sec = k === 'ig' ? 'HQ_IG_ACCESS_TOKEN' : 'HQ_THREADS_ACCESS_TOKEN';
+        await notify(`⚠️ Токен ${NAME[k]} не работает: ${s.checkError}. Публикации в ${NAME[k]} не выйдут. Проверьте секрет ${sec} в GitHub: ` +
+          `${k === 'ig' ? 'токен Instagram начинается с IG… (вход через Instagram) или EAA… (через Facebook)' : 'токен Threads начинается с TH…'}, вставлен целиком, без пробелов и кавычек; после замены — Run workflow deploy-hq-office.`).catch(() => {});
+      }
+      return { error:s.checkError };
+    }
+  }
   // a token issued less than a day ago cannot be refreshed yet — the next tick tries again
-  async function tick() { for (const k of ['ig', 'threads']) await refresh(k); }
+  async function tick() { for (const k of ['ig', 'threads']) { await check(k); await refresh(k); } }
   function status() {
-    return Object.fromEntries(['ig', 'threads'].map(k => [k, { has:Boolean(SRC[k]()), refreshedAt:st[k]?.refreshedAt || 0, expiresAt:st[k]?.expiresAt || 0, error:st[k]?.error || '' }]));
+    return Object.fromEntries(['ig', 'threads'].map(k => [k, { has:Boolean(SRC[k]()), kind:tokenKind(SRC[k]()), account:st[k]?.account || '', accountId:st[k]?.accountId || '',
+      refreshedAt:st[k]?.refreshedAt || 0, expiresAt:st[k]?.expiresAt || 0, error:st[k]?.checkError || st[k]?.error || '' }]));
   }
   // what the runner puts into ~/hq-runner/keys.env for the analytics script
   function runnerKeys() {
     const out = {};
     if (get('ig')) out.IG_ACCESS_TOKEN = get('ig');
-    if (env('HQ_IG_USER_ID')) out.IG_USER_ID = env('HQ_IG_USER_ID');
+    const uid = env('HQ_IG_USER_ID') || (tokenKind(get('ig')) === 'fb' ? st.ig?.accountId || '' : '');
+    if (uid) out.IG_USER_ID = uid;
     if (get('threads')) out.THREADS_ACCESS_TOKEN = get('threads');
     return out;
   }
-  return { get, refresh, tick, status, runnerKeys };
+  // the Instagram account id for a Facebook token: the secret, else the one found by check()
+  const igUser = () => env('HQ_IG_USER_ID') || (tokenKind(get('ig')) === 'fb' ? st.ig?.accountId || '' : '');
+  return { get, refresh, check, tick, status, runnerKeys, igUser };
 }

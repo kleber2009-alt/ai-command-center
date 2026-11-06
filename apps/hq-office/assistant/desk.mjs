@@ -294,7 +294,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const waiting = queueOrder();
     return {
       id:t.id, created:t.created, updated:t.updated, by:t.by || null, control:Boolean(t.control), text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
-      status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', source:t.source || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
+      status:t.status, statusText:pubStatusText(t) || STATUS[t.status] || t.status, routine:t.routine || '', source:t.source || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
       agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null,
       chain:t.chain && tr && to && to.id !== TRANSCRIBER ? { from:{ id:tr.id, name:tr.name }, to:{ id:to.id, name:to.name }, sources:t.chain.sources, done:Boolean(t.transcribed), note:t.transcribed?.summary || '' } : null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
       steps:t.steps.slice(-40), error:t.error || '', log:t.status === 'error' ? t.log || '' : '', published:Boolean(t.published), versions:t.versions || 0,
@@ -1306,6 +1306,13 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
   function canPublish(t) {
     return Boolean(t.result && ['review', 'done'].includes(t.status) && t.route?.agent !== PLANNER && !t.control && mediaFiles(t).length);
   }
+  // a planner task that is «done» tells where its publication is, not «готово» — a failed post must not look published
+  const PUB_TEXT = { scheduled:'публикация запланирована', publishing:'публикуется', published:'опубликовано', manual:'опубликуйте вручную', failed:'ошибка публикации', cancelled:'публикация снята' };
+  function pubStatusText(t) {
+    if (t.route?.agent !== PLANNER || t.status !== 'done') return '';
+    const p = pubOf(t);
+    return p ? PUB_TEXT[p.status] || '' : '';
+  }
   function pubView(t) {
     const p = pubOf(t);
     if (!p) return null;
@@ -1412,11 +1419,11 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       step(t, 'Публикация снята с планера.'); emit(t); return { ok:true };
     }
     if (what === 'now') {
-      if (!['scheduled', 'draft', 'failed'].includes(p.status)) return { error:'Публикация уже идёт или вышла.' };
+      if (!['scheduled', 'draft', 'failed', 'manual'].includes(p.status)) return { error:'Публикация уже идёт или вышла.' };
       pubSchedule(t, p, new Date(Date.now() + 60e3)); return { ok:true };
     }
     if (what === 'move') {
-      if (!['scheduled', 'draft', 'failed', 'cancelled'].includes(p.status)) return { error:'Публикация уже идёт или вышла.' };
+      if (!['scheduled', 'draft', 'failed', 'manual', 'cancelled'].includes(p.status)) return { error:'Публикация уже идёт или вышла.' };
       const at = opt.at ? new Date(opt.at) : parseWhen(text);
       if (at && !isNaN(at) && at > Date.now()) { pubSchedule(t, p, at); return { ok:true }; }
       p.status = 'draft'; pubSave(); pubAsk(t, p, 'Новое время. '); emit(t); return { ok:true };
@@ -1442,7 +1449,8 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         p.status = vals.every(x => x.ok) ? 'published' : vals.some(x => x.error) ? 'failed' : 'manual';
         pubSave();
         if (t) {
-          step(t, vals.map((x, i) => `${Object.keys(res)[i] === 'instagram' ? 'Instagram' : 'Threads'}: ${x.ok ? 'вышло' + (x.permalink ? ' — ' + x.permalink : '') : x.manual ? 'вручную — ' + x.why : 'ошибка — ' + x.error}`).join(' · '));
+          step(t, vals.map((x, i) => `${Object.keys(res)[i] === 'instagram' ? 'Instagram' : 'Threads'}: ${x.ok ? 'вышло' + (x.permalink ? ' — ' + x.permalink : '') : x.manual ? 'вручную — ' + x.why : 'ошибка — ' + x.error}`).join(' · ')
+            + (vals.some(x => /token|токен|OAuth/i.test(x.error || '')) ? ' — проверьте токен в секретах GitHub (HQ_IG_ACCESS_TOKEN начинается с IG…, HQ_THREADS_ACCESS_TOKEN — с TH…), затем «Опубликовать сейчас».' : ''));
           emit(t);
         }
       }
