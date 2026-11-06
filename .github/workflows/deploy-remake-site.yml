@@ -169,14 +169,18 @@ jobs:
           curl -sS "https://$DOMAIN/api/health"; echo
           curl -sS "https://$DOMAIN/api/studio/me"; echo
 
-      - name: Plan of the day now (test)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.plan_now }}
+      # after a push: today's plan is made right away if there is none yet (the bot would make it at REELS_HOUR anyway);
+      # by hand (plan_now) — made again
+      - name: Plan of the day (test)
+        if: ${{ github.event_name == 'push' || inputs.plan_now }}
         env:
           TOKEN: ${{ secrets.REMAKE_SITE_TOKEN }}
+          AGAIN: ${{ inputs.plan_now && 'yes' || '' }}
         run: |
-          [ -n "$TOKEN" ] || { echo "::error::REMAKE_SITE_TOKEN is not set"; exit 1; }
-          curl -sS -f -X POST -H "authorization: Bearer $TOKEN" "https://$DOMAIN/api/plan/scan"; echo
+          [ -n "$TOKEN" ] || { echo "::warning::REMAKE_SITE_TOKEN is not set — no plan test"; exit 0; }
           day=$(TZ=Europe/Moscow date +%F)
+          if [ -z "$AGAIN" ] && curl -sS -f "https://$DOMAIN/api/plan/$day" >/dev/null 2>&1; then echo "plan for $day is there"; exit 0; fi
+          curl -sS -f -X POST -H "authorization: Bearer $TOKEN" "https://$DOMAIN/api/plan/scan"; echo
           for i in $(seq 1 60); do
             sleep 10
             body=$(curl -sS "https://$DOMAIN/api/plan/$day" || true)
