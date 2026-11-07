@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
+import { createPrefs, catalog } from './styles.mjs';
 import { publishAll } from './publish.mjs';
 import { startTelegram, wantsFiles, pubReportText } from './tg.mjs';
 
@@ -120,6 +121,37 @@ test('монтаж ждёт выбора стиля; «стекло» выбир
   await d.call('POST', `tasks/${id}/answer`, { text:'давай стекло' });
   t = await d.get(id);
   assert.equal(t.status, 'queued'); assert.equal(t.style, 'Стеклянная объяснялка'); assert.equal(t.route.skill, 'glass-explainer-reel');
+});
+
+test('стиль по умолчанию из кабинета: офис не спрашивает и делает в нём; аватары — по кругу', async () => {
+  const d = setup(), prefs = createPrefs(d.dataDir);
+  d.desk.setPrefs(prefs);
+  prefs.setStyle('owner', 'video', 'kadrik-palii');
+  prefs.setStyle('owner', 'slides', 'deck-copper');
+  prefs.setAvatars('owner', [{ id:'L1', name:'Офис' }, { id:'L2', name:'Улица', voice:'V2' }]);
+  d.routes.push({ agent:'montage', skill:'montazh-rils', deliverable:'video', visual:'video' });
+  const id = await d.task('смонтируй рилс аватаром');
+  let t = await d.get(id);
+  assert.equal(t.status, 'queued'); assert.equal(t.style, 'Палий');
+  let job = await d.claim();
+  assert.match(job.prompt, /Стиль по умолчанию, который владелец выбрал в кабинете: «Палий»/);
+  assert.match(job.prompt, /look_id L[12]/);
+  const first = /look_id (L[12])/.exec(job.prompt)[1];
+  // the second avatar task of the round takes the other look
+  d.routes.push({ agent:'montage', skill:'montazh-rils', deliverable:'video', visual:'video' });
+  await d.task('ещё рилс аватаром');
+  job = await d.claim();
+  assert.match(job.prompt, new RegExp(`look_id ${first === 'L1' ? 'L2' : 'L1'}`));
+  // a presentation: the default style goes to the prompt, the skill stays the dispatcher's
+  d.routes.push({ agent:'slides', skill:'pptx', deliverable:'slides' });
+  await d.task('презентация для эфира');
+  job = await d.claim();
+  assert.match(job.prompt, /«Медь»/); assert.match(job.prompt, /Скилл: pptx/); assert.doesNotMatch(job.prompt, /look_id/);
+  // no default for carousels: the question stays
+  d.routes.push({ agent:'carousel', deliverable:'carousel', visual:'carousel' });
+  const c = await d.task('карусель');
+  assert.equal((await d.get(c)).question?.from, 'style');
+  assert.ok(catalog().every(x => x.styles.length >= 7));
 });
 
 test('стиль, названный в задаче, не спрашивается', async () => {

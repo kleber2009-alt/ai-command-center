@@ -19,7 +19,7 @@ export const KEYS = [
   { group:'Офис', id:'voice', name:'Голос двойника (ID голоса)', uses:'ответы голосом-клоном', secrets:['HQ_ASSISTANT_VOICE_ID'], live:['ELEVENLABS_VOICE_ID'], need:'opt' },
   { group:'Нейросети', id:'openai', name:'OpenAI', uses:'расшифровка, картинки', secrets:['REMAKE_OPENAI_API_KEY', 'TRANSCRIBE_OPENAI_API_KEY'], cabinet:'openai', need:'main' },
   { group:'Нейросети', id:'elevenlabs', name:'ElevenLabs', uses:'голос, распознавание речи, расшифровка', secrets:['PERSONA_TRAIN_ELEVENLABS_API_KEY', 'REMAKE_ELEVENLABS_API_KEY', 'WORKER_ELEVENLABS_API_KEY'], live:['ELEVENLABS_API_KEY'], cabinet:'elevenlabs', need:'main' },
-  { group:'Нейросети', id:'heygen', name:'HeyGen', uses:'аватар, Ремейк залёта, Рилс под ключ', secrets:['REMAKE_HEYGEN_API_KEY', 'PERSONA_TRAIN_HEYGEN_API_KEY', 'WORKER_HEYGEN_API_KEY'], cabinet:'heygen', need:'main' },
+  { group:'Нейросети', id:'heygen', name:'HeyGen', uses:'аватар, Ремейк залёта, Рилс под ключ', secrets:['REMAKE_HEYGEN_API_KEY', 'PERSONA_TRAIN_HEYGEN_API_KEY', 'WORKER_HEYGEN_API_KEY'], live:['HEYGEN_API_KEY'], cabinet:'heygen', need:'main' },
   { group:'Нейросети', id:'deepgram', name:'Deepgram', uses:'быстрая расшифровка', secrets:['TRANSCRIBE_DEEPGRAM_API_KEY'], cabinet:'deepgram', need:'opt' },
   { group:'Нейросети', id:'kie', name:'kie.ai', uses:'картинки и видео (Veo, Kling, Flux)', secrets:['AI_HUB_KIE_API_KEY'], cabinet:'kie', need:'opt' },
   { group:'Данные и соцсети', id:'apify', name:'Apify', uses:'залёты конкурентов, статистика Instagram', secrets:['REMAKE_APIFY_TOKEN', 'WORKER_APIFY_API_TOKEN', 'TRANSCRIBE_APIFY_API_TOKEN'], cabinet:'apify', need:'main' },

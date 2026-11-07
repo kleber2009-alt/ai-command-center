@@ -86,7 +86,7 @@ export const CATALOG = [
 ];
 const BY = Object.fromEntries(CATALOG.map(c => [c.id, c]));
 // the office's own keys (GitHub secrets on the server) — for the owner's cards: «ключ офиса подключён»
-const OFFICE_ENV = { anthropic:['ANTHROPIC_API_KEY'], elevenlabs:['ELEVENLABS_API_KEY'], instagram:['HQ_IG_ACCESS_TOKEN', 'IG_ACCESS_TOKEN'], threads:['HQ_THREADS_ACCESS_TOKEN', 'THREADS_ACCESS_TOKEN'] };
+const OFFICE_ENV = { anthropic:['ANTHROPIC_API_KEY'], elevenlabs:['ELEVENLABS_API_KEY'], heygen:['HEYGEN_API_KEY'], instagram:['HQ_IG_ACCESS_TOKEN', 'IG_ACCESS_TOKEN'], threads:['HQ_THREADS_ACCESS_TOKEN', 'THREADS_ACCESS_TOKEN'] };
 
 export function initIntegrations({ dataDir, secret, fetchFn = fetch, officeKeys = {} }) {
   const FILE = path.join(dataDir, 'integrations.json');

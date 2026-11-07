@@ -46,6 +46,7 @@ import { initCabinet } from './cabinet.mjs';
 import { createTokens } from './tokens.mjs';
 import { initIntegrations } from './integrations.mjs';
 import { keysStatus } from './keys.mjs';
+import { catalog as styleCatalog, createPrefs } from './styles.mjs';
 import { useTokens } from './publish.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -122,6 +123,35 @@ desk.setRunnerKeys(() => tokens.runnerKeys());
 // the cabinet's integrations: everyone's own keys (integrations.mjs); a task and a publication go on the keys of the person they belong to.
 // The owner without his own key — on the office's (GitHub secrets); a head or a user without a key — without it (no office keys for them)
 const integ = initIntegrations({ dataDir:DATA_DIR, secret:SECRET });
+// the cabinet's «Стили и аватары»: default styles of creatives and HeyGen avatars in turn (styles.mjs)
+const prefs = createPrefs(DATA_DIR);
+desk.setPrefs(prefs);
+const heygenKey = uid => integ.envFor(uid).HEYGEN_API_KEY || (uid === 'owner' ? String(process.env.HEYGEN_API_KEY || '').trim() : '');
+const avatarCache = new Map();
+async function heygenLooks(uid, fresh = false) {
+  const key = heygenKey(uid);
+  if (!key) return { error:uid === 'owner' ? 'Нет ключа HeyGen: подключите его в «Интеграциях» или добавьте секрет REMAKE_HEYGEN_API_KEY.' : 'Подключите свой ключ HeyGen в «Интеграциях» — тогда здесь появятся ваши аватары.' };
+  const c = avatarCache.get(uid);
+  if (!fresh && c && Date.now() - c.t < 10 * 60e3) return c.v;
+  const all = async p => {
+    const out = []; let token = '';
+    for (let i = 0; i < 10; i++) {
+      const r = await fetch('https://api.heygen.com' + p + (token ? `&token=${encodeURIComponent(token)}` : ''), { headers:{ 'x-api-key':key, accept:'application/json' }, signal:AbortSignal.timeout(20e3) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error?.message || j?.message || `HeyGen ответил ${r.status}`);
+      out.push(...(j.data || [])); if (!j.has_more || !j.next_token) break; token = j.next_token;
+    }
+    return out;
+  };
+  try {
+    const [groups, looks] = await Promise.all([all('/v3/avatars?ownership=private&limit=50'), all('/v3/avatars/looks?ownership=private&limit=50')]);
+    const gname = Object.fromEntries(groups.map(g => [g.id, g.name]));
+    const v = { looks:looks.filter(l => !l.status || l.status === 'completed').map(l => ({ id:l.id, name:l.name || '', group:l.group_id || '', groupName:gname[l.group_id] || '',
+      preview:l.preview_image_url || '', video:l.preview_video_url || '', voice:l.default_voice_id || '', orient:l.preferred_orientation || '' })) };
+    avatarCache.set(uid, { t:Date.now(), v });
+    return v;
+  } catch (e) { return { error:'HeyGen: ' + String(e.message || e).slice(0, 200) }; }
+}
 desk.setJobEnv(t => { const uid = t.by?.id || 'owner'; return { env:integ.envFor(uid), mcp:integ.mcpFor(uid) }; });
 desk.setPubKeys(uid => {
   const own = k => integ.get(uid, k);
@@ -505,6 +535,36 @@ const ROUTES = {
       if (!w) return json(res, 403, { error:'Пароль владельца задаётся секретом HQ_ASSISTANT_PASSWORD.' });
       try { return json(res, 200, { ok:true, user:team.setPassword(w.head.id, { email:b.email, password:b.password }) }); } catch (e) { return json(res, 400, { error:e.message }); }
     }
+    json(res, 400, { error:'Неизвестное действие.' });
+  },
+  // «Стили и аватары»: the catalogue with previews, the person's defaults, all skills of the runner
+  'GET prefs': (req, res, o) => {
+    const w = o ? { owner:true } : whoOf(req);
+    if (!w) return json(res, 403, { error:'Войдите в кабинет.' });
+    const uid = w.owner ? 'owner' : w.head.id, skills = desk.skills();
+    json(res, 200, { catalog:styleCatalog(skills), prefs:prefs.get(uid), skills:skills.map(x => ({ name:x.name, about:String(x.description || '').replace(/\s+/g, ' ').slice(0, 220) })) });
+  },
+  'GET prefs/avatars': async (req, res, o) => {
+    const w = o ? { owner:true } : whoOf(req);
+    if (!w) return json(res, 403, { error:'Войдите в кабинет.' });
+    const uid = w.owner ? 'owner' : w.head.id;
+    json(res, 200, await heygenLooks(uid, new URL(req.url, 'http://x').searchParams.has('fresh')));
+  },
+  'POST prefs': async (req, res, o) => {
+    const w = o ? { owner:true } : whoOf(req);
+    if (!w) return json(res, 403, { error:'Войдите в кабинет.' });
+    const uid = w.owner ? 'owner' : w.head.id, b = await jsonBody(req);
+    if (limited('prefs:' + uid, 60, 600e3)) return json(res, 429, { error:'Слишком часто — подождите пару минут.' });
+    try {
+      if (b.action === 'style') return json(res, 200, { prefs:prefs.setStyle(uid, String(b.cat || ''), String(b.id || ''), desk.skills()) });
+      if (b.action === 'avatars') {
+        // only looks of this person's HeyGen account
+        const L = await heygenLooks(uid), have = new Map((L.looks || []).map(l => [l.id, l]));
+        const ids = (Array.isArray(b.ids) ? b.ids : []).map(String).filter(id => have.has(id));
+        if (Array.isArray(b.ids) && b.ids.length && !ids.length) return json(res, 400, { error:L.error || 'Этих аватаров нет в вашем HeyGen.' });
+        return json(res, 200, { prefs:prefs.setAvatars(uid, ids.map(id => have.get(id))) });
+      }
+    } catch (e) { return json(res, 400, { error:e.message }); }
     json(res, 400, { error:'Неизвестное действие.' });
   },
   'POST integrations': async (req, res, o) => {
