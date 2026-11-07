@@ -256,6 +256,24 @@ def mcp_tools(cfg):
     return tools
 
 
+# пакеты, которые uvx ставит с плавающими зависимостями: heygen-mcp 0.0.3 просит mcp>=1.6, а mcp 2.x убрал FastMCP —
+# сервер падает на старте, и Claude Code видит «Connection closed». Держим совместимую ветку, пока пакет не обновят.
+UVX_PINS = {"heygen-mcp": ["mcp[cli]<2"]}
+
+
+def _pin_uvx(cfg):
+    """uvx <пакет> → uvx --with <совместимая зависимость> <пакет>, если владелец не задал --with сам."""
+    if not isinstance(cfg, dict) or os.path.basename(str(cfg.get("command") or "")) != "uvx":
+        return cfg
+    args = [str(a) for a in (cfg.get("args") or [])]
+    pkg = next((a for a in args if not a.startswith("-")), "")
+    pins = UVX_PINS.get(re.split(r"[=<>@\[]", pkg)[0]) if pkg else None
+    if not pins or "--with" in args:
+        return cfg
+    extra = [x for pin in pins for x in ("--with", pin)]
+    return {**cfg, "args": extra + args}
+
+
 def load_mcp():
     """mcp.json → файл для --mcp-config (только mcpServers) и списки инструментов на чтение и на запись."""
     if not MCP_FILE.exists():
@@ -268,6 +286,7 @@ def load_mcp():
     servers, policy = raw.get("mcpServers") or {}, raw.get("policy") or {}
     if not servers:
         return {"config": "", "servers": []}
+    servers = {name: _pin_uvx(cfg) for name, cfg in servers.items()}
     MCP_CLAUDE.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
     os.chmod(MCP_CLAUDE, 0o600)
     out = []

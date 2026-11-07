@@ -80,4 +80,13 @@ jobs:
 
           sec "heavy slot"
           cat "$RH/.heavy-slot.owner" 2>/dev/null; echo
+
+          sec "publications of the planner (status, time, results — no tokens)"
+          PF=/opt/hq-office/assistant-data/desk/publications.json
+          if [ -f "$PF" ]; then
+            python3 -c 'import json,sys; [print(p.get("id"), p.get("status"), "at=%s published=%s kind=%s ig=%d th=%d" % (p.get("at"), p.get("publishedAt"), p.get("kind"), len((p.get("media") or {}).get("instagram") or []), len((p.get("media") or {}).get("threads") or [])), "results=" + json.dumps(p.get("results"), ensure_ascii=False)[:400]) for p in json.load(open(sys.argv[1]))[:8]]' "$PF" 2>&1
+          else echo "no $PF"; fi
+          sec "assistant log: publications"
+          docker logs --since "$SINCE" aicex-hq-assistant 2>&1 | grep -iE "publication|publish|graph|instagram|threads" | tail -40
+          docker inspect -f 'assistant started {{.State.StartedAt}} restarts {{.RestartCount}}' aicex-hq-assistant 2>&1
           EOF
