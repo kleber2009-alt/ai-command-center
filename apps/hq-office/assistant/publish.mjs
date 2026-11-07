@@ -8,7 +8,7 @@
    Нет ключа площадки — publishAll возвращает { manual:true } для неё: офис напомнит в Telegram и пришлёт файлы и подпись. */
 
 const env = (k, d = '') => String(process.env[k] || d).trim();
-import { sources } from './tokens.mjs';
+import { sources, igAccount } from './tokens.mjs';
 const VER = () => env('HQ_IG_GRAPH_VERSION', 'v23.0');
 export const IMG = /\.(jpe?g|png|webp)$/i, JPG = /\.jpe?g$/i, VID = /\.(mp4|mov|m4v)$/i;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -47,11 +47,7 @@ async function ready(fetchFn, url, token, field, { tries = 60, every = 10e3 } = 
 export async function publishInstagram({ token, userId = '', caption = '', media, fetchFn = fetch, base = '', wait = {} }) {
   const ig = token.startsWith('IG');
   const root = (base || `https://graph.${ig ? 'instagram' : 'facebook'}.com`).replace(/\/$/, '') + '/' + VER();
-  if (!ig && !userId) {   // a Facebook token: the Instagram account is the one linked to the token's page
-    const d = await call(fetchFn, 'GET', `${root}/me/accounts`, { fields:'instagram_business_account{id,username}', access_token:token });
-    userId = (d.data || []).map(x => x.instagram_business_account?.id).find(Boolean) || '';
-    if (!userId) throw new Error('к токену Facebook не привязан профессиональный аккаунт Instagram — нужен токен Instagram (IG…) или HQ_IG_USER_ID');
-  }
+  if (!ig && !userId) userId = (await igAccount({ token, root, fetchFn })).id;   // an EAA… token: its own account (Unified login) or its page's
   const me = ig ? 'me' : userId;
   const video = media.find(m => m.kind === 'video'), images = media.filter(m => m.kind === 'image');
   if (!video && !images.length) throw new Error('нет видео или картинок для Instagram');

@@ -121,7 +121,7 @@ jobs:
           TG_TOPIC: ${{ vars.REMAKE_TG_TOPIC_ID }}
           COMPETITORS: ${{ vars.REELS_COMPETITORS }}
           IG_TOKEN: ${{ secrets.REMAKE_IG_ACCESS_TOKEN || secrets.HQ_IG_ACCESS_TOKEN }}
-          IG_USER: ${{ vars.REMAKE_IG_USER_ID || vars.HQ_IG_USER_ID }}
+          IG_USER: ${{ vars.REMAKE_IG_USER_ID || vars.HQ_IG_USER_ID || '17841446275691322' }}
           PER_DAY: ${{ vars.REELS_PER_DAY }}
           HOUR: ${{ vars.REELS_HOUR }}
           C_OWNERS: ${{ vars.CAROUSEL_TG_OWNER_IDS }}

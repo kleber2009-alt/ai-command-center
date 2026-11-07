@@ -225,8 +225,10 @@
   `claim` (`keys` → `update_keys` в `runner.py` → `~/hq-runner/keys.env` для скрипта аналитики). Не продлевается, а до конца < 7 дней
   (или сбой 2 дня) — сообщение владельцу в Telegram раз в сутки. Токен Facebook («EAA…») так не продлевается.
   Токены распознаются по виду, а не по имени секрета (`sources`: `IG…` — Instagram, `TH…` — Threads, `EAA…` — Facebook; перепутанные
-  секреты, пробелы, кавычки, переносы и «Bearer» не мешают); для токена Facebook id Instagram находится сам (`me/accounts` →
-  `instagram_business_account`). `check` при старте и раз в 6 ч: рабочий ли токен и чей аккаунт, нерабочий — сообщение владельцу.
+  секреты, пробелы, кавычки, переносы и «Bearer» не мешают). **Новые приложения Meta дают только `EAA…`** («API setup with Unified login» →
+  «Сгенерировать маркер»): токен самого аккаунта Instagram, без страницы Facebook, работает через `graph.facebook.com/<id аккаунта>`.
+  Аккаунт — `igAccount` в `tokens.mjs`: `HQ_IG_USER_ID` (в выкладке по умолчанию id @ilia.paliy 17841446275691322) → `/me` с username →
+  `me/accounts`. Такой токен не продлевается запросом — с 50-го дня офис напоминает в Telegram перевыпустить его той же кнопкой. `check` при старте и раз в 6 ч: рабочий ли токен и чей аккаунт, нерабочий — сообщение владельцу.
   Задача планера в статусе «готово» показывает статус публикации (`pubStatusText`: «опубликовано», «ошибка публикации»…, цвет — `stColor`).
   **«Аналитика контента»** `contentanalyst` — скилл `content-report` (`scripts/content_metrics.py`: Instagram Graph API или Apify, Threads API):
   утренние задачи `content-day` (`HQ_CONTENT_AT` 09:25, за вчера), `content-week` (пн, `HQ_CONTENT_WEEK_AT` 09:35, 7 дней) и
