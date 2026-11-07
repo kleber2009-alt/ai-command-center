@@ -29,6 +29,29 @@ export function sources() {
 }
 const SRC = { ig:() => sources().ig, threads:() => sources().threads };
 
+/* The Instagram account of an EAA… token (graph.facebook.com). New Meta apps give it by «API setup with Unified login» — a token of the
+   Instagram account itself, no Facebook page: /me answers with its username. An old Facebook-login token — through the page
+   (me/accounts → instagram_business_account). With a known id (HQ_IG_USER_ID) — just that account. → { id, username } */
+export async function igAccount({ token, userId = '', root = '', fetchFn = fetch }) {
+  root = (root || `${env('HQ_FB_GRAPH_BASE') || 'https://graph.facebook.com'}/${env('HQ_IG_GRAPH_VERSION') || 'v23.0'}`).replace(/\/$/, '');
+  const get = async (p, fields) => {
+    const r = await fetchFn(`${root}/${p}?` + new URLSearchParams({ fields, access_token:token }), { signal:AbortSignal.timeout(30e3) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) throw new Error(j.error?.error_user_msg || j.error?.message || `HTTP ${r.status}`);
+    return j;
+  };
+  if (userId) { const j = await get(userId, 'id,username'); return { id:String(j.id || userId), username:j.username || '' }; }
+  let me = null, err = null;
+  try { me = await get('me', 'id,user_id,username'); } catch (e) { err = e; }
+  if (me?.username) return { id:String(me.user_id || me.id), username:me.username };
+  try {
+    const d = await get('me/accounts', 'instagram_business_account{id,username}');
+    const acc = (d.data || []).map(x => x.instagram_business_account).find(Boolean);
+    if (acc) return { id:String(acc.id), username:acc.username || '' };
+  } catch (e) { err ||= e; }
+  throw err || new Error('по токену не найден аккаунт Instagram — задайте переменную HQ_IG_USER_ID (id аккаунта, виден в Meta под ником)');
+}
+
 export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch, now = () => Date.now(), every = 7 * DAY } = {}) {
   const FILE = path.join(dataDir, 'tokens.json');
   let st = {};
@@ -50,8 +73,13 @@ export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch
     let s = st[k];
     if (!s || s.from !== sha(src)) s = st[k] = { from:sha(src), token:'', refreshedAt:0, expiresAt:0, error:'', failingSince:0, warnedAt:0 };
     if (k === 'ig' && tokenKind(src) === 'fb') {
-      s.error = 'токен Facebook (EAA…) продлевается через приложение Meta — автопродление только для токена входа через Instagram (IG…)';
-      save(); return { skipped:s.error };
+      // an EAA… token is not refreshed by a request: it is issued again by the same button in Meta — remind from day 50
+      s.firstSeen ||= now(); save();
+      if (now() - s.firstSeen > 50 * DAY && now() - (s.warnedAt || 0) > DAY) {
+        s.warnedAt = now(); save();
+        await notify('⏰ Токену Instagram (EAA…) уже около 50 дней, он живёт 60. Выпустите новый: developers.facebook.com → ваше приложение → Instagram → API setup with Unified login → «Сгенерировать маркер», и обновите секрет HQ_IG_ACCESS_TOKEN в GitHub, затем Run workflow deploy-hq-office.').catch(() => {});
+      }
+      return { skipped:'токен EAA… продлевается перевыпуском в Meta — напомню за 10 дней' };
     }
     if (!force && s.refreshedAt && now() - s.refreshedAt < every) return { skipped:'рано' };
     const grant = k === 'ig' ? 'ig_refresh_token' : 'th_refresh_token';
@@ -80,14 +108,16 @@ export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch
     if (!tok) return null;
     const s = st[k] ||= { from:sha(SRC[k]()) };
     const url = k === 'threads' ? `${base('threads')}/v1.0/me?` + new URLSearchParams({ fields:'id,username', access_token:tok })
-      : tokenKind(tok) === 'fb' ? `${env('HQ_FB_GRAPH_BASE') || 'https://graph.facebook.com'}/v23.0/me/accounts?` + new URLSearchParams({ fields:'instagram_business_account{id,username}', access_token:tok })
       : `${base('ig')}/v23.0/me?` + new URLSearchParams({ fields:'user_id,username', access_token:tok });
     try {
-      const r = await fetchFn(url, { signal:AbortSignal.timeout(30e3) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.error) throw new Error(j.error?.message || `HTTP ${r.status}`);
-      const acc = k === 'ig' && tokenKind(tok) === 'fb' ? (j.data || []).map(x => x.instagram_business_account).find(Boolean) : j;
-      if (!acc) throw new Error('к токену Facebook не привязан профессиональный аккаунт Instagram');
+      let acc;
+      if (k === 'ig' && tokenKind(tok) === 'fb') acc = await igAccount({ token:tok, userId:env('HQ_IG_USER_ID'), fetchFn });
+      else {
+        const r = await fetchFn(url, { signal:AbortSignal.timeout(30e3) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.error) throw new Error(j.error?.message || `HTTP ${r.status}`);
+        acc = j;
+      }
       Object.assign(s, { account:acc.username || '', accountId:String(acc.user_id || acc.id || ''), checkError:'', checkedAt:now() });
       save();
       return { ok:true, account:s.account };
@@ -97,7 +127,7 @@ export function createTokens({ dataDir, notify = async () => {}, fetchFn = fetch
         s.checkWarnedAt = now(); save();
         const sec = k === 'ig' ? 'HQ_IG_ACCESS_TOKEN' : 'HQ_THREADS_ACCESS_TOKEN';
         await notify(`⚠️ Токен ${NAME[k]} не работает: ${s.checkError}. Публикации в ${NAME[k]} не выйдут. Проверьте секрет ${sec} в GitHub: ` +
-          `${k === 'ig' ? 'токен Instagram начинается с IG… (вход через Instagram) или EAA… (через Facebook)' : 'токен Threads начинается с TH…'}, вставлен целиком, без пробелов и кавычек; после замены — Run workflow deploy-hq-office.`).catch(() => {});
+          `${k === 'ig' ? 'токен Instagram начинается с EAA… (Instagram → API setup with Unified login → «Сгенерировать маркер») или IG…' : 'токен Threads начинается с TH…'}, вставлен целиком, без пробелов и кавычек; после замены — Run workflow deploy-hq-office.`).catch(() => {});
       }
       return { error:s.checkError };
     }

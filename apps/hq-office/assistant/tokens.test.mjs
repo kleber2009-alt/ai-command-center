@@ -52,7 +52,11 @@ test('токены продлеваются раз в неделю, продлё
   // a Facebook token is not refreshed this way
   process.env.HQ_IG_ACCESS_TOKEN = 'EAAx';
   const n = calls.length;
-  assert.match((await tk.refresh('ig', { force:true })).skipped, /Facebook/); assert.equal(calls.length, n);
+  assert.match((await tk.refresh('ig', { force:true })).skipped, /EAA/); assert.equal(calls.length, n);
+  // …but at day 50 it reminds to issue a new one, once a day
+  said.length = 0;
+  t += 51 * 864e5; await tk.refresh('ig'); await tk.refresh('ig');
+  assert.equal(said.length, 1); assert.match(said[0], /Unified login/);
   for (const k of ['HQ_IG_GRAPH_BASE', 'HQ_THREADS_GRAPH_BASE', 'HQ_IG_ACCESS_TOKEN', 'HQ_THREADS_ACCESS_TOKEN', 'HQ_IG_USER_ID']) delete process.env[k];
   useTokens(null);
 });
@@ -90,4 +94,26 @@ test('токены: перепутанные секреты и мусор при
   assert.equal(said.length, 1); assert.match(said[0], /Токен Threads не работает/); assert.match(said[0], /начинается с TH/);
   assert.equal(tk.status().threads.error.includes('Cannot parse'), true);
   for (const k of ['HQ_IG_ACCESS_TOKEN', 'HQ_THREADS_ACCESS_TOKEN', 'HQ_FB_GRAPH_BASE', 'HQ_THREADS_GRAPH_BASE']) delete process.env[k];
+});
+
+test('токен Unified login (EAA…, без страницы Facebook): аккаунт Instagram берётся из самого токена', async () => {
+  const { igAccount } = await import('./tokens.mjs');
+  const { publishInstagram } = await import('./publish.mjs');
+  const calls = [];
+  const srv = http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x'); calls.push(req.method + ' ' + u.pathname);
+    const send = j => { res.writeHead(200, { 'content-type':'application/json' }); res.end(JSON.stringify(j)); };
+    if (u.pathname.endsWith('/me')) return send({ id:'17841446275691322', username:'ilia.paliy' });
+    if (u.pathname.endsWith('/me/accounts')) return send({ data:[] });
+    if (u.pathname.endsWith('/17841446275691322') && req.method === 'GET') return send({ id:'17841446275691322', username:'ilia.paliy' });
+    if (req.method === 'GET') return send({ status_code:'FINISHED', permalink:'https://www.instagram.com/reel/Y/' });
+    send({ id:u.pathname.endsWith('media_publish') ? 'PUB2' : 'C2' });
+  }).listen(0);
+  servers.push(srv);
+  const base = `http://127.0.0.1:${srv.address().port}`;
+  assert.deepEqual(await igAccount({ token:'EAAu', root:base + '/v23.0' }), { id:'17841446275691322', username:'ilia.paliy' });
+  assert.deepEqual(await igAccount({ token:'EAAu', userId:'17841446275691322', root:base + '/v23.0' }), { id:'17841446275691322', username:'ilia.paliy' });
+  const r = await publishInstagram({ token:'EAAu', caption:'x', media:[{ url:'https://x/v.mp4', kind:'video', name:'v.mp4' }], base, wait:{ every:1 } });
+  assert.equal(r.id, 'PUB2'); assert.ok(calls.includes('POST /v23.0/17841446275691322/media'));
+  assert.ok(!calls.includes('GET /v23.0/me/accounts'));   // no Facebook page needed
 });
