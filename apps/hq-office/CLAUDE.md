@@ -293,7 +293,8 @@
   и `claim.mcp` (ChatPlace — заголовок Authorization, HeyGen — env сервера MCP: `job_mcp` пишет mcp-config задачи); публикации планера — на
   Instagram/Threads автора (`desk.setPubKeys`; владелец без своего — ключи офиса, остальные без своего — вручную). Тесты — `integrations.test.mjs`.
   **Стили и аватары по умолчанию** (раздел кабинета, `assistant/styles.mjs`): каталог `CATS` — рилсы и монтаж (5 стилей офиса + 26 стилей
-  Студии Кадрика, превью `media/montazh-styles`), карусели (3 `carousel-pro` + 24 Кадрика, `media/karusel-styles`), презентации (Медь,
+  Студии Кадрика, превью `media/montazh-styles`, + 31 монтажный скилл Creator Pack (рилсы, YouTube, клипы) — `CREATOR`, у каждого свой скилл, превью
+  `media/creator-styles` из `aicex-library/results/creator-pack-miniapp/public/samples`), карусели (3 `carousel-pro` + 24 Кадрика, `media/karusel-styles`), презентации (Медь,
   Лид-магнит, Небо — превью `works/pages` — и 10 тем `theme-factory` нарисованными макетами), сайты (`landing-*` скиллы и «Медь»), плюс скиллы
   исполнителя того же вида (`catalog(serverSkills)`); вкладка «Все скиллы» — весь список исполнителя с поиском. «Поставить по умолчанию» →
   `POST /api/assistant/prefs {action:'style', cat, id}`; аватары — свои образы HeyGen человека (`GET prefs/avatars`: его ключ HeyGen из
