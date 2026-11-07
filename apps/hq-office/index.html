@@ -95,6 +95,13 @@
   .filters button{font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:var(--glass-hi);color:var(--ink-2);display:flex;align-items:center;gap:6px}
   .filters button i{width:7px;height:7px;border-radius:50%;background:var(--c)}
   .filters button.on{background:rgba(255,255,255,.16);color:var(--ink)}
+  .pager{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 6px}
+  .pager small{font-size:12px;color:var(--ink-2)}
+  .pager .pg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+  .pager button{min-width:38px;height:38px;padding:0 12px;border-radius:12px;background:var(--glass-hi);color:var(--ink-2);font-size:14px;font-weight:700}
+  .pager button.on{background:rgba(255,255,255,.18);color:var(--ink)}
+  .pager button.nx{background:rgba(255,176,32,.16);color:#ffcf73}
+  .pager button:disabled{opacity:.35}
   .search{padding:0 14px 10px}
   .search input{width:100%;padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font:500 13.5px var(--f-ui);outline:none}
   .search input:focus{border-color:rgba(143,184,255,.6)}
@@ -3358,6 +3365,37 @@ function frameWrapHTML(src) {
 }
 
 let ptab = 'tasks', pdept = 'all', pquery = '', pagent = null;
+// long lists are split into pages: the panel stays light and scrolls smoothly on phones
+const PAGE = 20;
+let ppage = 0, ppageKey = '';
+function pageSlice(list) {
+  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  if (ppage >= pages) ppage = pages - 1;
+  return { items:list.slice(ppage * PAGE, ppage * PAGE + PAGE), pages, total:list.length };
+}
+function pagerHTML({ pages, total }) {
+  if (pages < 2) return '';
+  const from = ppage * PAGE + 1, to = Math.min(total, from + PAGE - 1);
+  const nums = [];
+  for (let i = 0; i < pages; i++) if (pages <= 7 || i === 0 || i === pages - 1 || Math.abs(i - ppage) <= 1) nums.push(i); else if (nums.at(-1) !== '…') nums.push('…');
+  return `<nav class="pager" aria-label="Страницы"><small>Показаны ${from}–${to} из ${total}</small><div class="pg">
+    <button data-pg="${ppage - 1}" ${ppage ? '' : 'disabled'} aria-label="Предыдущая страница">‹</button>
+    ${nums.map(i => i === '…' ? '<small>…</small>' : `<button data-pg="${i}" class="${i === ppage ? 'on' : ''}">${i + 1}</button>`).join('')}
+    <button data-pg="${ppage + 1}" ${ppage < pages - 1 ? '' : 'disabled'} aria-label="Следующая страница">›</button></div>
+    ${ppage < pages - 1 ? `<button class="nx" data-pg="${ppage + 1}">Следующая страница · ${ppage + 2} из ${pages}</button>` : ''}</nav>`;
+}
+// grouped cards: page over all cards, keep the group header above its cards on every page
+function groupsPaged(G, card) {
+  const flat = G.flatMap(([h, c, l]) => l.map(t => ({ h, c, n:l.length, t })));
+  const pg = pageSlice(flat);
+  let html = '', cur = null;
+  for (const x of pg.items) {
+    if (x.h !== cur) { if (cur !== null) html += '</ol>'; cur = x.h; html += `<h3 class="dk-gh" style="--g:${x.c}"><i></i>${x.h}<span>${x.n}</span></h3><ol class="tasks">`; }
+    html += card(x.t);
+  }
+  if (cur !== null) html += '</ol>';
+  return `<div class="dk-groups">${html}</div>${pagerHTML(pg)}`;
+}
 
 function proofSummary(t) {
   const n = k => (t.proof || []).filter(p => p.kind === k && (!guest() || k === 'site' && guestUrlOk(p.url))).length;
@@ -3384,7 +3422,7 @@ function taskRowHTML(t) {
     <span class="t-proof">${esc(proofSummary(t))}</span></button></li>`;
 }
 function tasksHTML() {
-  const list = visibleTasks();
+  const all = visibleTasks(), pg = pageSlice(all), list = pg.items;
   let html = '', month = '';
   for (const t of list) {
     const [y, m] = ymd(t.date), key = `${y}-${m}`;
@@ -3392,6 +3430,7 @@ function tasksHTML() {
     html += taskRowHTML(t);
   }
   if (month) html += '</ol>';
+  if (html) html += pagerHTML(pg);
   return html || `<p class="empty">Задач с такими условиями нет. Снимите фильтр или измените поиск.</p>`;
 }
 function focusHTML() {
@@ -3506,13 +3545,28 @@ function skillsHTML() {
     <h3 class="eyebrow mon">Ещё в библиотеке · ${more.length}</h3><p class="note">Подключённые наборы: стили монтажа, HyperFrames, служебные скиллы Claude.</p>
     <div class="chipsrow libmore">${more.map(n => `<span>${esc(n)}</span>`).join('')}</div>` : ''}`;
 }
-function renderPanel() {
+// background refreshes (SSE, timers) wait while the list is being scrolled: replacing the cards
+// under a finger stops touch scrolling on phones
+const pscroll = { touch:false, at:0, t:0, html:'' };
+{
+  const pb = $('pbody'), mark = () => { pscroll.at = performance.now(); };
+  pb.addEventListener('touchstart', () => { pscroll.touch = true; mark(); }, { passive:true });
+  for (const ev of ['touchend', 'touchcancel']) pb.addEventListener(ev, () => { pscroll.touch = false; mark(); }, { passive:true });
+  pb.addEventListener('scroll', mark, { passive:true });
+  pb.addEventListener('wheel', mark, { passive:true });
+}
+function renderPanel(soft = false) {
+  clearTimeout(pscroll.t);
+  if (soft && (pscroll.touch || performance.now() - pscroll.at < 1200)) { pscroll.t = setTimeout(() => renderPanel(true), 1300); return; }
+  const key = [ptab, pdept, pquery, selectedId].join('|');
+  if (key !== ppageKey) { ppageKey = key; ppage = 0; }
   for (const b of $('ptabs').children) { const on = b.dataset.tab === ptab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); if (on) b.scrollIntoView({ block:'nearest', inline:'nearest' }); }
   for (const b of $('filters').children) b.classList.toggle('on', b.dataset.f === pdept);
   if (ptab === 'live' && !desk.on && !desk.pubOk) ptab = 'tasks';
   if (ptab === 'skills' && guest()) ptab = 'tasks';
   const body = ptab === 'live' ? (desk.on ? liveHTML() : pubLiveHTML()) : ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
-  $('pbody').innerHTML = body;
+  const pb = $('pbody');
+  if (pscroll.html !== body) { const top = pb.scrollTop; pb.innerHTML = body; pscroll.html = body; pb.scrollTop = top; }
   const n = visibleTasks().length;
   let sum = `${SKILLS.length} скиллов · ${LIB_NAMES.size} в библиотеке`;
   if (ptab === 'tasks') sum = `${n} ${word(n, 'задача', 'задачи', 'задач')}${n !== TASKS.length && !guest() ? ` из ${TASKS.length}` : ''} · ${guest() ? 'готовые решения' : 'с доказательствами'}`;
@@ -3536,6 +3590,8 @@ $('filters').addEventListener('click', e => { const b = e.target.closest('[data-
 $('ptabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; ptab = b.dataset.tab; renderPanel(); $('pbody').scrollTop = 0; });
 $('q').addEventListener('input', e => { pquery = e.target.value.trim(); renderPanel(); });
 $('pbody').addEventListener('click', e => {
+  const pg = e.target.closest('[data-pg]');
+  if (pg) { if (pg.disabled) return; ppage = Math.max(0, Number(pg.dataset.pg) || 0); renderPanel(); $('pbody').scrollTop = 0; return; }
   const t = e.target.closest('[data-task]'); if (t) return openTask(t.dataset.task);
   const dk = e.target.closest('[data-desk]'); if (dk) return openDeskTask(dk.dataset.desk);
   const wk = e.target.closest('[data-works]'); if (wk) return openDossier(wk.dataset.works, 'works');
@@ -4335,7 +4391,7 @@ function deskStats(later = false) {
       const r = await fetch(DESK_API + '/stats', { cache:'no-store' });
       if (!r.ok) return;
       desk.stats = await r.json();
-      if (!$('team').hidden && ptab === 'live' && !modalOpen()) renderPanel();
+      if (!$('team').hidden && ptab === 'live' && !modalOpen()) renderPanel(true);
     } catch (e) {}
   }, later ? 3e3 : 0);
 }
@@ -4396,12 +4452,12 @@ function deskRefresh(id) {
   $('liveTab').hidden = !desk.on && !desk.pubOk;
   $('liveTab').innerHTML = desk.on ? `В работе${need ? ` <b>${need}</b>` : ''}` : `Сейчас${pubOpen ? ` <b>${pubOpen}</b>` : ''}`;
   $('skillsTab').hidden = guest();
-  if (!$('team').hidden && (ptab === 'live' || (ptab === 'tasks' && selectedId)) || !desk.on) renderPanel();
+  if (!$('team').hidden && (ptab === 'live' || (ptab === 'tasks' && selectedId)) || !desk.on) renderPanel(true);
   if (desk.openId && (!id || id === desk.openId)) renderDeskTask();
   drawOwnerScreen();
   appShell();
 }
-setInterval(() => { if (desk.on && ptab === 'live' && !$('team').hidden && !modalOpen()) renderPanel(); }, 30e3);
+setInterval(() => { if (desk.on && ptab === 'live' && !$('team').hidden && !modalOpen()) renderPanel(true); }, 30e3);
 // принятая задача сразу попадает в историю офиса — без перезагрузки
 async function deskHistory() {
   try {
@@ -4409,7 +4465,7 @@ async function deskHistory() {
     if (!r.ok) return;
     for (const t of await r.json()) if (!TASKS.some(x => x.id === t.id)) TASKS.push(t);
     TASKS.sort((a, b) => b.date.localeCompare(a.date));
-    renderPanel(); drawKanban();
+    renderPanel(true); drawKanban();
   } catch (e) {}
 }
 function deskFromAssistant() {
@@ -4483,7 +4539,7 @@ function liveHTML() {
       : desk.runner?.claude && !desk.runner.claude.ok ? `<p class="note warn">Исполнитель не может запустить Claude Code: ${esc(desk.runner.claude.error)}${desk.runner.claude.auth ? ` · вход: ${esc(desk.runner.claude.auth)}` : ''}</p>` : ''}
     <div class="dk-hero"><div class="w"><b>${n(0)}</b><small>ждут вас</small></div><div class="r"><b>${n(1) + n(2)}</b><small>в работе и очереди</small></div><div class="d"><b>${n(3)}</b><small>закрыто</small></div></div>
     ${deskMonthHTML()}
-    ${list.length ? `<div class="dk-groups">${G.filter(g => g[2].length).map(([h, c, l]) => `<h3 class="dk-gh" style="--g:${c}"><i></i>${h}<span>${l.length}</span></h3><ol class="tasks">${l.map(deskCardHTML).join('')}</ol>`).join('')}</div>`
+    ${list.length ? groupsPaged(G, deskCardHTML)
       : `<p class="empty">${desk.tasks.length ? 'Задач с такими условиями нет.' : 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите двойнику: «поставь задачу…».'}</p>`}`;
 }
 // раскрытые итоги месяца не сворачиваются при перерисовке панели
@@ -5243,7 +5299,7 @@ async function pubLoad() {
     liveApply(b, v || null, v ? prev.get(v.id) || null : null, !v);
   }
   deskRefresh();
-  if (ptab === 'live' && !$('team').hidden && !modalOpen()) renderPanel();
+  if (ptab === 'live' && !$('team').hidden && !modalOpen()) renderPanel(true);
 }
 function pubSum() {
   const open = desk.pub.filter(t => PUB_OPEN.includes(t.status)).length;
@@ -5279,7 +5335,7 @@ function pubLiveHTML() {
   ];
   return `<p class="note">Так офис работает прямо сейчас: владелец ставит задачу, диспетчер выбирает агента и скилл, агент делает работу у себя в комнате и несёт результат на проверку. Готовые решения — во вкладке «Задачи».</p>
     <div class="dk-hero"><div class="r"><b>${G[0][2].length + G[2][2].length}</b><small>в работе и очереди</small></div><div class="w"><b>${G[1][2].length}</b><small>ждут владельца</small></div><div class="d"><b>${G[3][2].length}</b><small>готово за неделю</small></div></div>
-    ${list.length ? `<div class="dk-groups">${G.filter(g => g[2].length).map(([h, c, l]) => `<h3 class="dk-gh" style="--g:${c}"><i></i>${h}<span>${l.length}</span></h3><ol class="tasks">${l.map(pubCardHTML).join('')}</ol>`).join('')}</div>`
+    ${list.length ? groupsPaged(G, pubCardHTML)
       : '<p class="empty">Сейчас у агентов нет задач — загляните позже или посмотрите готовые решения во вкладке «Задачи».</p>'}`;
 }
 // вход и выход владельца: другой набор отделов, вкладок и материалов
