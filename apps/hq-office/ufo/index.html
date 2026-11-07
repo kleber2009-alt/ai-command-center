@@ -200,10 +200,10 @@ const CONCEPTS = [
     bg:'#050302', tint:'#ffcc55', wall:'temple', floor:'stone', fl:['#2a2218', '#0a0806'], line:'rgba(255,200,90,.16)', rib:'#1a140c', win:false, exp:1.05, bloom:.65, hemi:['#ffe2a0', '#140a00', .5],
     A:{ skin:['#c9b38a', '#b8a4d8', '#9ec4c0'], eyes:'glow', eyeC:'#ffd66e', robe:true, tall:true, suit:'#2a1e0e', mix:.25, gold:true } },
   { n:'Зона 51', d:'Секретная лаборатория: белые стены, капсулы с образцами, серые пришельцы в лабораторных халатах', sw:['#d9dee2', '#9aa3ab', '#57ff7a'],
-    bg:'#0a0d0f', tint:'#57ff7a', wall:'lab', floor:'tiles', fl:['#d9dee2', '#a9b0b6'], line:'rgba(60,80,90,.25)', rib:'#cfd6dc', win:false, exp:.9, bloom:.4, hemi:['#ffffff', '#5a6066', .9],
+    bg:'#0a0d0f', tint:'#57ff7a', wall:'lab', floor:'tiles', fl:['#d9dee2', '#a9b0b6'], line:'rgba(60,80,90,.25)', rib:'#cfd6dc', win:false, exp:.62, bloom:.22, hemi:['#ffffff', '#5a6066', .45],
     A:{ skin:['#9aa3ab', '#a8b0b6', '#8e979e'], eyes:'black', coat:true, suit:'#e8ecef', mix:.04 } },
   { n:'Голограмма', d:'Цифровой корабль: тёмная пустота, проволочные стены, пришельцы из света — как проекция', sw:['#000206', '#06202a', '#3fd8ff'],
-    bg:'#000206', tint:'#3fd8ff', wall:'void', floor:'grid', fl:['#02101a', '#000306'], line:'rgba(60,200,255,.3)', rib:'#06202a', win:false, exp:1.0, bloom:1.0, hemi:['#7fdcff', '#000000', .3],
+    bg:'#000206', tint:'#3fd8ff', wall:'void', floor:'grid', fl:['#02101a', '#000306'], line:'rgba(60,200,255,.3)', rib:'#06202a', win:false, exp:1.0, bloom:.5, hemi:['#7fdcff', '#000000', .3],
     A:{ mat:'holo', eyes:'glow', eyeC:'#ffffff' } },
 ];
 const VI = Math.min(CONCEPTS.length, Math.max(1, Math.round(+new URLSearchParams(location.search).get('v')) || 1)), V = CONCEPTS[VI - 1];
@@ -537,7 +537,8 @@ function wallTex(style) {
   else if (style === 'lab') { fill('#e9edf0'); g.strokeStyle = '#c3cad0'; g.lineWidth = 2; for (let x = 0; x <= W; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); } for (let y = 0; y <= H; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); } g.fillStyle = '#2b9a3c'; g.fillRect(0, 196, W, 10); g.fillStyle = '#2a2f33'; g.font = '700 22px Manrope,Arial'; for (let x = 20; x < W; x += 256) g.fillText('СЕКТОР 51', x, 236); }
   else if (style === 'void') { g.clearRect(0, 0, W, H); g.strokeStyle = 'rgba(63,216,255,.6)'; g.lineWidth = 2; for (let x = 0; x <= W; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); } for (let y = 0; y <= H; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); } }
   else { fill('#121a26'); for (let x = 0; x < 1024; x += 128) { const s = 22 + RND() * 8; g.fillStyle = `rgb(${s},${s + 8},${s + 18})`; g.fillRect(x + 3, 3, 122, 250); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + 10, 190, 108, 6); g.fillStyle = 'rgba(140,255,220,.06)'; g.fillRect(x + 10, 20, 2, 160); } }
-  T.t.wrapS = THREE.RepeatWrapping; T.t.repeat.set(rep, 1); T.t.needsUpdate = true; return T.t;
+  // стена видна изнутри цилиндра — отражаем по горизонтали, чтобы надписи читались
+  T.t.wrapS = THREE.RepeatWrapping; T.t.repeat.set(-rep, 1); T.t.needsUpdate = true; return T.t;
 }
 const SPACE = [space(0), space(1), space(2)], PANEL = wallTex(V.wall);
 
@@ -765,8 +766,8 @@ function alien(o) {
   const R = ROOMDATA[o.room], root = new THREE.Group(); R.g.add(root);
   const hsh = hash(o.id), skinC = o.cap ? '#a48ad8' : SKIN[hsh % SKIN.length];
   const AV = V.A, HOLO = AV.mat === 'holo';
-  const holoM = col => new THREE.MeshBasicMaterial({ color:col, wireframe:true, transparent:true, opacity:.55, toneMapped:false, depthWrite:false, blending:THREE.AdditiveBlending });
-  const skin = HOLO ? holoM(mixHex(o.color, '#ffffff', .4)) : AV.mat === 'glass' ? new THREE.MeshPhysicalMaterial({ color:skinC, transparent:true, opacity:.7, roughness:.08, metalness:0, clearcoat:1, emissive:skinC, emissiveIntensity:.08 })
+  const holoM = col => new THREE.MeshBasicMaterial({ color:col, wireframe:true, transparent:true, opacity:.16, toneMapped:false, depthWrite:false, blending:THREE.AdditiveBlending });
+  const skin = HOLO ? holoM(mixHex(o.color, '#3fd8ff', .5)) : AV.mat === 'glass' ? new THREE.MeshPhysicalMaterial({ color:skinC, transparent:true, opacity:.7, roughness:.08, metalness:0, clearcoat:1, emissive:skinC, emissiveIntensity:.08 })
     : M(skinC, { roughness:.5, metalness:.08 });
   const suit = HOLO ? holoM(o.color) : M(new THREE.Color(AV.suit || '#121926').lerp(new THREE.Color(o.color), AV.mix ?? .22).getStyle(), { roughness:.45, metalness:AV.metal ?? .55 });
   const trim = glow(o.color), gold = M('#e5c06a', { metalness:.9, roughness:.25 });
