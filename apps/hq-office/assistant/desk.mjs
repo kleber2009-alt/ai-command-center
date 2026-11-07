@@ -884,6 +884,11 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   /* ---------- history: what the owner accepted ---------- */
 
+  // вышедшая публикация планера — ссылки на посты первыми доказательствами
+  function pubProof(t) {
+    const p = t.route?.agent === PLANNER ? pubs.find(x => x.task === t.id) : null;
+    return p ? pubLinks(p).filter(x => x.url).map(x => ({ kind:'site', label:`Пост в ${x.name}`, url:x.url })) : [];
+  }
   function historyTask(t) {
     const a = agentOf(t.route.agent), main = t.result.main, url = main ? fileUrl(t, main) : '';
     const ext = path.extname(main || '').toLowerCase(), title = t.route.title;
@@ -892,7 +897,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       : ext === '.html' ? [{ type:'page', src:url, title }] : [];
     return { id:'desk-' + t.id, date:moscowDate(new Date(t.doneAt)), dateNote:'задачу поставили и приняли прямо в офисе', kind:KIND[t.route.deliverable] || 'Разработка',
       dept:a?.dept || 'ceo', people:[...new Set([t.by?.id || 'ilia', t.approvedBy?.id || 'ilia'])], agents:[...new Set([...(t.transcribed && t.route.agent !== TRANSCRIBER ? [TRANSCRIBER] : []), ...(t.pipeline ? t.pipeline.stages.map(s => s.agent) : [t.route.agent])])], title, summary:t.result.history || t.result.summary || '',
-      proof:[{ kind:'file', label:`Результат агента «${a?.name || t.route.agent}»`, url }], media, desk:true };
+      proof:[...pubProof(t), { kind:'file', label:`Результат агента «${a?.name || t.route.agent}»`, url }], media, desk:true };
   }
 
   /* ---------- create, used by the routes and by the assistant's tool ---------- */
@@ -1318,7 +1323,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     const p = pubOf(t);
     if (!p) return null;
     return { status:p.status, at:p.at || '', platforms:p.platforms, kind:p.kind, caption:p.caption, threads:p.threads, code_word:p.code_word,
-      chain:p.chain || null, replaced:p.replaced || null, results:p.results || null, source:p.source, title:p.title };
+      chain:p.chain || null, replaced:p.replaced || null, results:p.results || null, source:p.source, title:p.title, publishedAt:p.publishedAt || '' };
   }
   function publishTask(srcId) {
     const src = byId(srcId);
@@ -1388,7 +1393,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     const where = p.platforms.map(x => x === 'instagram' ? 'Instagram' : 'Threads').join(' и ');
     t.status = 'question';
     t.question = { from:'schedule', text:`${lead}${where}: ${p.kind === 'reel' ? 'рилс' : p.kind === 'carousel' ? 'карусель' : 'пост'}, подпись готова, ${word}. Когда публикуем? Можно ответить временем («завтра 19:00») или правкой подписи.`,
-      options:[...p.slots.map((x, i) => ({ id:'s' + (i + 1), label:fmtMsk(x.at), about:x.why, at:x.at })), { id:'now', label:'Опубликовать сейчас', about:'через минуту' }, { id:'no', label:'Не публиковать', about:'подпись и файлы останутся в задаче' }] };
+      options:[...p.slots.map((x, i) => ({ id:'s' + (i + 1), label:fmtMsk(x.at), about:x.why, at:x.at })), { id:'now', label:'Опубликовать сейчас', about:'сразу' }, { id:'no', label:'Не публиковать', about:'подпись и файлы останутся в задаче' }] };
     step(t, `Планер подготовил публикацию: ${word}. Ждёт времени выхода.`);
   }
   function pubAnswer(t, text, files = []) {
@@ -1400,15 +1405,23 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       t.question = null; t.status = 'done'; t.doneAt = now(); t.published = false;
       step(t, 'Ваш ответ: не публиковать. Подпись и файлы остались в задаче.'); emit(t); return;
     }
-    const at = o?.at ? new Date(o.at) : o?.id === 'now' ? new Date(Date.now() + 60e3) : files.length ? null : parseWhen(text);
+    const nowWord = o?.id === 'now' || (!o && /^(сейчас|сразу|now|опубликуй сейчас|публикуй сейчас)\.?$/i.test(text.trim()));
+    if (nowWord) return pubNow(t, p);
+    const at = o?.at ? new Date(o.at) : files.length ? null : parseWhen(text);
     if (!at) { queue(t, { kind:'answer', text, files }); step(t, `Ваш ответ: ${text}${filesStep(files)} — планер переделает публикацию.`); emit(t); return; }
     pubSchedule(t, p, at);
   }
-  function pubSchedule(t, p, at) {
-    p.status = 'scheduled'; p.at = at.toISOString(); p.results = null; pubSave();
+  function pubSchedule(t, p, at, nowLead = false) {
+    p.status = 'scheduled'; p.at = at.toISOString(); p.results = null; p.reported = ''; pubSave();
     t.question = null; t.status = 'done'; t.doneAt = now(); t.published = false;
-    step(t, `Публикация запланирована: ${fmtMsk(p.at)} МСК — ${p.platforms.map(x => x === 'instagram' ? 'Instagram' : 'Threads').join(', ')}.`);
+    const where = p.platforms.map(x => x === 'instagram' ? 'Instagram' : 'Threads').join(', ');
+    step(t, nowLead ? `Публикую сейчас — ${where}.` : `Публикация запланирована: ${fmtMsk(p.at)} МСК — ${where}.`);
     emit(t);
+  }
+  // «Опубликовать сейчас»: без ожидания — публикация уходит сразу, не через минуту и не на следующем обходе планера
+  function pubNow(t, p) {
+    pubSchedule(t, p, new Date(), true);
+    tickPubs().catch(e => console.error('publications:', e.message));
   }
   function pubControl(t, what, text = '', opt = {}) {
     const p = pubOf(t);
@@ -1421,7 +1434,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     }
     if (what === 'now') {
       if (!['scheduled', 'draft', 'failed', 'manual'].includes(p.status)) return { error:'Публикация уже идёт или вышла.' };
-      pubSchedule(t, p, new Date(Date.now() + 60e3)); return { ok:true };
+      pubNow(t, p); return { ok:true };
     }
     if (what === 'move') {
       if (!['scheduled', 'draft', 'failed', 'manual', 'cancelled'].includes(p.status)) return { error:'Публикация уже идёт или вышла.' };
@@ -1431,31 +1444,59 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     }
     return { error:'Неизвестное действие.' };
   }
-  let pubBusy = false;
+  // один обход за раз: «Опубликовать сейчас» запускает обход сразу, а второй вызов ждёт идущий и проходит заново
+  let pubRun = null;
   async function tickPubs(nowMs = Date.now()) {
-    if (pubBusy) return;
-    pubBusy = true;
-    try {
-      for (const p of pubs.filter(x => x.status === 'scheduled' && Date.parse(x.at) <= nowMs)) {
-        const t = byId(p.task);
-        p.status = 'publishing'; pubSave();
-        if (t) { step(t, 'Время выхода — публикую.'); emit(t); }
-        const url = r => signedUrl(path.join(taskDir(r.task), 'v' + r.version, r.path));
-        const media = {};
-        for (const k of ['instagram', 'threads']) media[k] = (p.media?.[k] || []).map(r => ({ url:url(r), kind:refKind(r), name:r.path.split('/').pop() })).filter(m => m.url);
-        let res;
-        try { res = await publishAll({ ...p, media }); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
-        p.results = res; p.publishedAt = now();
-        const vals = Object.values(res);
-        p.status = vals.every(x => x.ok) ? 'published' : vals.some(x => x.error) ? 'failed' : 'manual';
-        pubSave();
-        if (t) {
-          step(t, vals.map((x, i) => `${Object.keys(res)[i] === 'instagram' ? 'Instagram' : 'Threads'}: ${x.ok ? 'вышло' + (x.permalink ? ' — ' + x.permalink : '') : x.manual ? 'вручную — ' + x.why : 'ошибка — ' + x.error}`).join(' · ')
-            + (vals.some(x => /token|токен|OAuth/i.test(x.error || '')) ? ' — проверьте токен в секретах GitHub (HQ_IG_ACCESS_TOKEN начинается с IG…, HQ_THREADS_ACCESS_TOKEN — с TH…), затем «Опубликовать сейчас».' : ''));
-          emit(t);
-        }
+    while (pubRun) await pubRun.catch(() => {});
+    pubRun = pubTick(nowMs);
+    try { return await pubRun; } finally { pubRun = null; }
+  }
+  async function pubTick(nowMs) {
+    for (const p of pubs.filter(x => x.status === 'scheduled' && Date.parse(x.at) <= nowMs)) {
+      const t = byId(p.task);
+      p.status = 'publishing'; pubSave();
+      if (t) { step(t, 'Время выхода — публикую.'); emit(t); }
+      const url = r => signedUrl(path.join(taskDir(r.task), 'v' + r.version, r.path));
+      const media = {};
+      for (const k of ['instagram', 'threads']) media[k] = (p.media?.[k] || []).map(r => ({ url:url(r), kind:refKind(r), name:r.path.split('/').pop() })).filter(m => m.url);
+      let res;
+      try { res = await publishAll({ ...p, media }); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
+      p.results = res; p.publishedAt = now();
+      const vals = Object.values(res);
+      p.status = vals.every(x => x.ok) ? 'published' : vals.some(x => x.error) ? 'failed' : 'manual';
+      pubSave();
+      if (t) {
+        step(t, vals.map((x, i) => `${Object.keys(res)[i] === 'instagram' ? 'Instagram' : 'Threads'}: ${x.ok ? 'вышло' + (x.permalink ? ' — ' + x.permalink : '') : x.manual ? 'вручную — ' + x.why : 'ошибка — ' + x.error}`).join(' · ')
+          + (vals.some(x => /token|токен|OAuth/i.test(x.error || '')) ? ' — проверьте токен в секретах GitHub (HQ_IG_ACCESS_TOKEN начинается с IG…, HQ_THREADS_ACCESS_TOKEN — с TH…), затем «Опубликовать сейчас».' : ''));
+        pubReport(t, p);
+        emit(t);
       }
-    } finally { pubBusy = false; }
+    }
+  }
+  /* Отчёт о вышедшей публикации — в офис: отчёт задачи планера (ссылки на посты, когда, кодовое слово), задача — в историю офиса
+     с постами как доказательствами, шаг со ссылками у исходной работы. Бот офиса присылает тот же отчёт отдельным сообщением (tg.mjs). */
+  const PL_NAME = { instagram:'Instagram', threads:'Threads' };
+  function pubLinks(p) {
+    return Object.entries(p.results || {}).filter(([, r]) => r.ok).map(([k, r]) => ({ platform:k, name:PL_NAME[k] || k, url:r.permalink || '' }));
+  }
+  function pubReport(t, p) {
+    const ok = pubLinks(p), when = fmtMsk(p.publishedAt || now());
+    const bad = Object.entries(p.results || {}).filter(([, r]) => !r.ok).map(([k, r]) => `- ${PL_NAME[k] || k}: ${r.manual ? 'опубликуйте вручную — ' + r.why : 'ошибка — ' + r.error}`);
+    if (!ok.length) return;
+    const kind = p.kind === 'reel' ? 'Рилс' : p.kind === 'carousel' ? 'Карусель' : 'Пост';
+    const md = ['## Что сделано', `${kind} «${p.title}» опубликован${p.kind === 'carousel' ? 'а' : ''} — ${when} МСК: ${ok.map(x => x.name).join(' и ')}.`, '',
+      '## Главное', ...ok.map(x => `- ${x.name}: ${x.url ? `[открыть пост](${x.url}) — ${x.url}` : 'вышло, ссылку Meta не вернула — пост в профиле'}`),
+      ...(p.code_word ? [`- Кодовое слово: ${p.code_word}${p.chain?.found ? ` — цепочка «${p.chain.name || p.chain.id}» в ChatPlace` : ''}`] : []), ...bad, ''];
+    if (t.result) {
+      const prev = String(t.result.prepSummary ?? t.result.summary ?? '');
+      t.result.prepSummary = prev;
+      t.result.summary = (md.join('\n') + '\n## Подготовка публикации\n' + prev.replace(/^##\s/gm, '### ')).slice(0, 8000);
+      t.result.history = `${kind} «${p.title}» вышел${p.kind === 'carousel' ? 'а' : ''} ${when} МСК: ${ok.map(x => x.url ? `${x.name} — ${x.url}` : x.name).join(', ')}.`;
+      t.published = true;   // в истории офиса — с постами как доказательствами (historyTask)
+      t.doneAt = t.doneAt || now();
+    }
+    const src = p.source && byId(p.source);
+    if (src) { step(src, `Опубликовано: ${ok.map(x => x.url ? `${x.name} — ${x.url}` : x.name).join(' · ')}`); emit(src); }
   }
   /* «Аналитика контента»: in/content-data.json — что офис знает о вышедшем за период: публикации планера (подпись, кодовое слово,
      цепочка ChatPlace, площадки, ссылки и id постов), пункты контент-планов маркетолога и «Плана дня» бота. Цифры постов, остальной контент

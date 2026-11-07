@@ -126,6 +126,20 @@ export function cardText(v, site) {
 }
 const B = (text, data) => ({ text, callback_data:data });
 const PL = { instagram:'Instagram', threads:'Threads' };
+// отчёт о выпуске: что вышло и где — ссылками, что нет — с причиной (pure — tested in desk.test.mjs)
+export function pubReportText(v, site) {
+  const p = v.publication;
+  if (!p?.results) return '';
+  const res = Object.entries(p.results), ok = res.filter(([, r]) => r.ok);
+  const kind = p.kind === 'reel' ? 'Рилс' : p.kind === 'carousel' ? 'Карусель' : 'Пост';
+  const L = [ok.length ? `🚀 <b>Опубликовано: ${esc(p.title || v.route?.title || '')}</b>` : `⚠️ <b>Не опубликовано: ${esc(p.title || v.route?.title || '')}</b>`,
+    `<i>${kind} · ${esc(mskText(p.publishedAt || p.at))}</i>`, ''];
+  for (const [k, r] of res) L.push(r.ok ? `✅ ${PL[k] || k}: ${r.permalink ? `<a href="${esc(r.permalink)}">${esc(r.permalink)}</a>` : 'вышло (ссылку Meta не вернула — пост в профиле)'}`
+    : r.manual ? `✋ ${PL[k] || k}: опубликуйте вручную — ${esc(r.why)}` : `⚠️ ${PL[k] || k}: ${esc(cut(r.error, 300))}`);
+  if (p.code_word) L.push(`🔑 ${esc(p.code_word)}`);
+  if (site) L.push('', `<a href="${esc(site)}/#desk-${esc(v.id)}">Отчёт в офисе</a>`);
+  return L.join('\n');
+}
 // the state of a publication of the planner (desk.mjs → pub*): when it goes out, what came out, what waits for the owner
 export function pubLines(p) {
   const where = (p.platforms || []).map(x => PL[x] || x).join(' и '), L = [];
@@ -598,10 +612,18 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
   const pubNoticed = () => (st.pubNoticed ||= {});
   function pubWatch(t) {
     const v = desk.get(t.id), p = v?.publication;
-    if (!p || p.status !== 'manual' || pubNoticed()[t.id] === p.at) return;
+    if (!p) return;
+    // вышло или не вышло — отдельное сообщение со ссылками (один раз на выпуск), карточка правится на месте молча
+    if (p.publishedAt && ['published', 'manual', 'failed'].includes(p.status) && pubDone()[t.id] !== p.publishedAt) {
+      pubDone()[t.id] = p.publishedAt; save();
+      const msg = pubReportText(v, site);
+      if (msg) quiet(send(p.status === 'failed' && !Object.values(p.results || {}).some(r => r.ok) ? 'errors' : 'done', msg));
+    }
+    if (p.status !== 'manual' || pubNoticed()[t.id] === p.at) return;
     pubNoticed()[t.id] = p.at; save();
     pubSend(t.id).catch(e => console.error('telegram publication:', e.message));
   }
+  const pubDone = () => (st.pubDone ||= {});
 
   /* ----- reminders and digests ----- */
 

@@ -43,6 +43,16 @@ async function ready(fetchFn, url, token, field, { tries = 60, every = 10e3 } = 
   throw new Error('Meta не обработала файл за 10 минут');
 }
 
+// ссылка на вышедший пост: сразу после публикации Meta иногда отдаёт её не с первого раза — до 3 попыток
+async function permalink(fetchFn, url, token, { linkTries = 3, linkEvery = 3e3 } = {}) {
+  for (let i = 0; i < linkTries; i++) {
+    const info = await call(fetchFn, 'GET', url, { fields:'permalink', access_token:token }).catch(() => ({}));
+    if (info.permalink) return info.permalink;
+    if (i < linkTries - 1) await sleep(linkEvery);
+  }
+  return '';
+}
+
 /* media: [{ url, kind:'video'|'image', name }] — в порядке слайдов */
 export async function publishInstagram({ token, userId = '', caption = '', media, fetchFn = fetch, base = '', wait = {} }) {
   const ig = token.startsWith('IG');
@@ -71,8 +81,7 @@ export async function publishInstagram({ token, userId = '', caption = '', media
     await ready(fetchFn, `${root}/${id}`, token, 'status_code', wait);
   }
   const pub = await call(fetchFn, 'POST', `${root}/${me}/media_publish`, { creation_id:id, access_token:token });
-  const info = await call(fetchFn, 'GET', `${root}/${pub.id}`, { fields:'permalink', access_token:token }).catch(() => ({}));
-  return { id:pub.id, permalink:info.permalink || '' };
+  return { id:pub.id, permalink:await permalink(fetchFn, `${root}/${pub.id}`, token, wait) };
 }
 
 export async function publishThreads({ token, text = '', media = [], fetchFn = fetch, base = '', wait = {} }) {
@@ -93,8 +102,7 @@ export async function publishThreads({ token, text = '', media = [], fetchFn = f
   } else ({ id } = await call(fetchFn, 'POST', `${root}/me/threads`, { media_type:'TEXT', text, access_token:token }));
   await ready(fetchFn, `${root}/${id}`, token, 'status', wait);
   const pub = await call(fetchFn, 'POST', `${root}/me/threads_publish`, { creation_id:id, access_token:token });
-  const info = await call(fetchFn, 'GET', `${root}/${pub.id}`, { fields:'permalink', access_token:token }).catch(() => ({}));
-  return { id:pub.id, permalink:info.permalink || '' };
+  return { id:pub.id, permalink:await permalink(fetchFn, `${root}/${pub.id}`, token, wait) };
 }
 
 /* p: { platforms, caption, threads, media:{ instagram:[…], threads:[…] } } → { instagram:{ok,permalink}|{manual}|{error}, threads:… } */

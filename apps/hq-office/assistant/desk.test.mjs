@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
-import { startTelegram, wantsFiles } from './tg.mjs';
+import { startTelegram, wantsFiles, pubReportText } from './tg.mjs';
 
 process.env.HQ_ROUTINES = 'off';
 process.env.HQ_PLAN = 'off';  // «План дня» ходит на remake.aicex.club — включается только в своём тесте
@@ -430,12 +430,26 @@ test('планер публикаций: «Опубликовать» → под
   // not yet
   await d.desk.tickPubs(Date.now());
   assert.equal(calls.length, 0);
-  // «Сейчас» from the planner card, then the time comes
+  // «Опубликовать сейчас» — сразу, без ожидания следующего обхода (tickPubs с тем же временем ждёт идущий выпуск)
   assert.equal((await d.call('POST', `tasks/${pid}/pub`, { action:'now' })).status, 200);
-  await d.desk.tickPubs(Date.now() + 120e3);
+  await d.desk.tickPubs(Date.now());
   v = await d.get(pid);
   assert.equal(v.publication.status, 'published', JSON.stringify(v.publication.results));
   assert.equal(v.publication.results.instagram.permalink, 'https://www.instagram.com/reel/NEW/');
+  assert.ok(v.publication.publishedAt);
+  // отчёт в офисе: в результате планера — что вышло и ссылки, задача в истории офиса с постом как доказательством, шаг у исходной работы
+  assert.match(v.result.summary, /^## Что сделано\nРилс «Рилс про ИИ-офис» опубликован/);
+  assert.match(v.result.summary, /Instagram: \[открыть пост\]\(https:\/\/www\.instagram\.com\/reel\/NEW\/\)/);
+  assert.match(v.result.summary, /## Подготовка публикации/);
+  assert.equal(v.published, true); assert.equal(v.statusText, 'опубликовано');
+  const hist = (await d.call('GET', 'history.json', null, { 'x-guest':'1' })).j;
+  const ht = (hist.tasks || hist).find(x => x.id === 'desk-' + pid);
+  assert.ok(ht && ht.proof.some(x => x.kind === 'site' && x.url === 'https://www.instagram.com/reel/NEW/'), JSON.stringify(hist).slice(0, 400));
+  assert.ok((await d.get(src)).steps.some(x => /Опубликовано: Instagram — https:\/\/www\.instagram\.com\/reel\/NEW\//.test(x.text)));
+  // сообщение бота офиса о выпуске
+  const msg = pubReportText(v, 'https://hq2.example');
+  assert.match(msg, /🚀 <b>Опубликовано: Рилс про ИИ-офис<\/b>/); assert.match(msg, /✅ Instagram: <a href="https:\/\/www\.instagram\.com\/reel\/NEW\/">/);
+  assert.match(msg, /#desk-/);
   const reel = calls.find(c => c.q.media_type === 'REELS');
   assert.ok(reel && /\/api\/assistant\/desk\/files\//.test(reel.q.video_url) && /бонус/.test(reel.q.caption));
   assert.ok(calls.some(c => c.p.endsWith('/me/threads') && c.q.media_type === 'VIDEO' && c.q.text === 'Короткий текст для Threads'));
