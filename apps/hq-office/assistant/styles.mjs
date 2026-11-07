@@ -33,6 +33,25 @@ const KARUSEL = [
   ['pulse', 'Пульс', 'промо, коралл на коричневом'], ['vibecode', 'Вайбкод', 'рамка Figma, UI-карточки'], ['aura', 'Аура', 'главы со свечением'],
 ];
 
+// Creator Pack reels of «Студия Кадрика» (pack/public/skills.json, kind reels) — every one is its own skill on the runner
+const CREATOR = [
+  ['personal-short-form-reels', 'Личный рилс', 'B-roll, слово-субтитры', 'personal-short-form'], ['visual-essay-reel', 'Видеоэссе', 'вырез, стена доказательств'],
+  ['cutout-backdrop-reel', 'Вырез на фоне', 'картинка на каждую мысль'], ['cutout-grid-reel', 'Вырез в сетке 2×2', '4 картинки, ты в центре'],
+  ['image-cluster-reel', 'Облако картинок', 'метафоры над головой'], ['depth-ui-reel', 'Интерфейсы за спиной', 'UI за головой, весь кадр'],
+  ['ranking-format', 'Тир-лист', 'таблица S–F'], ['split-reel', 'Сплит-рилс', 'лицо сверху, схемы снизу'],
+  ['broll-stacked-text-edit', 'B-roll + стопка текста', 'B-roll, субтитры, стопки'], ['fitted-stacked-captions', 'Плотные субтитры', 'большое слово + мелкие вокруг'],
+  ['tiktok-style-edit', 'TikTok-стиль', 'без пауз, субтитры с обводкой'], ['big-type-stack', 'Крупный текст за спиной', 'хук огромными буквами за головой'],
+  ['cinematic-type-reel', 'Кинотитры', 'кадр меняется каждые 1–3 с'], ['yap-and-show', 'Говорю и показываю', 'доказательства над головой'],
+  ['natural-story-reel', 'Спокойная история', 'картинки за спиной, твоя комната'], ['top-five-ranking', 'Топ-5', 'доска 1–5, карточки по местам'],
+  ['this-versus-that-format', 'То или это', 'две колонки: всегда / никогда'], ['if-then-grid-reel', 'Сетка «если → то»', 'цветная таблица по ячейке'],
+  ['rapid-list', 'Быстрый список', 'длинный список, растёт на экране'], ['clone-versus-reel', 'Клон против клона', 'ты дважды в кадре, X vs Y'],
+  ['dual-role-dialogue', 'Диалог с собой', 'новичок и эксперт, 2 записи'], ['origin-story-reel', 'История пути', 'фото по годам, дроп музыки'],
+  ['vlog-editor', 'Влог', 'клипы дня или поездки по порядку'],
+];
+// skills behind the Kadrik styles above (skill:'' there) — so they are not listed a second time as bare skill cards
+const KADRIK_SKILLS = ['montazh-rils', 'montazh-rils-kobalt', 'montazh-rils-scheme', 'montazh-rils-arena', 'montazh-rils-uimotion',
+  'montazh-rils-gloss', 'montazh-rils-hud', 'montazh-rils-vibecode', 'montazh-rils-aura', 'promo-pulse'];
+
 export const CATS = [
   { id:'video', name:'Рилсы и монтаж', ask:'В каком стиле смонтировать ролик?', ratio:'9/16', styles:[
     { id:'glass-explainer-reel', label:'Стеклянная объяснялка', skill:'glass-explainer-reel', img:'media/videos/glass-explainer.jpg', about:'крупные планы и панель снизу, сверху бизнес-графика на стеклянных карточках, уведомления, счётчики' },
@@ -41,6 +60,7 @@ export const CATS = [
     { id:'reels-herk', label:'Как у Nate Herk', skill:'reels-herk', mock:mock('#111', '#fff', '#ff7a1a'), about:'сплит, тёмные боксовые титры, логотипы-плитки, 3D-скрины, терминал-карточки' },
     { id:'reels-promo-face', label:'Промо-история с лицом', skill:'reels-promo-face', img:'media/montazh-styles/promo.jpg', about:'кинетический хук, поиск с шайбой, светлый iOS-интерфейс, 3D-эмодзи, кодовое слово' },
     ...MONTAZH.map(([id, label, about]) => ({ id:'kadrik-' + id, label, skill:'', img:`media/montazh-styles/${id}.jpg`, about:`${about}; ${KADRIK} «${label}» (${id})` })),
+    ...CREATOR.map(([skill, label, about, img]) => ({ id:skill, label, skill, img:`media/creator-styles/${img || skill}.jpg`, about:`${about}; стиль Creator Pack «Студии Кадрика», скилл ${skill}` })),
   ] },
   { id:'carousel', name:'Карусели', ask:'В каком стиле сделать карусель?', ratio:'4/5', styles:[
     { id:'carousel-dark', label:'Тёмный @ilia.paliy', skill:'carousel-pro', mock:mock('#0a0a0a', '#f4efe6', '#ff8a3d', 'serif'), about:'основной формат: чёрный фон, тёплое свечение, Jost, оранжевый курсив, капсулы' },
@@ -80,7 +100,7 @@ const SKIP = new Set(['remake-top-reel', 'carousel-pro', 'ilia-carousel-style', 
 
 export function catalog(serverSkills = []) {
   return CATS.map(c => {
-    const have = new Set(c.styles.map(s => s.skill).filter(Boolean)), extra = [];
+    const have = new Set([...c.styles.map(s => s.skill).filter(Boolean), ...(c.id === 'video' ? KADRIK_SKILLS : [])]), extra = [];
     for (const x of serverSkills) {
       const name = String(x.name || '');
       if (!name || have.has(name) || SKIP.has(name) || !SKILL_RE[c.id].test(name + ' ' + String(x.description || '').slice(0, 120))) continue;
