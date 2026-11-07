@@ -113,8 +113,9 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
       else echo "::warning::uv could not be installed — MCP servers started by uvx (HeyGen) will not run"; fi
     fi
     if grep -q '"uvx"' "$RD/mcp.json"; then
-      # warm the package cache once, so the first task does not wait for the download
-      runuser -u "$RUSER" -- env PATH="$RH/.local/bin:$PATH" timeout 60 uvx heygen-mcp </dev/null >/dev/null 2>&1 || true
+      # warm the package cache once, so the first task does not wait for the download — with the same pin the runner adds
+      # (heygen-mcp 0.0.3 breaks on mcp 2.x: FastMCP was removed, the server exits and Claude Code reports «Connection closed»)
+      runuser -u "$RUSER" -- env PATH="$RH/.local/bin:$PATH" timeout 120 uvx --with 'mcp[cli]<2' heygen-mcp </dev/null >/dev/null 2>&1 || true
     fi
   elif [ -f "$RD/mcp.json" ]; then
     rm -f "$RD/mcp.json" "$RD/mcp.claude.json"; changed=1
