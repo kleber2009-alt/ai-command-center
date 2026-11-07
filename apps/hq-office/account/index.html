@@ -111,6 +111,7 @@ function intCard(it) {
       ${it.fields.map(f => `<label>${esc(f.label)}</label><input name="${f.env}" ${f.secret ? 'type="password" autocomplete="off"' : ''} placeholder="${esc(f.value || f.hint || '')}">`).join('')}
       <div class="acts"><button class="btn go" type="submit">${it.connected ? 'Обновить' : 'Подключить'}</button>
         ${it.connected ? `<button class="btn" type="button" data-test="${it.id}">Проверить</button><button class="btn danger" type="button" data-rm="${it.id}">Отключить</button>` : ''}
+        <a class="btn ghost" href="guides/${esc(it.id)}.pdf" target="_blank" rel="noopener">Инструкция PDF</a>
         <a class="btn ghost" href="${esc(it.site)}" target="_blank" rel="noopener">Где взять ключ ↗</a></div>
       <div class="note ${it.check && !it.check.ok ? 'err' : ''}" id="n-${it.id}">${it.check && !it.check.ok ? 'Ответ сервиса: ' + esc(it.check.error) : it.office && !it.connected ? 'Сейчас работает ключ офиса. Подключите свой — и ваши задачи пойдут на нём.' : ''}</div>
     </form></div>`;
@@ -136,7 +137,7 @@ function cabinet() {
       <div style="margin-top:12px"><button class="btn go" type="submit">Сохранить</button></div><div class="note" id="pn"></div></form></div>` : ''}
 
     <h2>Интеграции</h2>
-    <p class="mute small" style="margin-top:-6px">Ключи хранятся на сервере офиса в зашифрованном виде и никому не показываются — даже вам: видны только последние 4 символа. Задачи, которые вы ставите, идут на ваших ключах${m.role === 'owner' ? '; без вашего ключа — на ключе офиса из секретов' : ''}.</p>
+    <p class="mute small" style="margin-top:-6px">Ключи хранятся на сервере офиса в зашифрованном виде и никому не показываются — даже вам: видны только последние 4 символа. Задачи, которые вы ставите, идут на ваших ключах${m.role === 'owner' ? '; без вашего ключа — на ключе офиса из секретов' : ''}. Пошагово, где взять каждый ключ, — <a href="guides/vse-integracii.pdf" target="_blank" rel="noopener">все инструкции одним PDF</a> или кнопка «Инструкция PDF» в карточке.</p>
     ${groups.map(g => `<div class="grp">${esc(g)}</div><div class="grid2">${m.integrations.filter(i => i.group === g).map(intCard).join('')}</div>`).join('')}
 
     ${m.team ? `<h2>Люди офиса</h2><div class="card"><ul class="list">${m.team.length ? m.team.map(u => `<li><span>${esc(u.name)}<span class="badge">${ROLE[u.role] || u.role}</span>${u.disabled ? ' <span class="mute small">отключён</span>' : ''}<br><span class="mute small">${esc(u.email || 'вход по ссылке')}</span></span><span class="mute small">агентов: ${u.agents}</span></li>`).join('') : '<li class="mute">Пока никого — пригласите руководителей в «Админке» или дайте ссылку на регистрацию.</li>'}</ul>

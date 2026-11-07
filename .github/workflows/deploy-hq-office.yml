@@ -125,7 +125,7 @@ jobs:
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
-          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./assistant --exclude=./runner --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
+          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./assistant --exclude=./runner --exclude=./README.md --exclude=./CLAUDE.md --exclude=./account/guides/build.mjs -czf - . \
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
           tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
             | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
