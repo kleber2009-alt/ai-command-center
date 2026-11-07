@@ -213,6 +213,21 @@ jobs:
           SOCIAL_TIKTOK: ${{ vars.HQ_SOCIAL_TIKTOK }}
           SOCIAL_TG_CHANNEL: ${{ vars.HQ_SOCIAL_TG_CHANNEL }}
           SOCIAL_TG_BOT_TOKEN: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN || secrets.WORKER_TELEGRAM_BOT_TOKEN || secrets.REMAKE_TG_BOT_TOKEN }}
+          # only for the «Ключи» tab of the admin panel: which secrets are set (names, never values)
+          HQ_ASSISTANT_PASSWORD: ${{ secrets.HQ_ASSISTANT_PASSWORD }}
+          HQ_NOTIFY_TG_BOT_TOKEN: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN }}
+          HQ_TG_BOT_TOKEN: ${{ secrets.HQ_TG_BOT_TOKEN }}
+          WORKER_TELEGRAM_BOT_TOKEN: ${{ secrets.WORKER_TELEGRAM_BOT_TOKEN }}
+          HQ_NOTIFY_TG_CHAT_ID: ${{ vars.HQ_NOTIFY_TG_CHAT_ID || vars.WORKER_OWNER_TELEGRAM_ID || vars.REMAKE_TG_OWNER_IDS || vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+          REMAKE_SITE_TOKEN: ${{ secrets.REMAKE_SITE_TOKEN }}
+          HQ_CABINET_TOKEN: ${{ secrets.HQ_CABINET_TOKEN }}
+          HQ_IG_ACCESS_TOKEN: ${{ secrets.HQ_IG_ACCESS_TOKEN }}
+          REMAKE_IG_ACCESS_TOKEN: ${{ secrets.REMAKE_IG_ACCESS_TOKEN }}
+          HQ_THREADS_ACCESS_TOKEN: ${{ secrets.HQ_THREADS_ACCESS_TOKEN }}
+          HQ_YOUTUBE_API_KEY: ${{ secrets.HQ_YOUTUBE_API_KEY }}
+          FUNNEL_META_TOKEN: ${{ secrets.FUNNEL_META_TOKEN }}
+          HQ_ASSISTANT_VOICE_ID: ${{ vars.HQ_ASSISTANT_VOICE_ID }}
+          MCP_JSON: ${{ secrets.HQ_RUNNER_MCP_JSON }}
         run: |
           {
             for n in HQ_OFFICE_ANTHROPIC_API_KEY REMAKE_ANTHROPIC_API_KEY STUDIO_KADRIK_ANTHROPIC_API_KEY TRANSCRIBE_ANTHROPIC_API_KEY TG_AGENT_ANTHROPIC_API_KEY \
@@ -225,6 +240,15 @@ jobs:
             [ -n "$SUBS" ] && printf 'SUBSCRIPTIONS_JSON=%s\n' "$(printf '%s' "$SUBS" | jq -c . 2>/dev/null || echo "::warning::HQ_SUBSCRIPTIONS_JSON is not valid JSON" >&2)"
             true
           } | $SSH "umask 077 && cat > /opt/hq-office/runner-keys.env"
+          # the admin panel's «Ключи»: the names of the secrets that are set and the runner's systems — never a value
+          names=$(for n in HQ_OFFICE_ANTHROPIC_API_KEY REMAKE_ANTHROPIC_API_KEY STUDIO_KADRIK_ANTHROPIC_API_KEY TRANSCRIBE_ANTHROPIC_API_KEY TG_AGENT_ANTHROPIC_API_KEY \
+                     WORKER_ANTHROPIC_API_KEY REMAKE_OPENAI_API_KEY TRANSCRIBE_OPENAI_API_KEY PERSONA_TRAIN_ELEVENLABS_API_KEY REMAKE_ELEVENLABS_API_KEY \
+                     WORKER_ELEVENLABS_API_KEY REMAKE_HEYGEN_API_KEY PERSONA_TRAIN_HEYGEN_API_KEY WORKER_HEYGEN_API_KEY REMAKE_APIFY_TOKEN WORKER_APIFY_API_TOKEN \
+                     TRANSCRIBE_APIFY_API_TOKEN TRANSCRIBE_DEEPGRAM_API_KEY AI_HUB_KIE_API_KEY FUNNEL_META_TOKEN META_AD_ACCOUNT HQ_IG_ACCESS_TOKEN REMAKE_IG_ACCESS_TOKEN \
+                     HQ_THREADS_ACCESS_TOKEN HQ_YOUTUBE_API_KEY SOCIAL_YT SOCIAL_TIKTOK SOCIAL_TG_CHANNEL SUBS HQ_ASSISTANT_PASSWORD HQ_NOTIFY_TG_BOT_TOKEN HQ_TG_BOT_TOKEN \
+                     WORKER_TELEGRAM_BOT_TOKEN HQ_NOTIFY_TG_CHAT_ID REMAKE_SITE_TOKEN HQ_CABINET_TOKEN HQ_ASSISTANT_VOICE_ID; do if [ -n "${!n}" ]; then echo "$n"; fi; done | paste -sd, -)
+          mcp=$(printf '%s' "$MCP_JSON" | jq -r '.mcpServers | keys | join(",")' 2>/dev/null || true)
+          printf 'HQ_KEYS_SET=%s\nHQ_KEYS_MCP=%s\nHQ_KEYS_AT=%s\n' "$names" "$mcp" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | $SSH "cat >> /opt/hq-office/assistant.env"
 
       - name: Systems of the runner (MCP)
         # agents read ChatPlace / Windsor (Meta Ads) / HeyGen right away; actions that change data run only after

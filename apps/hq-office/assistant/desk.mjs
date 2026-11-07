@@ -1997,5 +1997,5 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
   return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, setJobEnv:fn => { jobEnv = fn; }, setPubKeys:fn => { pubKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view), publishTask, tickPubs, pubFiles, publications:() => pubs,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
-    skills:() => serverSkills, skillsFile:SKILLS_FILE };
+    skills:() => serverSkills, skillsFile:SKILLS_FILE, runner:runnerView };
 }

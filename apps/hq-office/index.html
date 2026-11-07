@@ -660,6 +660,16 @@
   .ta-log{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:13px}
   .ta-log li{display:grid;grid-template-columns:120px 110px minmax(0,1fr);gap:10px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.06)}
   .ta-log time,.ta-log b{color:var(--ink-2);font-weight:600}
+  .ta-keys{display:grid;gap:2px;margin:0 0 14px;padding:0;list-style:none}
+  .ta-keys li{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .ta-keys .ck{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--f-mono);background:rgba(255,107,107,.14);color:#ff9a9a}
+  .ta-keys li.ok .ck{background:rgba(61,220,151,.16);color:#3ddc97}
+  .ta-keys li.opt:not(.ok) .ck{background:rgba(255,255,255,.07);color:var(--ink-2)}
+  .ta-keys b{display:block;font-size:13.5px}.ta-keys small{color:var(--ink-2);font-size:12px}
+  .ta-keys .src{font:500 11px var(--f-mono);color:var(--ink-2);text-align:right;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ta-keys .warn{color:#ffcf6e}
+  .ta-ksum{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  @media (max-width:700px){ .ta-keys li{grid-template-columns:26px minmax(0,1fr)} .ta-keys .src{grid-column:2;text-align:left;max-width:none} }
   @media (max-width:700px){ .ta-agents li{grid-template-columns:auto minmax(0,1fr)} .ta-agents .ctl{grid-column:1/-1;justify-content:flex-start} .ta-log li{grid-template-columns:1fr} }
   .ta-card{border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);padding:14px;margin:0 0 12px;display:grid;gap:10px}
   .ta-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -5037,7 +5047,8 @@ async function openTeamAdmin(tab) {
   if (tab) TA.tab = tab;
   $('teamAdm').hidden = false; $('taBody').innerHTML = '<p class="note">Загружаю…</p>';
   try {
-    const [r1, r2] = await Promise.all([fetch(ASST_API + '/team', { cache:'no-store' }), fetch(ASST_API + '/admin', { cache:'no-store' })]);
+    const [r1, r2, r3] = await Promise.all([fetch(ASST_API + '/team', { cache:'no-store' }), fetch(ASST_API + '/admin', { cache:'no-store' }), fetch(ASST_API + '/admin/keys', { cache:'no-store' }).catch(() => null)]);
+    TA.keys = r3?.ok ? await r3.json().catch(() => null) : null;
     if (!r1.ok || !r2.ok) throw new Error((await (r1.ok ? r2 : r1).json().catch(() => ({}))).error || 'нет доступа');
     Object.assign(TA, await r1.json(), await r2.json());
   } catch (e) { $('taBody').innerHTML = `<p class="note warn">Не получилось загрузить: ${esc(e.message)}</p>`; return; }
@@ -5060,7 +5071,7 @@ function taAgents() {
 }
 function renderTeamAdmin() {
   const ags = taAgents(), away = ags.filter(a => a.st !== 'active').length;
-  $('taTabs').innerHTML = [['people', 'Люди', TA.users.length], ['agents', 'Агенты', ags.length - away], ['new', 'Новый агент', ''], ['log', 'Журнал', TA.log.length]]
+  $('taTabs').innerHTML = [['people', 'Люди', TA.users.length], ['agents', 'Агенты', ags.length - away], ['new', 'Новый агент', ''], ['keys', 'Ключи', TA.keys ? `${TA.keys.filled}/${TA.keys.total}` : ''], ['log', 'Журнал', TA.log.length]]
     .map(([k, l, n]) => `<button data-tab="${k}" class="${TA.tab === k ? 'on' : ''}">${l}${n !== '' ? `<span>${n}</span>` : ''}</button>`).join('');
   const reload = TA.changed ? `<div class="ta-reload"><span>Изменения сохранены и уже действуют у диспетчера. Чтобы увидеть их в 3D-офисе, обновите страницу.</span><button class="btn-go" data-ta="reload">Обновить офис</button></div>` : '';
   if (TA.tab === 'agents') {
@@ -5083,10 +5094,24 @@ function renderTeamAdmin() {
       <label>Экран в 3D<select name="screen">${[['doc', 'Документы'], ['media', 'Видео и картинки'], ['chart', 'Графики'], ['chat', 'Переписки'], ['code', 'Код'], ['flow', 'Схемы'], ['ads', 'Реклама'], ['calendar', 'Календарь']].map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
       <label>Цвет<input name="color" type="color" value="#7fd3ff"></label>
       <div class="ta-acts"><button class="go" type="submit">Создать агента</button></div></form>`;
+  } else if (TA.tab === 'keys') {
+    $('taBody').innerHTML = keysHTML(TA.keys);
   } else if (TA.tab === 'log') {
     $('taBody').innerHTML = TA.log.length ? `<ul class="ta-log">${TA.log.map(x => `<li><time>${esc(fmtDate(x.at.slice(0, 10), true))}, ${esc(hhmm(new Date(x.at)))}</time><b>${esc(x.who)}</b><span>${esc(x.text)}</span></li>`).join('')}</ul>`
       : '<p class="empty">Пока пусто — здесь появятся приглашения, входы руководителей и изменения команды.</p>';
   } else renderPeople();
+}
+// вкладка «Ключи»: что из ключей и доступов офиса заполнено — только галочки, значения не показываются (assistant/keys.mjs)
+function keysHTML(K) {
+  if (!K) return '<p class="note warn">Не получилось узнать, какие ключи заполнены. Обновите страницу.</p>';
+  const groups = [...new Set(K.rows.map(r => r.group))];
+  const miss = K.rows.filter(r => !r.ok && r.need === 'main');
+  return `<div class="ta-ksum"><span class="ta-st ${K.mainFilled === K.mainTotal ? 'on' : 'inv'}">основные: ${K.mainFilled} из ${K.mainTotal}</span><span class="ta-st">всего: ${K.filled} из ${K.total}</span>${K.at ? `<span class="ta-st">сверено при выкладке ${esc(fmtDate(K.at.slice(0, 10), true))}, ${esc(hhmm(new Date(K.at)))}</span>` : ''}</div>
+    <p class="note">Галочка — ключ заполнен (секрет GitHub, ключ на сервере или ваш ключ из «Кабинета»). Сами ключи здесь не показываются никогда. ${miss.length ? `Не хватает основных: ${miss.map(r => esc(r.name)).join(', ')}.` : 'Все основные ключи на месте.'}${K.known ? '' : ' Список секретов появится после следующей выкладки офиса.'}</p>`
+    + groups.map(g => `<h3 class="eyebrow">${esc(g)}</h3><ul class="ta-keys">${K.rows.filter(r => r.group === g).map(r => `<li class="${r.ok ? 'ok' : ''} ${r.need}">
+      <span class="ck" aria-label="${r.ok ? 'заполнен' : 'нет'}">${r.ok ? '✓' : r.need === 'opt' ? '–' : '✕'}</span>
+      <span><b>${esc(r.name)}</b><small>${esc(r.uses)}${r.need === 'opt' ? ' · по желанию' : ''}</small>${r.warn ? `<small class="warn"> · ${esc(r.warn)}</small>` : ''}</span>
+      <span class="src" title="${esc(r.from)}">${esc(r.ok ? r.from : r.from || 'не заполнен')}</span></li>`).join('')}</ul>`).join('');
 }
 // вкладка «Люди»: руководители, их агенты, ссылки-приглашения
 function renderPeople() {
