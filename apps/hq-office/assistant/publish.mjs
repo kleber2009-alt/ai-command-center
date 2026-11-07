@@ -31,17 +31,23 @@ async function call(fetchFn, method, url, params) {
   if (!r.ok || d.error) throw new Error(d.error?.error_user_msg || d.error?.message || `HTTP ${r.status}`);
   return d;
 }
-// a container is ready when Meta has downloaded and processed the file
-async function ready(fetchFn, url, token, field, { tries = 60, every = 10e3 } = {}) {
-  for (let i = 0; i < tries; i++) {
+// a container is ready when Meta has downloaded and processed the file: first checks every 2 s, then up to every 10 s, 15 min at most
+async function ready(fetchFn, url, token, field, { limit = 15 * 60e3, first = 2e3, every = 10e3, progress } = {}) {
+  const t0 = Date.now();
+  for (let i = 0; ; i++) {
     const d = await call(fetchFn, 'GET', url, { fields:field, access_token:token });
     const s = String(d[field] || '').toUpperCase();
     if (!s || s === 'FINISHED' || s === 'PUBLISHED') return;
     if (s === 'ERROR' || s === 'EXPIRED') throw new Error(`Meta не обработала файл (${s}${d.error_message ? ': ' + d.error_message : ''})`);
-    await sleep(every);
+    if (Date.now() - t0 > limit) throw new Error(`Meta не обработала файл за ${Math.round(limit / 60e3)} мин`);
+    progress?.(Date.now() - t0);
+    await sleep(Math.min(every, first * 2 ** Math.min(i, 4)));
   }
-  throw new Error('Meta не обработала файл за 10 минут');
 }
+// the same wait, with what is going on named for the office: progress(text, ms)
+const say = (wait, text) => ({ ...wait, progress:wait.progress && (ms => wait.progress(text, ms)) });
+// containers of a carousel: all created first, then Meta processes them at once
+const readyAll = (fetchFn, root, ids, token, field, wait) => Promise.all(ids.map(id => ready(fetchFn, `${root}/${id}`, token, field, wait)));
 
 // ссылка на вышедший пост: сразу после публикации Meta иногда отдаёт её не с первого раза — до 3 попыток
 async function permalink(fetchFn, url, token, { linkTries = 3, linkEvery = 3e3 } = {}) {
@@ -66,19 +72,17 @@ export async function publishInstagram({ token, userId = '', caption = '', media
   let id;
   if (video) {
     ({ id } = await call(fetchFn, 'POST', `${root}/${me}/media`, { media_type:'REELS', video_url:video.url, caption, share_to_feed:'true', access_token:token }));
-    await ready(fetchFn, `${root}/${id}`, token, 'status_code', wait);
+    await ready(fetchFn, `${root}/${id}`, token, 'status_code', say(wait, 'Meta обрабатывает видео'));
   } else if (images.length === 1) {
     ({ id } = await call(fetchFn, 'POST', `${root}/${me}/media`, { image_url:images[0].url, caption, access_token:token }));
-    await ready(fetchFn, `${root}/${id}`, token, 'status_code', wait);
+    await ready(fetchFn, `${root}/${id}`, token, 'status_code', say(wait, 'Meta обрабатывает картинку'));
   } else {
     const children = [];
-    for (const m of images.slice(0, 10)) {
-      const c = await call(fetchFn, 'POST', `${root}/${me}/media`, { image_url:m.url, is_carousel_item:'true', access_token:token });
-      await ready(fetchFn, `${root}/${c.id}`, token, 'status_code', wait);
-      children.push(c.id);
-    }
+    for (const m of images.slice(0, 10))
+      children.push((await call(fetchFn, 'POST', `${root}/${me}/media`, { image_url:m.url, is_carousel_item:'true', access_token:token })).id);
+    await readyAll(fetchFn, root, children, token, 'status_code', say(wait, `Meta обрабатывает ${children.length} слайдов`));
     ({ id } = await call(fetchFn, 'POST', `${root}/${me}/media`, { media_type:'CAROUSEL', children:children.join(','), caption, access_token:token }));
-    await ready(fetchFn, `${root}/${id}`, token, 'status_code', wait);
+    await ready(fetchFn, `${root}/${id}`, token, 'status_code', say(wait, 'Meta собирает карусель'));
   }
   const pub = await call(fetchFn, 'POST', `${root}/${me}/media_publish`, { creation_id:id, access_token:token });
   return { id:pub.id, permalink:await permalink(fetchFn, `${root}/${pub.id}`, token, wait) };
@@ -97,26 +101,30 @@ export async function publishThreads({ token, text = '', media = [], fetchFn = f
       const c = await call(fetchFn, 'POST', `${root}/me/threads`, { ...one(m), is_carousel_item:'true', access_token:token });
       children.push(c.id);
     }
-    for (const c of children) await ready(fetchFn, `${root}/${c}`, token, 'status', wait);
+    await readyAll(fetchFn, root, children, token, 'status', say(wait, `Meta обрабатывает ${children.length} слайдов`));
     ({ id } = await call(fetchFn, 'POST', `${root}/me/threads`, { media_type:'CAROUSEL', children:children.join(','), text, access_token:token }));
   } else ({ id } = await call(fetchFn, 'POST', `${root}/me/threads`, { media_type:'TEXT', text, access_token:token }));
-  await ready(fetchFn, `${root}/${id}`, token, 'status', wait);
+  await ready(fetchFn, `${root}/${id}`, token, 'status', say(wait, video ? 'Meta обрабатывает видео' : 'Meta готовит пост'));
   const pub = await call(fetchFn, 'POST', `${root}/me/threads_publish`, { creation_id:id, access_token:token });
   return { id:pub.id, permalink:await permalink(fetchFn, `${root}/${pub.id}`, token, wait) };
 }
 
 /* p: { platforms, caption, threads, media:{ instagram:[…], threads:[…] } } → { instagram:{ok,permalink}|{manual}|{error}, threads:… } */
-export async function publishAll(p, { fetchFn = fetch, k = keys(), base = { instagram:env('HQ_IG_GRAPH_BASE'), threads:env('HQ_THREADS_GRAPH_BASE') }, wait } = {}) {
-  const out = {};
-  for (const pl of p.platforms) {
+// площадки — параллельно: Threads не ждёт, пока Meta обработает видео для Instagram. progress(platform, text, ms) — что сейчас идёт
+export async function publishAll(p, { fetchFn = fetch, k = keys(), base = { instagram:env('HQ_IG_GRAPH_BASE'), threads:env('HQ_THREADS_GRAPH_BASE') }, wait = {}, progress } = {}) {
+  const w = pl => ({ ...wait, progress:progress && ((text, ms) => progress(pl, text, ms)) });
+  const one = async pl => {
     try {
-      if (pl === 'instagram') out.instagram = k.ig ? { ok:true, ...(await publishInstagram({ token:k.ig, userId:k.igUser, caption:p.caption, media:p.media.instagram || [], fetchFn, base:base.instagram, wait })) }
+      if (pl === 'instagram') return k.ig ? { ok:true, ...(await publishInstagram({ token:k.ig, userId:k.igUser, caption:p.caption, media:p.media.instagram || [], fetchFn, base:base.instagram, wait:w(pl) })) }
         : { manual:true, why:'нет ключа Instagram (HQ_IG_ACCESS_TOKEN)' };
-      else if (pl === 'threads') out.threads = k.threads ? { ok:true, ...(await publishThreads({ token:k.threads, text:p.threads || p.caption, media:p.media.threads || [], fetchFn, base:base.threads, wait })) }
+      if (pl === 'threads') return k.threads ? { ok:true, ...(await publishThreads({ token:k.threads, text:p.threads || p.caption, media:p.media.threads || [], fetchFn, base:base.threads, wait:w(pl) })) }
         : { manual:true, why:'нет ключа Threads (HQ_THREADS_ACCESS_TOKEN)' };
-    } catch (e) { out[pl] = { error:String(e.message || e).slice(0, 400) }; }
-  }
-  return out;
+      return { error:'неизвестная площадка' };
+    } catch (e) { return { error:String(e.message || e).slice(0, 400) }; }
+  };
+  const pls = p.platforms.filter(x => x === 'instagram' || x === 'threads');
+  const res = await Promise.all(pls.map(one));
+  return Object.fromEntries(pls.map((pl, i) => [pl, res[i]]));
 }
 
 /* ---------- time ---------- */

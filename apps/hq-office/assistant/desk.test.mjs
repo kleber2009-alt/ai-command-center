@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
+import { publishAll } from './publish.mjs';
 import { startTelegram, wantsFiles, pubReportText } from './tg.mjs';
 
 process.env.HQ_ROUTINES = 'off';
@@ -1020,4 +1021,33 @@ test('restart with a task left in routing: the desk starts and routes it again',
   const t = read();
   assert.notEqual(t.status, 'routing');
   assert.notEqual(t.status, 'error', t.error);
+});
+
+test('публикация: Instagram и Threads — параллельно, офис видит, что Meta обрабатывает файл; прерванный перезапуском выпуск не висит', async () => {
+  const order = [];
+  let igPolls = 0;
+  const fetchFn = async (url, { method }) => {
+    const u = new URL(url), j = d => ({ ok:true, status:200, json:async () => d });
+    if (method === 'POST' && u.pathname.endsWith('/media')) return j({ id:'IGC' });
+    if (method === 'POST' && u.pathname.endsWith('/media_publish')) { order.push('ig'); return j({ id:'IGP' }); }
+    if (method === 'POST' && u.pathname.endsWith('/threads')) return j({ id:'THC' });
+    if (method === 'POST' && u.pathname.endsWith('/threads_publish')) { order.push('th'); return j({ id:'THP' }); }
+    if (u.searchParams.get('fields') === 'permalink') return j({ permalink:'https://x/' + u.pathname.split('/').pop() });
+    if (u.pathname.endsWith('/IGC')) return j({ status_code:++igPolls < 4 ? 'IN_PROGRESS' : 'FINISHED' });
+    return j({ status:'FINISHED' });
+  };
+  const seen = [];
+  const res = await publishAll({ platforms:['instagram', 'threads'], caption:'c', threads:'t', media:{ instagram:[{ url:'https://f/r.mp4', kind:'video', name:'r.mp4' }], threads:[] } },
+    { fetchFn, k:{ ig:'IGtok', threads:'THtok' }, base:{ instagram:'https://g', threads:'https://t' }, wait:{ first:5, every:5 }, progress:(pl, text) => seen.push(pl + ':' + text) });
+  assert.ok(res.instagram.ok && res.threads.ok, JSON.stringify(res));
+  assert.deepEqual(order, ['th', 'ig']);   // Threads не ждёт, пока Meta обработает видео для Instagram
+  assert.ok(seen.includes('instagram:Meta обрабатывает видео'));
+  assert.equal(res.instagram.permalink, 'https://x/IGP');
+  // выпуск, прерванный перезапуском: после старта — ошибка с подсказкой, а не «публикуется» навсегда
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-test-')); dirs.push(dataDir);
+  fs.mkdirSync(path.join(dataDir, 'desk'), { recursive:true });
+  fs.writeFileSync(path.join(dataDir, 'desk', 'publications.json'), JSON.stringify([{ id:'x1', task:'x1', status:'publishing', platforms:['instagram'], at:new Date().toISOString() }]));
+  const d2 = createDesk({ claude:null, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK });
+  const p = d2.publications()[0];
+  assert.equal(p.status, 'failed'); assert.match(p.results.instagram.error, /перезапуск офиса/);
 });

@@ -1321,6 +1321,16 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
   let pubs = []; try { pubs = JSON.parse(fs.readFileSync(PUB_FILE, 'utf8')); } catch {}
   const pubSave = () => { try { fs.writeFileSync(PUB_FILE + '.tmp', JSON.stringify(pubs, null, 1)); fs.renameSync(PUB_FILE + '.tmp', PUB_FILE); } catch (e) { console.error('publications save:', e.message); } };
   const pubOf = t => pubs.find(p => p.task === t.id) || null;
+  // выпуск, прерванный перезапуском офиса, не висит «публикуется» вечно: ошибка с подсказкой (пост мог успеть выйти — сначала профиль)
+  const cut = pubs.filter(x => x.status === 'publishing');
+  for (const p of cut) {
+    p.status = 'failed'; p.publishedAt = new Date().toISOString();
+    p.results = Object.fromEntries((p.platforms || []).map(k => [k, { error:'выпуск прервал перезапуск офиса — проверьте профиль: если поста нет, нажмите «Ещё раз»' }]));
+  }
+  if (cut.length) setImmediate(() => {
+    pubSave();
+    for (const p of cut) { const t = byId(p.task); if (t) { step(t, 'Выпуск прервал перезапуск офиса — проверьте профиль; если поста нет, нажмите «Ещё раз».'); emit(t); } }
+  });
   const mediaFiles = t => (t?.result?.files || []).filter(f => P_IMG.test(f.path) || P_VID.test(f.path));
   function canPublish(t) {
     return Boolean(t.result && ['review', 'done'].includes(t.status) && t.route?.agent !== PLANNER && !t.control && mediaFiles(t).length);
@@ -1426,7 +1436,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     pubSchedule(t, p, at);
   }
   function pubSchedule(t, p, at, nowLead = false) {
-    p.status = 'scheduled'; p.at = at.toISOString(); p.results = null; p.reported = ''; pubSave();
+    p.status = 'scheduled'; p.at = at.toISOString(); p.results = null; p.now = nowLead; pubSave();
     t.question = null; t.status = 'done'; t.doneAt = now(); t.published = false;
     const where = p.platforms.map(x => x === 'instagram' ? 'Instagram' : 'Threads').join(', ');
     step(t, nowLead ? `Публикую сейчас — ${where}.` : `Публикация запланирована: ${fmtMsk(p.at)} МСК — ${where}.`);
@@ -1469,12 +1479,18 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     for (const p of pubs.filter(x => x.status === 'scheduled' && Date.parse(x.at) <= nowMs)) {
       const t = byId(p.task);
       p.status = 'publishing'; pubSave();
-      if (t) { step(t, 'Время выхода — публикую.'); emit(t); }
+      if (t && !p.now) { step(t, 'Время выхода — публикую.'); emit(t); }
       const url = r => signedUrl(path.join(taskDir(r.task), 'v' + r.version, r.path));
       const media = {};
       for (const k of ['instagram', 'threads']) media[k] = (p.media?.[k] || []).map(r => ({ url:url(r), kind:refKind(r), name:r.path.split('/').pop() })).filter(m => m.url);
       let res;
-      try { res = await publishAll({ ...p, media }, pubKeys ? { k:pubKeys(p.by || 'owner') } : {}); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
+      // что идёт у Meta — шагом в офисе, не чаще раза в минуту на площадку: «Instagram: Meta обрабатывает видео — 2 мин»
+      const said = {}, progress = (pl, text, ms) => {
+        if (!t || ms < 30e3 || Date.now() - (said[pl] || 0) < 60e3) return;
+        said[pl] = Date.now();
+        step(t, `${pl === 'instagram' ? 'Instagram' : 'Threads'}: ${text} — ${Math.max(1, Math.round(ms / 60e3))} мин…`); emit(t);
+      };
+      try { res = await publishAll({ ...p, media }, { ...(pubKeys ? { k:pubKeys(p.by || 'owner') } : {}), progress }); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
       p.results = res; p.publishedAt = now();
       const vals = Object.values(res);
       p.status = vals.every(x => x.ok) ? 'published' : vals.some(x => x.error) ? 'failed' : 'manual';
