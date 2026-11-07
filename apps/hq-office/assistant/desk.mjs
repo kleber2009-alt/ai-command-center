@@ -809,7 +809,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   // the office «Нейроворонка»: its agents get the plan of the project, the state of the cabinet and the knowledge of the main office
   // as files in in/ (server.mjs → setContext → cabinet.contextFiles); refreshed every time the task goes to an agent of that office
-  let contextOf = null, runnerKeys = null;   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
+  let contextOf = null, runnerKeys = null;
+  // integrations of the cabinet (integrations.mjs): the keys of the person a task belongs to — env and MCP of that job; publishing keys
+  let jobEnv = null, pubKeys = null;   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
   function attachContext(t) {
     if (!contextOf) return;
     let files = [];
@@ -1333,6 +1335,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       'Напиши подпись, сверь кодовое слово с цепочками ChatPlace, подготовь файлы и предложи время — по скиллу publish-planner.';
     const t = createTask({ text, preset:{ agent:PLANNER, skill:'publish-planner', deliverable:'research', title:`Публикация · ${title}`, why:'Опубликовать готовую работу' } }).task;
     t.pubOf = src.id; t.pubFiles = {};
+    if (src.by) t.by = src.by;   // a head's work is published to the head's own accounts (their integrations)
     const dir = path.join(taskDir(t.id), 'in'), from = path.join(taskDir(src.id), 'v' + src.result.version);
     fs.mkdirSync(dir, { recursive:true });
     for (const f of files) {
@@ -1372,7 +1375,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     if (!ig.length) ig = video ? [video] : [...own.filter(r => P_JPG.test(r.path) && /^media\//.test(r.path)), ...srcRefs.filter(r => P_JPG.test(r.path))].slice(0, 10);
     if (!th.length) th = video ? [video] : srcRefs.filter(r => P_IMG.test(r.path)).slice(0, 20);
     const p = pubOf(t) || { id:t.id, task:t.id, created:now() };
-    Object.assign(p, { source:t.pubOf || '', title:String(j.title || t.route.title).slice(0, 140), platforms:platforms.length ? platforms : ['instagram', 'threads'],
+    Object.assign(p, { by:t.by?.id || '', source:t.pubOf || '', title:String(j.title || t.route.title).slice(0, 140), platforms:platforms.length ? platforms : ['instagram', 'threads'],
       kind:video ? 'reel' : ig.length > 1 || th.length > 1 ? 'carousel' : 'image', caption:String(j.caption || '').slice(0, 2200), threads:String(j.threads || j.caption || '').slice(0, 500),
       code_word:String(j.code_word || '').slice(0, 40), chain:j.chain && typeof j.chain === 'object' ? { found:Boolean(j.chain.found), name:String(j.chain.name || '').slice(0, 120), id:String(j.chain.id || '').slice(0, 60) } : null,
       replaced:j.replaced?.from ? { from:String(j.replaced.from).slice(0, 40), to:String(j.replaced.to || '').slice(0, 40), why:String(j.replaced.why || '').slice(0, 200) } : null,
@@ -1444,7 +1447,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         const media = {};
         for (const k of ['instagram', 'threads']) media[k] = (p.media?.[k] || []).map(r => ({ url:url(r), kind:refKind(r), name:r.path.split('/').pop() })).filter(m => m.url);
         let res;
-        try { res = await publishAll({ ...p, media }); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
+        try { res = await publishAll({ ...p, media }, pubKeys ? { k:pubKeys(p.by || 'owner') } : {}); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
         p.results = res; p.publishedAt = now();
         const vals = Object.values(res);
         p.status = vals.every(x => x.ok) ? 'published' : vals.some(x => x.error) ? 'failed' : 'manual';
@@ -1723,7 +1726,9 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         }
         t.worker = worker; t.workAt = now();
         const rk = runnerKeys ? runnerKeys() : null;
+        const je = jobEnv ? jobEnv(t) : null;
         const extra = { purge:purge.map(x => x.id), heavy:isHeavy(t), ...(rk && Object.keys(rk).length ? { keys:rk } : {}),
+          ...(je?.env && Object.keys(je.env).length ? { env:je.env } : {}), ...(je?.mcp?.length ? { mcp:je.mcp } : {}),
           // the result of a continuation: the runner downloads into out/ only what is missing there — its job folder may be
           // gone (purge, or the runner freed disk space on its own); files that are there stay untouched
           ...(t.result && ['revise', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
@@ -1920,6 +1925,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       catch (e) { return json(res, 400, { error:e.message }); }
     }
     if (M === 'POST' && rest === 'tasks') {
+      if (head && !head.agents?.length) return json(res, 403, { error:'Агентов вам ещё не выдали — владелец добавит их в админ-панели. Пока можно настроить кабинет и интеграции.' });
       const b = await readJson(req);
       if (!String(b.text || '').trim()) return json(res, 400, { error:'Опишите задачу.' });
       if (head && b.agent && !head.agents.includes(b.agent)) return json(res, 403, { error:'Этот агент не в вашем отделе — поставить ему задачу может его руководитель или владелец.' });
@@ -1972,7 +1978,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     return notFound(res);
   }
 
-  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, setJobEnv:fn => { jobEnv = fn; }, setPubKeys:fn => { pubKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view), publishTask, tickPubs, pubFiles, publications:() => pubs,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };
