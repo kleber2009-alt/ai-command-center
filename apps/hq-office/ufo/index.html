@@ -1,0 +1,1014 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тарелка AICEX</title>
+<meta name="description" content="Офис агентов AICEX в стиле летающей тарелки: каждый отдел — отдельный отсек, вместо агентов работают инопланетяне.">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
+<!-- «Тарелка» — четвёртый стиль живого офиса hq2.aicex.club (/ufo/): летающая тарелка снаружи и девять отсеков внутри,
+     каждый — отдельная сцена во весь экран (меню слева, стрелки ← →). Вместо агентов — инопланетяне: экипаж собирается
+     из того же реестра agents.js (комната — поле night, руководители — office.config.js), без сборки и своих данных.
+     Журнал отсеков — только реальные задачи (tasks.js, tasks.auto.js, принятые в офисе); живые задачи — рабочий стол
+     (/api/assistant/desk/tasks у владельца, live.json у гостя). Передачи работ между инопланетянами и телепорт между
+     отсеками — визуализация, а не данные. Поставить задачу из строки внизу может владелец (тот же вход, что в офисе). -->
+<style>
+:root{--g:rgba(10,18,30,.6);--g2:rgba(255,255,255,.05);--ln:rgba(140,255,210,.14);--ln2:rgba(140,255,210,.3);--tx:#eef6f4;--mu:#9fb3bc;
+  --ac:#7cffb2;--ac2:#b58cff;--ok:#7cffb2;--warn:#ffc65c;--bad:#ff7a8a;--bl:#7fe3ff;--bg:#03050b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:Manrope,system-ui,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--bl)}
+#bg{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#0d1830,#03050b)}
+#bg canvas{display:block}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.6) 100%)}
+#fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .24s;z-index:2}
+#loader{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);font:600 15px Unbounded,Manrope,sans-serif;letter-spacing:.4px;transition:opacity .5s}
+#loader.done{opacity:0;pointer-events:none}
+#loader i{width:64px;height:22px;border-radius:50%;background:radial-gradient(ellipse at 50% 35%,#dff,#7aa 45%,#344 70%);box-shadow:0 0 30px var(--ac);animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.glass{background:var(--g);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--ln);box-shadow:0 12px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.07)}
+button{font-family:inherit}
+#menu{position:fixed;left:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:4;max-height:calc(100% - 210px);overflow:auto;scrollbar-width:none}
+#menu::-webkit-scrollbar{display:none}
+#menu button{position:relative;display:flex;align-items:center;gap:11px;width:206px;padding:9px 12px;border-radius:15px;color:var(--tx);font:600 14px Manrope,sans-serif;cursor:pointer;text-align:left;transition:transform .15s,background .2s;flex:none}
+#menu button:hover{transform:translateX(3px);border-color:var(--ln2)}
+#menu button .ic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.07);flex:none}
+#menu button svg{width:18px;height:18px;stroke:#dbfff0;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#menu button small{display:block;font-weight:500;font-size:11.5px;color:var(--mu)}
+#menu button.on{background:linear-gradient(135deg,rgba(124,255,178,.95),rgba(80,220,200,.9));color:#03140c;border-color:transparent}
+#menu button.on small{color:#0b3a26}#menu button.on .ic{background:rgba(0,0,0,.12)}#menu button.on svg{stroke:#03140c}
+#menu button i{position:absolute;right:12px;top:50%;margin-top:-4px;width:8px;height:8px;border-radius:50%}
+#menu button i.w{background:var(--warn);box-shadow:0 0 10px var(--warn);animation:pl 1s infinite}
+@keyframes pl{50%{opacity:.3}}
+#hud{position:fixed;left:16px;top:14px;display:flex;gap:8px;z-index:4;align-items:center}
+.brand{font:600 14px Unbounded,Manrope,sans-serif;padding:10px 14px;border-radius:14px;letter-spacing:.5px}
+.brand span{color:var(--ac)}
+.hb{padding:9px 13px;border-radius:14px;color:var(--tx);font:600 13px Manrope,sans-serif;cursor:pointer;display:flex;gap:8px;align-items:center;white-space:nowrap;text-decoration:none}
+.hb small{font-weight:500;color:var(--mu)}.hb:hover{border-color:var(--ln2)}
+.hb b{background:var(--ac);color:#03140c;border-radius:99px;padding:1px 7px;font-size:12px}
+#right{position:fixed;right:16px;top:14px;display:flex;gap:8px;z-index:5;align-items:center}
+#toasts{position:fixed;right:16px;top:66px;display:flex;flex-direction:column;gap:8px;z-index:6;width:340px}
+.toast{border-radius:16px;padding:12px 14px;cursor:pointer;animation:tin .35s ease-out;display:flex;gap:11px;align-items:flex-start}
+.toast .d{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;box-shadow:0 0 10px currentColor;background:currentColor}
+.toast b{font-size:13.5px;display:block}.toast span{font-size:12px;color:var(--mu)}
+@keyframes tin{from{opacity:0;transform:translateX(30px)}}
+#room{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:3;text-align:center;pointer-events:none;max-width:44vw}
+#room h1{margin:0;font:600 18px Unbounded,Manrope,sans-serif;text-shadow:0 2px 16px rgba(0,0,0,.9)}
+#room div{font-size:12.5px;color:#d6efe8;text-shadow:0 1px 10px #000;margin-top:4px}
+#nav{position:fixed;top:50%;right:16px;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:4}
+#nav button{width:44px;height:44px;border-radius:14px;color:var(--tx);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+#dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(900px,calc(100% - 28px));z-index:4;display:flex;flex-direction:column;gap:8px}
+#proc{border-radius:16px;padding:9px 12px;display:flex;align-items:center;gap:12px;min-height:46px;font-size:13px}
+#pst{display:flex;align-items:center;gap:8px;white-space:nowrap;font-weight:700}
+#pst i{width:9px;height:9px;border-radius:50%;background:#5d6b78}#pst i.on{background:var(--warn);box-shadow:0 0 12px var(--warn);animation:pl 1.4s infinite}
+#jobs{flex:1;display:flex;gap:8px;overflow:hidden;min-width:0}
+.job{position:relative;display:flex;align-items:center;gap:8px;padding:6px 10px 8px;border-radius:11px;background:rgba(255,255,255,.06);white-space:nowrap;overflow:hidden;min-width:0;max-width:100%;cursor:pointer;border:0;color:var(--tx);font:500 12.5px Manrope,sans-serif}
+.job .sp{width:12px;height:12px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:currentColor;animation:spin .8s linear infinite;flex:none}
+.job em{font-style:normal;color:var(--mu)}
+.job:after{content:"";position:absolute;left:0;bottom:0;height:2px;width:40%;background:currentColor;opacity:.8;animation:sl 1.6s ease-in-out infinite}
+.job span{overflow:hidden;text-overflow:ellipsis}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes sl{0%{left:-40%}100%{left:100%}}
+.sbtn{background:rgba(255,255,255,.07);border:0;color:var(--tx);border-radius:10px;padding:7px 10px;font:600 12px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
+.sbtn:hover{background:rgba(255,255,255,.12)}
+#log{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);width:min(900px,calc(100% - 28px));max-height:46vh;overflow:auto;border-radius:18px;padding:10px 14px;z-index:6;display:none}
+#log.on{display:block}
+#log .note{font-size:12px;color:var(--mu);padding:4px 0 8px}
+.ev{display:flex;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07);font-size:13px}
+.ev time{color:var(--mu);font-variant-numeric:tabular-nums;flex:none}.ev .d{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none}
+#bar{border-radius:18px;padding:8px}
+#bar form{display:flex;gap:8px;align-items:flex-end}
+#bar .w{flex:1;display:flex;flex-direction:column;min-width:0}
+#ctx{font:700 11px Manrope,sans-serif;color:var(--ac);letter-spacing:.5px;padding:2px 6px 5px;text-transform:uppercase;display:flex;gap:8px;align-items:center;min-width:0}
+#ctx em{font-style:normal;color:var(--mu);text-transform:none;letter-spacing:0;font-weight:500;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mctx{display:none;text-transform:none;letter-spacing:0;background:rgba(255,255,255,.1);color:var(--tx);border-radius:99px;padding:2px 4px 2px 9px;font-weight:600;cursor:pointer;border:0;font-size:11px}
+#mctx b{margin-left:4px;opacity:.7}
+textarea{resize:none;min-height:44px;max-height:120px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:13px;color:var(--tx);padding:11px 13px;font:15px Manrope,sans-serif;width:100%}
+textarea:focus{outline:none;border-color:var(--ac)}
+.btn{border:0;border-radius:12px;padding:11px 16px;font:700 13.5px Manrope,sans-serif;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.acc{background:linear-gradient(135deg,#7cffb2,#4fd8c8);color:#03140c}.btn.no{background:rgba(255,255,255,.1);color:var(--tx)}
+.btn:disabled{opacity:.5;cursor:default}
+#modal{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(2,4,9,.45)}
+#modal.on{display:flex}
+#win{width:min(780px,calc(100% - 28px));max-height:calc(100% - 60px);border-radius:22px;display:flex;flex-direction:column;animation:win .28s ease-out;background:rgba(8,16,28,.88)}
+@keyframes win{from{opacity:0;transform:translateY(16px) scale(.98)}}
+#wh{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 10px}
+#wh .d{width:10px;height:10px;border-radius:50%;margin-top:6px;box-shadow:0 0 10px currentColor;background:currentColor;flex:none}
+#wh h2{margin:0;font:700 17px Manrope,sans-serif}#wh small{color:var(--mu);font-size:12.5px}
+#wh .x{margin-left:auto;background:rgba(255,255,255,.08);border:0;color:var(--tx);width:34px;height:34px;border-radius:11px;font-size:18px;cursor:pointer;flex:none}
+#wb{padding:2px 20px 18px;overflow:auto;font-size:14px;line-height:1.55}
+.sec{font:700 11px Manrope,sans-serif;letter-spacing:.8px;color:var(--bl);text-transform:uppercase;margin:16px 0 7px}
+.item{background:var(--g2);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:11px 13px;margin-bottom:8px}
+.item p{margin:4px 0 0;font-size:13px;color:#d3e3e0}.item.click{cursor:pointer}.item.click:hover{border-color:var(--ac)}
+.item .meta{font-size:12px;color:var(--mu);display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px;background:rgba(124,255,178,.13);color:#aef7cf}
+.chip.w{background:rgba(255,198,92,.16);color:#ffdc9a}
+.crew{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.crew .item{display:flex;gap:10px;align-items:flex-start;margin:0}
+.crew .item i{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}
+.crew .item b{font-size:13.5px}.crew .item span{display:block;font-size:12px;color:var(--mu)}
+.empty{color:var(--mu);font-size:13.5px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.lbl{font:700 11px Manrope,sans-serif;color:#fff;background:rgba(6,14,24,.66);padding:3px 8px;border-radius:8px;white-space:nowrap;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.08);cursor:pointer}
+.lbl.busy{box-shadow:0 0 0 1.5px var(--warn)}
+.lbl.cap{border-color:rgba(255,214,110,.6)}
+.say{font:600 12.5px Manrope,sans-serif;color:#05110c;background:rgba(220,255,238,.96);padding:7px 11px;border-radius:13px;max-width:240px;box-shadow:0 8px 22px rgba(0,0,0,.35);opacity:0;transition:opacity .3s;pointer-events:none}
+.deck{font:700 12px Manrope,sans-serif;color:var(--tx);background:rgba(6,14,24,.7);border:1px solid var(--ln2);padding:6px 10px;border-radius:11px;white-space:nowrap;cursor:pointer;display:flex;gap:7px;align-items:center}
+.deck:hover{border-color:var(--ac);color:var(--ac)}
+.deck i{width:7px;height:7px;border-radius:50%}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media(max-width:1000px){
+  #menu{top:auto;bottom:168px;transform:none;flex-direction:row;left:8px;right:8px;max-height:none;overflow-x:auto}
+  #menu button{width:auto;padding:7px 9px}#menu button .t{display:none}#menu button i{right:4px;top:6px;margin:0}
+  #toasts{width:calc(100% - 32px);top:110px}#room{top:64px;max-width:calc(100% - 32px)}#room h1{font-size:15px}
+  #right{top:14px}#right .hb small{display:none}#nav{display:none}#ctx em{display:none}
+  .brand{display:none}
+}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="loader"><i></i>Тарелка заходит на посадку…</div>
+<div id="bg"></div><div id="vig"></div><div id="fade"></div>
+<div id="hud"><div class="brand glass">AICEX · <span>ТАРЕЛКА</span></div><a class="glass hb" href="../" title="Вернуться в обычный офис">← Офис</a></div>
+<div id="right"><button class="glass hb" id="crewb">Экипаж <small id="crewn"></small></button><button class="glass hb" id="liveb">Живые задачи <b id="liven">0</b></button></div>
+<div id="toasts"></div>
+<div id="room"><h1 id="rt"></h1><div id="rr"></div></div>
+<nav id="menu" aria-label="Отсеки тарелки"></nav>
+<div id="nav"><button class="glass" id="prev" aria-label="Предыдущий отсек"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button><button class="glass" id="next" aria-label="Следующий отсек"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></div>
+<div id="log" class="glass"></div>
+<div id="dock">
+  <div id="proc" class="glass"><div id="pst"><i id="pdot"></i><span id="ptx">Тарелка ждёт задач</span></div><div id="jobs"></div><button class="sbtn" id="jrnb">Журнал отсека</button><button class="sbtn" id="logb">Эфир</button></div>
+  <div id="bar" class="glass"><form id="f"><div class="w"><div id="ctx"><span id="ctxt">Задача экипажу</span><button type="button" id="mctx"></button><em id="hint">диспетчер сам выберет инопланетянина</em></div><textarea id="inp" rows="1" aria-label="Текст задачи"></textarea></div><button class="btn acc" id="send">Отправить</button></form></div>
+</div>
+<div id="modal"><div id="win" class="glass" role="dialog" aria-modal="true"><div id="wh"></div><div id="wb"></div></div></div>
+
+<!-- данные — те же файлы, что у главного офиса -->
+<script src="../agents.js"></script>
+<script src="/api/assistant/office/patch.js"></script>
+<script src="../office.config.js"></script>
+<script src="../tasks.js"></script>
+<script src="../tasks.auto.js"></script>
+<script src="/api/assistant/desk/history.js"></script>
+
+<script type="module">
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const short = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+const hm = t => new Date(t).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+const fmtDate = d => { const [y, m, dd] = String(d).split('-'); return dd && m ? `${+dd} ${['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][+m - 1]} ${y}` : d; };
+const word = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c; };
+const hash = s => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
+const RM_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ======================= ДАННЫЕ ОФИСА ======================= */
+const AG = window.OFFICE_AGENTS || { list:{}, ids:[] }, CFG = window.OFFICE_CONFIG || { depts:[] };
+const API = '/api/assistant', DESK = API + '/desk';
+const IC = {
+  ufo:'<ellipse cx="12" cy="14" rx="10" ry="3.5"/><path d="M7 12.5a5 5 0 0 1 10 0"/><path d="M8 20l1.5-2.5M16 20l-1.5-2.5M12 21v-3"/>',
+  radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12 18 6"/><circle cx="12" cy="12" r="1"/>',
+  crown:'<path d="M3 18h18M4 18l-1-10 5 4 4-7 4 7 5-4-1 10"/>',
+  megaphone:'<path d="M3 11v3a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8"/>',
+  video:'<path d="m16 13 5.2 3.1a.5.5 0 0 0 .8-.4V8.3a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  chat:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  cpu:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/>',
+  users:'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 2-5 5-5s5 2 5 5"/>',
+};
+// отсеки тарелки = комнаты «Главного офиса» (поле night в agents.js) + мостик (операционный зал) + вид снаружи
+const ROOMS = [
+  { k:'ship',      n:'Тарелка',            t:'Флагман AICEX',               d:'Летающая тарелка офиса — выберите отсек на корпусе или в меню', c:'#7cffb2', ic:'ufo' },
+  { k:'hub',       n:'Мостик',             t:'Командный мостик',            d:'Диспетчер разбирает задачи и раздаёт их экипажу',              c:'#5ee7ff', ic:'radar', ph:'Задача экипажу: диспетчер сам выберет, кому отдать' },
+  { k:'ceo',       n:'Стратегия',          t:'Каюта стратегии и продукта',  d:'Капитан, рынок, финансы, ТЗ и продукты',                         c:'#b58cff', ic:'crown' },
+  { k:'marketing', n:'Маркетинг',          t:'Отсек маркетинга',            d:'Креативы, воронки, лендинги и публикации',                       c:'#ff6fd8', ic:'megaphone' },
+  { k:'studio',    n:'Голостудия',         t:'Голостудия контента',         d:'Сценарии, монтаж, аватар, карусели и расшифровки',               c:'#ffb347', ic:'video' },
+  { k:'analytics', n:'Обсерватория',       t:'Обсерватория аналитики',      d:'Охваты, залёты, конкуренты и аудитория',                         c:'#5ee7ff', ic:'chart' },
+  { k:'sales',     n:'Продажи',            t:'Отсек продаж',                d:'Директ, комментарии, рассылки и сделки',                         c:'#7cffb2', ic:'chat' },
+  { k:'ads',       n:'Реклама Meta',       t:'Отсек рекламы Meta',          d:'Кампании, бюджеты и отчёты',                                     c:'#4da3ff', ic:'target' },
+  { k:'tech',      n:'Машинное',           t:'Машинное отделение',          d:'Продукты, скиллы, балансы и контроль качества',                  c:'#ffd25e', ic:'cpu' },
+  { k:'meet',      n:'Совет легенд',       t:'Зал совета легенд',           d:'Восемь советников за круглым столом — место во главе стола ваше', c:'#ffe08a', ic:'users' },
+];
+const RMK = Object.fromEntries(ROOMS.map(r => [r.k, r]));
+const DEPT_ROOM = { ceo:'ceo', marketing:'marketing', sales:'sales', traffic:'ads', council:'meet' };
+const SKIN = ['#6fbf86', '#5fb3a6', '#8b9cb3', '#7d8fd6', '#9b84d9', '#7fb84f', '#5aa9c2', '#9aa88a', '#b98bc4', '#6f9c7c'];
+
+// экипаж: агенты реестра (без офиса Нейроворонки и без фигуры), руководители отделов, диспетчер
+const CREW = [];
+for (const d of CFG.depts || []) if (d.head) CREW.push({ id:d.head.id, name:d.head.name, role:d.head.title || 'Руководитель', color:'#ffd66e', room:DEPT_ROOM[d.id] || 'hub', dept:d.id, cap:true, tasks:[], out:[], works:[] });
+CREW.push({ id:'orchestrator', name:'Диспетчер', role:'Разбирает каждую задачу и выбирает, кто её сделает', color:'#5ee7ff', room:'hub', dept:'ceo', tasks:['Разбирает новую задачу', 'Подбирает агента и скилл', 'Следит за очередью'], out:[], works:[] });
+for (const id of AG.ids || []) {
+  const a = AG.list[id];
+  if (!a || a.dept === 'neuro' || a.figure === false) continue;
+  const room = RMK[a.night] ? a.night : DEPT_ROOM[a.dept] || 'hub';
+  CREW.push({ id, ...a, room, legend:a.dept === 'council' });
+}
+const CREW_BY = Object.fromEntries(CREW.map(c => [c.id, c]));
+const headOf = dept => CREW.find(c => c.cap && c.dept === dept);
+const crewOf = k => CREW.filter(c => c.room === k);
+
+// реальные задачи: история офиса + задачи, принятые в офисе
+const MANUAL = window.OFFICE_TASKS || [];
+const ALL_TASKS = [...MANUAL, ...[...(window.OFFICE_TASKS_AUTO?.tasks || []), ...(Array.isArray(window.OFFICE_TASKS_DESK) ? window.OFFICE_TASKS_DESK : [])].filter(t => !MANUAL.some(m => m.id === t.id))]
+  .filter(t => t && t.title && t.date).sort((a, b) => b.date.localeCompare(a.date));
+const HIDDEN = new Set(AG.patch?.hiddenTasks || []);
+let OWNER = false;
+const shown = t => OWNER || !HIDDEN.has(t.id);
+const tasksOfAgent = id => ALL_TASKS.filter(t => shown(t) && (t.agents || []).includes(id) || (CREW_BY[id]?.cap && (t.people || []).includes(id) && shown(t)));
+function tasksOfRoom(k) {
+  if (k === 'ship' || k === 'hub') return ALL_TASKS.filter(shown);
+  // и агенты без фигуры (например, «Совет легенд»): их комната — по полю night или отделу
+  const ids = new Set([...crewOf(k).map(c => c.id), ...(AG.ids || []).filter(id => { const a = AG.list[id]; return a && a.dept !== 'neuro' && (a.night === k || (!RMK[a.night] && DEPT_ROOM[a.dept] === k)); })]);
+  const depts = Object.entries(DEPT_ROOM).filter(([, r]) => r === k).map(([d]) => d);
+  return ALL_TASKS.filter(t => shown(t) && ((t.agents || []).some(a => ids.has(a)) || (!t.agents?.length && depts.includes(t.dept))));
+}
+
+/* ======================= ИНТЕРФЕЙС ======================= */
+let room = 'ship', ctxAgent = null, scene3d = null;
+const LIVE = { list:[], owner:false, ok:false };
+const OPEN = ['routing', 'question', 'queued', 'work', 'review', 'paused'];
+const liveAgent = t => typeof t.agent === 'string' ? t.agent : t.agent?.id || t.route?.agent || '';
+const liveTitle = t => t.route?.title || t.title || short(t.text, 70) || 'Новая задача';
+const liveOpen = () => LIVE.list.filter(t => OPEN.includes(t.status));
+const busyRoom = k => liveOpen().some(t => t.status === 'work' && CREW_BY[liveAgent(t)]?.room === k);
+
+function menu() {
+  $('#menu').innerHTML = ROOMS.map((r, i) => `<button class="glass${r.k === room ? ' on' : ''}" data-k="${r.k}" title="${esc(r.t)}"><span class="ic"><svg viewBox="0 0 24 24">${IC[r.ic]}</svg></span><span class="t">${esc(r.n)}<small>${r.k === 'ship' ? 'вид снаружи' : crewOf(r.k).length + ' ' + word(crewOf(r.k).length, 'член экипажа', 'члена экипажа', 'членов экипажа')}</small></span>${busyRoom(r.k) ? '<i class="w"></i>' : ''}</button>`).join('');
+}
+$('#menu').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) go(b.dataset.k); });
+function hud() {
+  const r = RMK[room];
+  $('#rt').textContent = r.t; $('#rr').textContent = r.d;
+  menu();
+  $('#jrnb').textContent = room === 'ship' ? 'Журнал тарелки' : 'Журнал отсека';
+  setCtx();
+}
+function setCtx() {
+  const a = ctxAgent && CREW_BY[ctxAgent];
+  $('#mctx').style.display = a ? 'inline-block' : 'none';
+  if (a) $('#mctx').innerHTML = `${esc(a.name)} <b>×</b>`;
+  $('#ctxt').textContent = a ? 'Задача инопланетянину' : 'Задача экипажу';
+  $('#hint').textContent = !LIVE.owner ? 'ставить задачи может владелец — вход в обычном офисе' : a ? 'уйдёт сразу этому агенту' : 'диспетчер сам выберет инопланетянина';
+  $('#inp').placeholder = a ? `Например: «${short(a.tasks?.[0] || a.role, 60)}»` : RMK[room].ph || 'Опишите задачу — диспетчер разберёт и отдаст нужному отсеку';
+}
+$('#mctx').addEventListener('click', () => { ctxAgent = null; setCtx(); });
+function go(k) {
+  if (!RMK[k] || k === room) return;
+  room = k; hud();
+  scene3d?.focus(k);
+}
+const order = ROOMS.map(r => r.k);
+const step = d => go(order[(order.indexOf(room) + d + order.length) % order.length]);
+$('#prev').onclick = () => step(-1); $('#next').onclick = () => step(1);
+addEventListener('keydown', e => {
+  if (e.target.closest('textarea,input')) return;
+  if (e.key === 'Escape') return closeM();
+  if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1);
+  else if (/^[0-9]$/.test(e.key) && order[+e.key]) go(order[+e.key]);
+});
+
+function toast(title, sub, color = 'var(--ac)', onClick) {
+  const el = document.createElement('div'); el.className = 'toast glass';
+  el.innerHTML = `<i class="d" style="color:${color}"></i><div><b>${esc(title)}</b><span>${esc(sub || '')}</span></div>`;
+  el.onclick = () => { el.remove(); onClick?.(); };
+  $('#toasts').prepend(el);
+  while ($('#toasts').children.length > 3) $('#toasts').lastChild.remove();
+  setTimeout(() => el.remove(), 7000);
+}
+
+/* ---------- окна ---------- */
+function modal(head, body) { $('#wh').innerHTML = head + '<button class="x" aria-label="Закрыть">×</button>'; $('#wb').innerHTML = body; $('#modal').classList.add('on'); $('#wb').scrollTop = 0; }
+function closeM() { $('#modal').classList.remove('on'); $('#log').classList.remove('on'); }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.closest('.x')) closeM(); const a = e.target.closest('[data-agent]'); if (a) openAgent(a.dataset.agent); const g = e.target.closest('[data-go]'); if (g) { closeM(); go(g.dataset.go); } const t = e.target.closest('[data-task]'); if (t) { ctxAgent = t.dataset.task; closeM(); setCtx(); $('#inp').focus(); } });
+const taskItem = t => `<div class="item"><b>${esc(t.title)}</b>${t.summary ? `<p>${esc(short(t.summary, 260))}</p>` : ''}<div class="meta"><span>${esc(fmtDate(t.date))}</span>${t.kind ? `<span>${esc(t.kind)}</span>` : ''}${(t.proof || []).slice(0, 3).map(p => p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(short(p.label || 'ссылка', 40))}</a>` : '').join('')}</div></div>`;
+function openJournal(k = room) {
+  const r = RMK[k], list = tasksOfRoom(k);
+  const crew = crewOf(k);
+  modal(`<i class="d" style="color:${r.c}"></i><div><h2>${esc(k === 'ship' ? 'Журнал тарелки' : 'Журнал · ' + r.t)}</h2><small>Только реальные задачи офиса со ссылками-доказательствами · ${list.length} ${word(list.length, 'задача', 'задачи', 'задач')}</small></div>`,
+    (crew.length ? `<div class="sec">Экипаж отсека</div><div class="crew">${crew.map(c => `<div class="item click" data-agent="${esc(c.id)}"><i style="background:${c.color};box-shadow:0 0 8px ${c.color}"></i><div><b>${esc(c.name)}</b><span>${esc(short(c.role, 70))}</span></div></div>`).join('')}</div>` : '')
+    + `<div class="sec">Сделанные задачи</div>` + (list.length ? list.slice(0, 40).map(taskItem).join('') : '<div class="empty">В истории офиса пока нет задач этого отсека. Поставьте задачу в строке внизу — диспетчер отдаст её экипажу.</div>'));
+}
+$('#jrnb').onclick = () => openJournal();
+function openAgent(id) {
+  const a = CREW_BY[id]; if (!a) return;
+  const r = RMK[a.room], real = tasksOfAgent(id), live = liveOpen().filter(t => liveAgent(t) === id);
+  const outs = (a.out || []).map(x => { const to = x.to === 'you' ? 'вам' : x.to === 'head' ? 'руководителю' : CREW_BY[x.to]?.name || x.to; return `<li>${esc(x.say)} → <b>${esc(to)}</b></li>`; }).join('');
+  modal(`<i class="d" style="color:${a.color}"></i><div><h2>${esc(a.name)}</h2><small>${esc(a.role)} · ${esc(r.t)}</small></div>`,
+    (live.length ? `<div class="sec">Сейчас на рабочем столе</div>${live.map(t => `<div class="item"><span class="chip w">${esc(t.statusText || t.status)}</span><b>${esc(liveTitle(t))}</b></div>`).join('')}` : '')
+    + (a.cap ? `<div class="sec">Команда отдела</div><div class="crew">${CREW.filter(c => !c.cap && c.id !== 'orchestrator' && (c.dept === a.dept && !c.control || c.control === a.id)).map(c => `<div class="item click" data-agent="${esc(c.id)}"><i style="background:${c.color};box-shadow:0 0 8px ${c.color}"></i><div><b>${esc(c.name)}</b><span>${esc(short(c.role, 70))}</span></div></div>`).join('') || '<div class="empty">—</div>'}</div>`
+      : `<div class="sec">Чем занят на борту</div><div class="item">${a.now ? `<b>${esc(a.now)}</b>` : ''}<p>${(a.tasks || []).map(esc).join(' · ') || '—'}</p></div>`)
+    + (outs ? `<div class="sec">Кому носит работу</div><div class="item"><ul style="margin:0;padding-left:18px">${outs}</ul><p style="color:var(--mu);font-size:12px">В 3D это анимация передач: инопланетяне ходят по отсеку и телепортируются в другие.</p></div>` : '')
+    + ((a.works || []).length ? `<div class="sec">Готовые работы</div><div class="item">${a.works.map(w => `<a href="${esc(w[1])}" target="_blank" rel="noopener">${esc(w[0])}</a>`).join(' · ')}</div>` : '')
+    + `<div class="sec">Реальные задачи · ${real.length}</div>` + (real.length ? real.slice(0, 10).map(taskItem).join('') : '<div class="empty">В истории офиса задач этого агента пока нет.</div>')
+    + `<div class="btns">${a.id !== 'orchestrator' && !a.cap ? `<button class="btn acc" data-task="${esc(id)}">Поставить задачу ${esc(a.name)}</button>` : ''}${a.room !== room ? `<button class="btn no" data-go="${esc(a.room)}">Перейти в отсек</button>` : ''}</div>`);
+}
+function openCrew() {
+  modal(`<i class="d" style="color:var(--ac)"></i><div><h2>Экипаж тарелки</h2><small>${CREW.length} ${word(CREW.length, 'инопланетянин', 'инопланетянина', 'инопланетян')} в ${ROOMS.length - 1} отсеках — те же агенты, что в обычном офисе</small></div>`,
+    ROOMS.filter(r => r.k !== 'ship').map(r => `<div class="sec" style="color:${r.c}">${esc(r.t)}</div><div class="crew">${crewOf(r.k).map(c => `<div class="item click" data-agent="${esc(c.id)}"><i style="background:${c.color};box-shadow:0 0 8px ${c.color}"></i><div><b>${esc(c.name)}</b><span>${esc(short(c.role, 70))}</span></div></div>`).join('')}</div>`).join(''));
+}
+$('#crewb').onclick = openCrew;
+$('#crewn').textContent = CREW.length;
+function openLive() {
+  const list = liveOpen();
+  modal(`<i class="d" style="color:var(--warn)"></i><div><h2>Живые задачи рабочего стола</h2><small>${LIVE.ok ? (LIVE.owner ? 'Вы вошли как владелец' : 'Гостю видны название, агент и статус') : 'Рабочий стол недоступен — откройте тарелку на hq2.aicex.club/ufo/'}</small></div>`,
+    (list.length ? list.map(t => { const a = CREW_BY[liveAgent(t)]; return `<div class="item${a ? ' click' : ''}"${a ? ` data-agent="${esc(a.id)}"` : ''}><span class="chip${t.status === 'work' ? ' w' : ''}">${esc(t.statusText || t.status)}</span><b>${esc(liveTitle(t))}</b><div class="meta"><span>${esc(a?.name || t.agent?.name || 'диспетчер')}</span>${a ? `<span>${esc(RMK[a.room].t)}</span>` : ''}</div></div>`; }).join('') : '<div class="empty">Сейчас открытых задач нет — экипаж ждёт.</div>')
+    + `<div class="btns"><a class="btn no" href="../">Рабочий стол в обычном офисе</a></div>`);
+}
+$('#liveb').onclick = openLive;
+
+/* ---------- эфир: передачи работ в 3D (визуализация) ---------- */
+const EV = [];
+function logEv(text, color) {
+  EV.unshift({ t:Date.now(), text, color }); EV.length = Math.min(EV.length, 60);
+  if ($('#log').classList.contains('on')) renderLog();
+}
+function renderLog() {
+  $('#log').innerHTML = `<div class="note">Эфир тарелки — это анимация: инопланетяне носят друг другу работы из реестра агентов. Реальные задачи — в журнале отсека.</div>`
+    + (EV.length ? EV.map(e => `<div class="ev"><time>${hm(e.t)}</time><i class="d" style="background:${e.color}"></i><span>${esc(e.text)}</span></div>`).join('') : '<div class="empty">Пока тихо.</div>');
+}
+$('#logb').onclick = () => { const on = !$('#log').classList.contains('on'); $('#log').classList.toggle('on', on); if (on) renderLog(); };
+
+/* ---------- живые задачи ---------- */
+function procBar() {
+  const list = liveOpen(), work = list.filter(t => t.status === 'work');
+  $('#liven').textContent = list.length;
+  $('#pdot').classList.toggle('on', work.length > 0);
+  $('#ptx').textContent = work.length ? `В работе: ${work.length}` : list.length ? `Открыто задач: ${list.length}` : 'Тарелка ждёт задач';
+  $('#jobs').innerHTML = list.slice(0, 4).map(t => { const a = CREW_BY[liveAgent(t)]; return `<button class="job" data-agent="${esc(a?.id || '')}" style="color:${a?.color || '#9fb3bc'}">${t.status === 'work' ? '<i class="sp"></i>' : ''}<span>${esc(a?.name || 'Диспетчер')}: ${esc(short(liveTitle(t), 46))}</span><em>${esc(t.statusText || '')}</em></button>`; }).join('');
+  menu();
+}
+$('#jobs').addEventListener('click', e => { const b = e.target.closest('[data-agent]'); if (b?.dataset.agent) openAgent(b.dataset.agent); });
+async function liveLoad() {
+  let j = null, owner = false;
+  try {
+    const r = await fetch(DESK + '/tasks', { cache:'no-store' });
+    if (r.ok) { j = await r.json(); owner = true; }
+    else { const p = await fetch(DESK + '/live.json', { cache:'no-store' }); if (p.ok) j = await p.json(); }
+  } catch (e) {}
+  const prev = new Map(LIVE.list.map(t => [t.id, t.status]));
+  LIVE.ok = Boolean(j); LIVE.owner = owner; OWNER = owner;
+  LIVE.list = Array.isArray(j?.tasks) ? j.tasks : [];
+  for (const t of LIVE.list) {
+    const was = prev.get(t.id), a = CREW_BY[liveAgent(t)];
+    if (prev.size && was !== t.status && OPEN.includes(t.status)) toast(`${a?.name || 'Диспетчер'} · ${t.statusText || t.status}`, short(liveTitle(t), 80), a?.color || 'var(--warn)', () => a && openAgent(a.id));
+  }
+  procBar(); setCtx();
+  scene3d?.live(LIVE.list.filter(t => OPEN.includes(t.status)));
+}
+setInterval(liveLoad, 20e3);
+
+/* ---------- постановка задачи ---------- */
+const inp = $('#inp');
+inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(120, inp.scrollHeight) + 'px'; });
+inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#f').requestSubmit(); } });
+$('#f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const text = inp.value.trim(); if (!text) return inp.focus();
+  if (!LIVE.owner) return toast('Задачи ставит владелец', 'Войдите в обычном офисе (кнопка «← Офис») и вернитесь в тарелку — вход общий.', 'var(--warn)', () => { location.href = '../'; });
+  $('#send').disabled = true;
+  let ok = false, j = {};
+  try { const r = await fetch(DESK + '/tasks', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text, agent:ctxAgent || '' }) }); ok = r.ok; j = await r.json().catch(() => ({})); }
+  catch (err) { j = { error:'Нет связи с офисом — проверьте интернет.' }; }
+  $('#send').disabled = false;
+  if (!ok) return toast('Задача не ушла', j.error || 'Попробуйте ещё раз', 'var(--bad)');
+  const who = ctxAgent ? CREW_BY[ctxAgent]?.name : 'Диспетчер';
+  inp.value = ''; inp.style.height = '';
+  toast('Задача на борту', `${who} берёт: ${short(text, 70)}`, 'var(--ac)');
+  scene3d?.beamTask(ctxAgent || 'orchestrator');
+  liveLoad();
+});
+
+/* ======================= 3D ======================= */
+const THREE = await import('three');
+const { EffectComposer } = await import('three/addons/postprocessing/EffectComposer.js');
+const { RenderPass } = await import('three/addons/postprocessing/RenderPass.js');
+const { UnrealBloomPass } = await import('three/addons/postprocessing/UnrealBloomPass.js');
+const { OutputPass } = await import('three/addons/postprocessing/OutputPass.js');
+const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+const { CSS2DRenderer, CSS2DObject } = await import('three/addons/renderers/CSS2DRenderer.js');
+const { RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js');
+
+const PI = Math.PI, D = PI / 180, RND = Math.random;
+const host = $('#bg');
+const rnd = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+rnd.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+rnd.toneMapping = THREE.ACESFilmicToneMapping; rnd.toneMappingExposure = 1.05; rnd.outputColorSpace = THREE.SRGBColorSpace;
+rnd.shadowMap.enabled = true; rnd.shadowMap.type = THREE.PCFSoftShadowMap;
+host.appendChild(rnd.domElement);
+const lr = new CSS2DRenderer(); Object.assign(lr.domElement.style, { position:'absolute', inset:'0', pointerEvents:'none' }); host.appendChild(lr.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#03050b');
+const pm = new THREE.PMREMGenerator(rnd); scene.environment = pm.fromScene(new RoomEnvironment(), .03).texture; scene.environmentIntensity = .6;
+const cam = new THREE.PerspectiveCamera(50, 1, .05, 600);
+const comp = new EffectComposer(rnd); comp.addPass(new RenderPass(scene, cam));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .5, .5, .9); comp.addPass(bloom); comp.addPass(new OutputPass());
+let MOBILE = false;
+function rs() { const w = innerWidth, h = innerHeight; rnd.setSize(w, h); comp.setSize(w, h); lr.setSize(w, h); cam.aspect = w / h; MOBILE = w / h < 1.15; cam.fov = MOBILE ? 64 : 46; cam.updateProjectionMatrix(); }
+addEventListener('resize', rs); rs();
+scene.add(new THREE.HemisphereLight('#cfe9ff', '#1a1430', .5));
+const sun = new THREE.DirectionalLight('#e6f4ff', 1.1); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left:-11, right:11, top:11, bottom:-11, near:1, far:40 }); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
+scene.add(sun, sun.target);
+
+const MC = {};
+const M = (c, o = {}) => { const k = c + JSON.stringify(o); return MC[k] || (MC[k] = new THREE.MeshStandardMaterial(Object.assign({ color:c, roughness:.55, metalness:.1 }, o))); };
+const GL = {}; const glow = (c, op = 1) => GL[c + op] || (GL[c + op] = new THREE.MeshBasicMaterial({ color:c, toneMapped:false, transparent:op < 1, opacity:op, depthWrite:op >= 1 }));
+const sh = o => { o.castShadow = true; o.receiveShadow = true; return o; };
+const B = (w, h, d, m, x, y, z, p, r = 0) => { const o = new THREE.Mesh(r ? new RoundedBoxGeometry(w, h, d, 3, r) : new THREE.BoxGeometry(w, h, d), typeof m === 'string' ? M(m) : m); o.position.set(x, y, z); sh(o); p.add(o); return o; };
+const C = (rt, rb, h, m, x, y, z, p, s = 32) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, s), typeof m === 'string' ? M(m) : m); o.position.set(x, y, z); sh(o); p.add(o); return o; };
+const ringM = (r, w, c, p, y = .012, op = 1) => { const m = new THREE.Mesh(new THREE.RingGeometry(r - w / 2, r + w / 2, 128), glow(c, op)); m.rotation.x = -PI / 2; m.position.y = y; p.add(m); return m; };
+const polar = (r, phi) => [r * Math.sin(phi), -r * Math.cos(phi)];
+function cv(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return { c, g:c.getContext('2d'), t }; }
+function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function wrap(g, text, x, y, maxW, lh, maxLines) {
+  const words = String(text).split(/\s+/); let line = '', n = 0;
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { if (++n >= maxLines) { g.fillText(line + '…', x, y); return y + lh; } g.fillText(line, x, y); y += lh; line = w; } else line = t; }
+  if (line) g.fillText(line, x, y); return y + lh;
+}
+
+/* ---------- текстуры космоса ---------- */
+function space(seed = 0) {
+  const T = cv(4096, 1024), g = T.g;
+  const gr = g.createLinearGradient(0, 0, 0, 1024); gr.addColorStop(0, '#010208'); gr.addColorStop(.6, '#050b22'); gr.addColorStop(1, '#0b1640');
+  g.fillStyle = gr; g.fillRect(0, 0, 4096, 1024);
+  for (let i = 0; i < 14; i++) {
+    const x = RND() * 4096, y = RND() * 700, r = 200 + RND() * 520, c = ['120,80,255', '40,200,220', '255,90,200', '60,120,255'][i % 4];
+    const ng = g.createRadialGradient(x, y, 0, x, y, r); ng.addColorStop(0, `rgba(${c},.22)`); ng.addColorStop(1, `rgba(${c},0)`);
+    g.fillStyle = ng; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  for (let i = 0; i < 2600; i++) { const s = RND(); g.fillStyle = `rgba(${200 + RND() * 55 | 0},${210 + RND() * 45 | 0},255,${.3 + s * .7})`; const z = s > .985 ? 3 : s > .9 ? 2 : 1; g.fillRect(RND() * 4096, RND() * 1024, z, z); }
+  // край планеты внизу
+  const px = 1400 + seed * 900;
+  const pg = g.createRadialGradient(px, 2600, 1700, px, 2600, 1900);
+  pg.addColorStop(0, '#0d3a66'); pg.addColorStop(.86, '#1d6fb0'); pg.addColorStop(.95, 'rgba(120,220,255,.9)'); pg.addColorStop(1, 'rgba(120,220,255,0)');
+  g.fillStyle = pg; g.beginPath(); g.arc(px, 2600, 1900, 0, PI * 2); g.fill();
+  g.globalAlpha = .35; for (let i = 0; i < 40; i++) { g.fillStyle = RND() < .5 ? '#2f8f5a' : '#e8f4ff'; g.beginPath(); g.ellipse(px - 900 + RND() * 1800, 830 + RND() * 220, 40 + RND() * 140, 8 + RND() * 22, 0, 0, PI * 2); g.fill(); }
+  g.globalAlpha = 1;
+  T.t.wrapS = THREE.RepeatWrapping; T.t.needsUpdate = true; return T.t;
+}
+function floorTex(accent) {
+  const T = cv(1024, 1024), g = T.g;
+  const bg = g.createRadialGradient(512, 512, 40, 512, 512, 512); bg.addColorStop(0, '#1a2434'); bg.addColorStop(1, '#070b12');
+  g.fillStyle = bg; g.fillRect(0, 0, 1024, 1024);
+  g.strokeStyle = 'rgba(160,255,220,.06)'; g.lineWidth = 2;
+  const s = 34; for (let y = 0; y < 1100; y += s * 1.5) for (let x = 0; x < 1100; x += s * Math.sqrt(3)) {
+    const ox = (Math.round(y / (s * 1.5)) % 2) * s * Math.sqrt(3) / 2; g.beginPath();
+    for (let k = 0; k < 6; k++) { const a = PI / 6 + k * PI / 3; g[k ? 'lineTo' : 'moveTo'](x + ox + Math.cos(a) * s, y + Math.sin(a) * s); } g.closePath(); g.stroke();
+  }
+  g.strokeStyle = accent; g.globalAlpha = .18; g.lineWidth = 3; for (const r of [150, 300, 420]) { g.beginPath(); g.arc(512, 512, r, 0, PI * 2); g.stroke(); }
+  g.globalAlpha = .12; for (let i = 0; i < 24; i++) { const a = i / 24 * PI * 2; g.beginPath(); g.moveTo(512 + Math.cos(a) * 150, 512 + Math.sin(a) * 150); g.lineTo(512 + Math.cos(a) * 500, 512 + Math.sin(a) * 500); g.stroke(); }
+  g.globalAlpha = 1; T.t.needsUpdate = true; return T.t;
+}
+function panelTex() {
+  const T = cv(1024, 256), g = T.g; g.fillStyle = '#121a26'; g.fillRect(0, 0, 1024, 256);
+  for (let x = 0; x < 1024; x += 128) { const s = 22 + RND() * 8; g.fillStyle = `rgb(${s},${s + 8},${s + 18})`; g.fillRect(x + 3, 3, 122, 250); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + 10, 190, 108, 6); g.fillStyle = 'rgba(140,255,220,.06)'; g.fillRect(x + 10, 20, 2, 160); }
+  T.t.wrapS = THREE.RepeatWrapping; T.t.repeat.set(10, 1); T.t.needsUpdate = true; return T.t;
+}
+const SPACE = [space(0), space(1), space(2)], PANEL = panelTex();
+
+// фон: звёзды вокруг всего
+{
+  const n = 3500, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const v = new THREE.Vector3().randomDirection().multiplyScalar(260 + RND() * 140); pos.set([v.x + 130, v.y, v.z], i * 3); }
+  const gq = new THREE.BufferGeometry(); gq.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(gq, new THREE.PointsMaterial({ color:'#dfe9ff', size:1.1, sizeAttenuation:false, toneMapped:false })));
+}
+
+/* ---------- экраны консолей ---------- */
+const SCR = {};
+const SCR_KIND = { code:'code', chart:'chart', doc:'doc', media:'media', flow:'flow', chat:'chat', ads:'chart', calendar:'doc' };
+function screenTex(kind, col) {
+  const key = kind + col; if (SCR[key]) return SCR[key];
+  const T = cv(256, 160); T.kind = kind; T.col = col; T.s = RND() * 9; SCR[key] = T; drawScr(T, 0); return T;
+}
+function drawScr(T, t) {
+  const g = T.g, c = T.col; g.clearRect(0, 0, 256, 160);
+  g.fillStyle = 'rgba(10,40,50,.55)'; rrect(g, 2, 2, 252, 156, 14); g.fill(); g.strokeStyle = c; g.globalAlpha = .9; g.lineWidth = 3; rrect(g, 2, 2, 252, 156, 14); g.stroke(); g.globalAlpha = 1;
+  g.fillStyle = 'rgba(255,255,255,.05)'; for (let y = 8; y < 156; y += 5) g.fillRect(4, y, 248, 1);
+  g.strokeStyle = c; g.fillStyle = c; g.lineWidth = 3;
+  if (T.kind === 'chart') { for (let k = 0; k < 9; k++) { const v = .3 + .6 * Math.abs(Math.sin(t * .7 + k * .9 + T.s)); g.globalAlpha = .75; g.fillRect(18 + k * 25, 140 - v * 110, 16, v * 110); } g.globalAlpha = 1; }
+  else if (T.kind === 'code') { for (let k = 0; k < 9; k++) { const w = 40 + ((k * 37 + (t * 3 | 0) * 13) % 150); g.globalAlpha = .5 + (k % 3) * .2; g.fillRect(18 + (k % 3) * 12, 18 + k * 15, w, 6); } g.globalAlpha = 1; }
+  else if (T.kind === 'media') { g.globalAlpha = .4; g.fillRect(18, 18, 220, 100); g.globalAlpha = 1; g.beginPath(); g.moveTo(112, 48); g.lineTo(144, 68); g.lineTo(112, 88); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.fillStyle = c; const p = (t * .15 + T.s) % 1; g.fillRect(18, 132, 220 * p, 6); }
+  else if (T.kind === 'flow') { const pts = [[40, 50], [128, 30], [216, 60], [80, 120], [180, 120]]; g.globalAlpha = .6; for (const [a, b] of [[0, 1], [1, 2], [0, 3], [3, 4], [2, 4]]) { g.beginPath(); g.moveTo(...pts[a]); g.lineTo(...pts[b]); g.stroke(); } g.globalAlpha = 1; pts.forEach(([x, y], k) => { g.beginPath(); g.arc(x, y, 8 + 3 * Math.sin(t * 2 + k), 0, PI * 2); g.fill(); }); }
+  else if (T.kind === 'chat') { for (let k = 0; k < 4; k++) { const r = k % 2; g.globalAlpha = .55; rrect(g, r ? 90 : 18, 16 + k * 34, 140, 24, 10); g.fill(); } g.globalAlpha = 1; }
+  else { g.beginPath(); for (let k = 0; k <= 30; k++) { const v = Math.sin(t * .9 + k * .45 + T.s) * .25 + Math.sin(k * .2 + T.s * 2 + t * .3) * .15 + .5; k ? g.lineTo(10 + k * 7.8, 150 - v * 120) : g.moveTo(10, 150 - v * 120); } g.stroke(); g.globalAlpha = .45; g.fillRect(18, 16, 70, 6); g.fillRect(18, 28, 44, 5); g.globalAlpha = 1; }
+  T.t.needsUpdate = true;
+}
+
+/* ---------- голопанели на стенах ---------- */
+const HOLOS = [];
+function holoPanel(p, x, y, z, w, h, ry, draw, open) {
+  const T = cv(1024, Math.round(1024 * h / w));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map:T.t, transparent:true, toneMapped:false, side:THREE.DoubleSide, depthWrite:false }));
+  m.position.set(x, y, z); m.rotation.y = ry; m.userData.open = open; p.add(m);
+  const H = { m, T, draw, y0:y, ph:RND() * 6 }; HOLOS.push(H); draw(H); return H;
+}
+function holoBg(T, title, col) {
+  const g = T.g, W = T.c.width, H = T.c.height; g.clearRect(0, 0, W, H);
+  const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, 'rgba(40,140,150,.34)'); gr.addColorStop(1, 'rgba(30,40,110,.26)');
+  g.fillStyle = gr; rrect(g, 10, 10, W - 20, H - 20, 40); g.fill();
+  g.shadowColor = col; g.shadowBlur = 20; g.strokeStyle = col; g.lineWidth = 3; rrect(g, 10, 10, W - 20, H - 20, 40); g.stroke(); g.shadowBlur = 0;
+  g.fillStyle = 'rgba(255,255,255,.05)'; for (let y = 20; y < H; y += 6) g.fillRect(12, y, W - 24, 1);
+  g.fillStyle = col; g.beginPath(); g.arc(62, 72, 9, 0, 7); g.fill();
+  g.font = '700 40px Manrope,Arial'; g.fillStyle = '#eafff6'; g.fillText(title, 86, 86);
+  g.fillStyle = 'rgba(200,255,235,.6)'; g.font = '600 28px Manrope,Arial'; g.textAlign = 'right'; g.fillText('открыть ›', W - 48, 86); g.textAlign = 'left';
+  return g;
+}
+function drawJournal(H, k) {
+  const g = holoBg(H.T, k === 'hub' ? 'Журнал тарелки' : 'Журнал отсека', RMK[k].c), list = tasksOfRoom(k);
+  g.font = '800 92px Manrope,Arial'; g.fillStyle = '#ffffff'; g.fillText(String(list.length), 60, 210);
+  g.font = '600 30px Manrope,Arial'; g.fillStyle = 'rgba(210,255,240,.75)'; g.fillText(word(list.length, 'реальная задача', 'реальные задачи', 'реальных задач') + ' со ссылками', 60 + g.measureText(String(list.length)).width * 0 + 10, 254);
+  g.font = '600 30px Manrope,Arial'; let y = 320;
+  for (const t of list.slice(0, 3)) { g.fillStyle = RMK[k].c; g.fillRect(60, y - 22, 8, 8); g.fillStyle = '#e6fff6'; y = wrap(g, t.title, 84, y, H.T.c.width - 150, 36, 2) + 14; }
+  if (!list.length) { g.fillStyle = 'rgba(210,255,240,.7)'; g.fillText('Задач отсека пока нет — поставьте первую внизу', 60, 320); }
+  H.T.t.needsUpdate = true;
+}
+let LIVE3D = [];
+function drawBoard(H) {
+  const g = holoBg(H.T, 'Живые задачи', '#ffc65c'), list = LIVE3D;
+  g.font = '600 32px Manrope,Arial'; let y = 168;
+  if (!list.length) { g.fillStyle = 'rgba(210,255,240,.7)'; g.fillText(LIVE.ok ? 'Открытых задач нет — экипаж ждёт' : 'Рабочий стол офиса — на hq2.aicex.club/ufo/', 60, y); }
+  for (const t of list.slice(0, 6)) {
+    const a = CREW_BY[liveAgent(t)];
+    g.fillStyle = a?.color || '#9fb3bc'; g.beginPath(); g.arc(70, y - 10, 9, 0, 7); g.fill();
+    g.fillStyle = '#ffffff'; g.fillText(short(liveTitle(t), 42), 94, y);
+    g.fillStyle = 'rgba(210,255,240,.6)'; g.font = '600 24px Manrope,Arial'; g.fillText(`${a?.name || 'Диспетчер'} · ${t.statusText || t.status}`, 94, y + 32); g.font = '600 32px Manrope,Arial';
+    y += 84;
+  }
+  H.T.t.needsUpdate = true;
+}
+
+/* ======================= ОТСЕКИ ======================= */
+const GROUPS = {}, ROOMDATA = {};
+const SPACING = 34;
+const darkM = M('#0e141e', { roughness:.42, metalness:.75 }), hullM = M('#9aa6b8', { roughness:.22, metalness:.92 }), ribM = M('#1c2533', { roughness:.35, metalness:.85 });
+const wallM = new THREE.MeshStandardMaterial({ color:'#ffffff', map:PANEL, roughness:.5, metalness:.6, side:THREE.BackSide });
+
+function shell(k, i) {
+  const r = RMK[k], g = new THREE.Group(); g.position.x = i * SPACING; scene.add(g); GROUPS[k] = g; g.visible = false;
+  const RW = 8.8;
+  const f = new THREE.Mesh(new THREE.CircleGeometry(RW + .2, 96), new THREE.MeshStandardMaterial({ map:floorTex(r.c), roughness:.32, metalness:.55 }));
+  f.rotation.x = -PI / 2; f.receiveShadow = true; g.add(f);
+  ringM(RW - .1, .07, r.c, g); ringM(2.1, .04, r.c, g, .012, .6);
+  // стена: 250° сзади и по бокам, спереди открыто к камере
+  // у CylinderGeometry угол 0 смотрит на +z (к камере), задняя стена — угол PI
+  const th = 250 * D;
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(RW, RW, 4.8, 120, 1, true, PI - th / 2, th), wallM);
+  wall.position.y = 2.4; wall.receiveShadow = true; g.add(wall);
+  // панорамное окно в космос сзади
+  const win = new THREE.Mesh(new THREE.CylinderGeometry(RW - .05, RW - .05, 2.3, 96, 1, true, PI - 62 * D, 124 * D),
+    new THREE.MeshBasicMaterial({ map:SPACE[i % 3], side:THREE.BackSide, toneMapped:false, color:'#d6e4ff' }));
+  win.material.map = SPACE[i % 3].clone(); win.material.map.needsUpdate = true; win.material.map.repeat.set(.42, 1); win.material.map.offset.x = (i * .17) % 1;
+  win.position.y = 2.55; g.add(win);
+  ringM(RW - .02, .001, r.c, g);
+  // рёбра каркаса и светящиеся швы
+  for (let a = -110; a <= 110; a += 20) {
+    const [x, z] = polar(RW - .15, a * D), rib = B(.22, 4.8, .26, ribM, x, 2.4, z, g); rib.rotation.y = -a * D;
+    const [sx, sz] = polar(RW - .29, a * D), seam = B(.03, 4.2, .03, glow(r.c, .8), sx, 2.4, sz, g); seam.rotation.y = -a * D;
+  }
+  // световые полосы вдоль стены: дуга тора начинается с угла 0, группа поворачивает её на заднюю часть
+  for (const y of [1.36, 3.72]) {
+    const hold = new THREE.Group(); hold.position.y = y; hold.rotation.y = PI / 2 + th / 2; g.add(hold);
+    const t = new THREE.Mesh(new THREE.TorusGeometry(RW - .2, .05, 8, 160, th), glow(r.c, .9)); t.rotation.x = PI / 2; hold.add(t);
+  }
+  // потолочные кольца-светильники
+  // телепорт-площадка
+  const [px, pz] = polar(6.4, 125 * D), pad = new THREE.Group(); pad.position.set(px, 0, pz); g.add(pad);
+  C(.78, .86, .1, darkM, 0, .05, 0, pad, 48); ringM(.7, .05, r.c, pad, .105); ringM(.42, .03, r.c, pad, .106, .8);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.62, .7, 3.4, 40, 1, true), new THREE.MeshBasicMaterial({ color:r.c, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false, toneMapped:false, blending:THREE.AdditiveBlending }));
+  beam.position.y = 1.75; pad.add(beam);
+  // свет: одинаковое число источников в каждом отсеке — шейдеры не пересобираются при переходе
+  const l1 = new THREE.PointLight(r.c, 11, 16, 1.6); l1.position.set(0, 3.6, -1); g.add(l1);
+  const l2 = new THREE.PointLight('#cfe6ff', 8, 14, 1.6); l2.position.set(-5, 3.2, 2); g.add(l2);
+  const l3 = new THREE.PointLight('#ffffff', 6, 14, 1.6); l3.position.set(5, 3.2, 2); g.add(l3);
+  ROOMDATA[k] = { g, pad, beam, cx:i * SPACING, anim:[], light:l1 };
+  return g;
+}
+
+/* ---------- центральные голограммы отсеков ---------- */
+function centerpiece(k) {
+  const R = ROOMDATA[k], g = R.g, c = RMK[k].c, A = R.anim;
+  const base = (rad = 1.2) => { C(rad, rad + .15, .32, darkM, 0, .16, 0, g, 64); ringM(rad - .05, .04, c, g, .325); };
+  const wire = (geo, op = .55) => new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color:c, wireframe:true, transparent:true, opacity:op, toneMapped:false }));
+  if (k === 'hub') {
+    base(1.3); const core = new THREE.Mesh(new THREE.SphereGeometry(.85, 48, 32), M('#0b2b4a', { emissive:'#0e5f8f', emissiveIntensity:.8, roughness:.4 })); core.position.y = 1.9; g.add(core);
+    const w = wire(new THREE.IcosahedronGeometry(1.05, 3), .4); w.position.y = 1.9; g.add(w);
+    const o1 = new THREE.Mesh(new THREE.TorusGeometry(1.5, .02, 8, 160), glow(c)); o1.position.y = 1.9; o1.rotation.x = PI / 2.4; g.add(o1);
+    const o2 = new THREE.Mesh(new THREE.TorusGeometry(1.75, .015, 8, 160), glow('#ffc65c', .8)); o2.position.y = 1.9; o2.rotation.x = PI / 1.7; g.add(o2);
+    A.push(t => { w.rotation.y = t * .25; core.rotation.y = -t * .1; o1.rotation.z = t * .4; o2.rotation.z = -t * .3; });
+  } else if (k === 'ceo') {
+    base(1.2); const n = 900, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const arm = i % 3, rr = Math.pow(RND(), .6) * 1.25, a = rr * 3.2 + arm * 2.09 + (RND() - .5) * .5; pos.set([Math.cos(a) * rr, (RND() - .5) * .08, Math.sin(a) * rr], i * 3); }
+    const gq = new THREE.BufferGeometry(); gq.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const gal = new THREE.Points(gq, new THREE.PointsMaterial({ color:c, size:.035, toneMapped:false, transparent:true, opacity:.9 })); gal.position.y = 1.4; g.add(gal);
+    const st = new THREE.Mesh(new THREE.SphereGeometry(.08, 16, 12), glow('#fff3c8')); st.position.y = 1.4; g.add(st);
+    A.push(t => { gal.rotation.y = t * .18; gal.rotation.x = Math.sin(t * .2) * .15; });
+  } else if (k === 'marketing') {
+    base(1.1); const cone = wire(new THREE.CylinderGeometry(1.25, .22, 2, 24, 6, true), .5); cone.position.y = 1.55; g.add(cone);
+    const drops = []; for (let i = 0; i < 18; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 8), glow(i % 3 ? c : '#7cffb2')); d.userData.s = RND(); d.userData.a = RND() * PI * 2; g.add(d); drops.push(d); }
+    A.push(t => { cone.rotation.y = t * .3; for (const d of drops) { const p = (t * .25 + d.userData.s) % 1, rr = 1.2 - p * 1.0, a = d.userData.a + t * .8; d.position.set(Math.cos(a) * rr, 2.55 - p * 2, Math.sin(a) * rr); d.scale.setScalar(1 - p * .5); } });
+  } else if (k === 'studio') {
+    base(1.25); const frames = [];
+    for (let i = 0; i < 6; i++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(.42, .72), new THREE.MeshBasicMaterial({ color:['#ffb347', '#ff6fd8', '#5ee7ff'][i % 3], transparent:true, opacity:.5, side:THREE.DoubleSide, toneMapped:false, depthWrite:false })); g.add(f); frames.push(f); const e = new THREE.LineSegments(new THREE.EdgesGeometry(f.geometry), new THREE.LineBasicMaterial({ color:'#ffffff', transparent:true, opacity:.7 })); f.add(e); }
+    const lens = C(.18, .22, .5, M('#14161c', { metalness:.7, roughness:.3 }), 0, 1.3, 0, g, 24); lens.rotation.x = PI / 2;
+    A.push(t => frames.forEach((f, i) => { const a = t * .35 + i / 6 * PI * 2; f.position.set(Math.cos(a) * 1.05, 1.35 + Math.sin(t + i) * .12, Math.sin(a) * 1.25); f.rotation.y = -a + PI / 2; }));
+  } else if (k === 'analytics') {
+    base(1.25); const bars = [];
+    for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2, b = new THREE.Mesh(new THREE.BoxGeometry(.16, 1, .16), glow(i % 4 ? c : '#ffc65c', .75)); b.position.set(Math.cos(a) * .95, 0, Math.sin(a) * .95); b.userData.ph = i; g.add(b); bars.push(b); }
+    const tube = C(.16, .26, 2.2, hullM, 0, 2.2, 0, g, 24); tube.rotation.z = .5;
+    A.push(t => bars.forEach(b => { const h = .3 + 1.1 * Math.abs(Math.sin(t * .8 + b.userData.ph * .7)); b.scale.y = h; b.position.y = .32 + h / 2; }));
+  } else if (k === 'sales') {
+    base(1.0); C(.18, .22, 1.8, hullM, 0, 1.2, 0, g, 24); const bub = [];
+    for (let i = 0; i < 7; i++) { const b = new THREE.Mesh(new RoundedBoxGeometry(.5, .3, .06, 3, .09), glow(i % 2 ? c : '#5ee7ff', .7)); g.add(b); bub.push(b); }
+    A.push(t => bub.forEach((b, i) => { const a = t * .5 + i / 7 * PI * 2; b.position.set(Math.cos(a) * 1.15, 1.2 + Math.sin(a * 2 + i) * .5, Math.sin(a) * 1.15); b.rotation.y = -a; }));
+  } else if (k === 'ads') {
+    base(1.1); const rings = [];
+    for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(.35 + i * .25, .025, 8, 96), glow(i % 2 ? c : '#ff6fd8')); r.position.y = 1.6; g.add(r); rings.push(r); }
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(.12, 16, 12), glow('#ffffff')); dot.position.y = 1.6; g.add(dot);
+    A.push(t => rings.forEach((r, i) => { r.rotation.x = t * (.4 + i * .15); r.rotation.y = t * (.25 - i * .07); }));
+  } else if (k === 'tech') {
+    base(1.3); const core = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, 2.6, 32), glow(c, .85)); core.position.y = 1.6; g.add(core);
+    const cage = wire(new THREE.CylinderGeometry(.75, .75, 2.8, 16, 6, true), .35); cage.position.y = 1.6; g.add(cage);
+    const rs2 = [0, 1, 2].map(i => { const r = new THREE.Mesh(new THREE.TorusGeometry(1.0, .05, 8, 96), M('#2a3240', { metalness:.9, roughness:.25, emissive:c, emissiveIntensity:.25 })); r.position.y = .8 + i * .8; g.add(r); return r; });
+    A.push(t => { core.material.opacity = .65 + .3 * Math.sin(t * 3); cage.rotation.y = t * .5; rs2.forEach((r, i) => { r.rotation.x = PI / 2 + Math.sin(t * .8 + i) * .3; r.rotation.y = t * (.6 + i * .2); }); R.light.intensity = 16 + 6 * Math.sin(t * 3); });
+  } else if (k === 'meet') {
+    C(2.1, 2.0, .12, M('#151c28', { metalness:.85, roughness:.25 }), 0, .78, 0, g, 96); C(.5, .8, .74, darkM, 0, .37, 0, g, 48);
+    const edge = new THREE.Mesh(new THREE.TorusGeometry(2.1, .03, 8, 160), glow(c)); edge.rotation.x = PI / 2; edge.position.y = .84; g.add(edge);
+    const em = wire(new THREE.IcosahedronGeometry(.45, 1), .7); em.position.y = 1.7; g.add(em);
+    // ваше место во главе стола — спереди, ближе к камере
+    const [cx2, cz2] = polar(2.9, 180 * D), chair = new THREE.Group(); chair.position.set(cx2, 0, cz2); g.add(chair);
+    C(.3, .34, .5, darkM, 0, .25, 0, chair, 32); B(.62, .62, .1, M('#2a2216', { metalness:.7, roughness:.3, emissive:'#ffd66e', emissiveIntensity:.15 }), 0, .8, .3, chair, .05);
+    const yl = document.createElement('div'); yl.className = 'lbl cap'; yl.textContent = 'Ваше место'; const yo = new CSS2DObject(yl); yo.position.y = 1.6; chair.add(yo);
+    A.push(t => { em.rotation.y = t * .4; em.rotation.x = t * .2; em.position.y = 1.7 + Math.sin(t) * .06; });
+  }
+}
+
+/* ======================= ИНОПЛАНЕТЯНЕ ======================= */
+const ALIENS = [], A_BY = {};
+const eyeM = new THREE.MeshPhysicalMaterial({ color:'#04050a', roughness:.06, metalness:.15, clearcoat:1, clearcoatRoughness:.05 });
+function alien(o) {
+  const R = ROOMDATA[o.room], root = new THREE.Group(); R.g.add(root);
+  const hsh = hash(o.id), skinC = o.cap ? '#a48ad8' : SKIN[hsh % SKIN.length];
+  const skin = M(skinC, { roughness:.5, metalness:.08 }), suit = M(new THREE.Color('#121926').lerp(new THREE.Color(o.color), .22).getStyle(), { roughness:.45, metalness:.55 });
+  const trim = glow(o.color), gold = M('#e5c06a', { metalness:.9, roughness:.25 });
+  const cap = (r, l, m, seg = 12) => sh(new THREE.Mesh(new THREE.CapsuleGeometry(r, l, 5, seg), m));
+  const sph = (r, m, s = 20) => sh(new THREE.Mesh(new THREE.SphereGeometry(r, s, Math.round(s * .75)), m));
+  const body = new THREE.Group(); root.add(body);
+  const pel = new THREE.Group(); pel.position.y = .72; body.add(pel);
+  const legs = [];
+  if (o.legend) { const robe = C(.13, .34, .74, M(new THREE.Color('#1a1426').lerp(new THREE.Color(o.color), .3).getStyle(), { roughness:.7 }), 0, -.36, 0, pel, 28); robe.castShadow = true; const hem = new THREE.Mesh(new THREE.TorusGeometry(.33, .015, 6, 40), trim); hem.rotation.x = PI / 2; hem.position.y = -.7; pel.add(hem); }
+  else for (const s of [-1, 1]) {
+    const hip = new THREE.Group(); hip.position.set(s * .07, -.03, 0); pel.add(hip);
+    const th2 = cap(.045, .24, suit); th2.position.y = -.17; hip.add(th2);
+    const kn = new THREE.Group(); kn.position.y = -.35; hip.add(kn);
+    const sn = cap(.038, .25, suit); sn.position.y = -.16; kn.add(sn);
+    const ft = new THREE.Mesh(new RoundedBoxGeometry(.08, .05, .2, 2, .02), M('#1a1f2a', { metalness:.6, roughness:.3 })); ft.position.set(0, -.33, .045); sh(ft); kn.add(ft);
+    legs.push({ hip, kn });
+  }
+  const sp = new THREE.Group(); pel.add(sp);
+  const tor = cap(.12, .2, suit, 16); tor.scale.set(1.12, 1, .75); tor.position.y = .24; sp.add(tor);
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(.125, .012, 6, 32), trim); belt.rotation.x = PI / 2; belt.position.y = .08; belt.scale.set(1.1, .78, 1); sp.add(belt);
+  const emb = new THREE.Mesh(new THREE.CircleGeometry(.038, 24), trim); emb.position.set(.05, .33, .1); sp.add(emb);
+  if (o.cap) for (const s of [-1, 1]) { const pad = sph(.06, gold); pad.scale.set(1.3, .55, 1); pad.position.set(s * .15, .43, 0); sp.add(pad); }
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const shd = new THREE.Group(); shd.position.set(s * .155, .4, 0); sp.add(shd);
+    shd.add(sph(.045, suit, 14));
+    const ua = cap(.032, .18, suit); ua.position.y = -.12; shd.add(ua);
+    const el = new THREE.Group(); el.position.y = -.25; shd.add(el);
+    const fa = cap(.028, .17, skin); fa.position.y = -.1; el.add(fa);
+    const hd = new THREE.Group(); hd.position.y = -.22; el.add(hd);
+    hd.add(sph(.034, skin, 12));
+    for (const f of [-1, 0, 1]) { const fi = cap(.009, .06, skin, 6); fi.position.set(f * .02, -.045, .005); fi.rotation.z = f * .25; hd.add(fi); }
+    arms.push({ shd, el, hd });
+  }
+  const nk = new THREE.Group(); nk.position.y = .47; sp.add(nk);
+  C(.026, .032, .12, skin, 0, .04, 0, nk, 12);
+  const col = new THREE.Mesh(new THREE.TorusGeometry(.05, .013, 6, 24), o.cap ? gold : trim); col.rotation.x = PI / 2; nk.add(col);
+  const hg = new THREE.Group(); hg.position.y = .09; nk.add(hg);
+  const cran = sph(.2, skin, 32); cran.scale.set(1, o.legend ? 1.24 : 1.12, 1.02); cran.position.y = .2; hg.add(cran);
+  const jaw = sph(.12, skin, 24); jaw.scale.set(.8, .85, .85); jaw.position.set(0, .03, .04); hg.add(jaw);
+  const eyes = [];
+  for (const s of [-1, 1]) {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(.066, 24, 16), eyeM); e.scale.set(1.35, .62, .5); e.position.set(s * .082, .115, .158); e.rotation.set(-.15, s * .32, s * -.45); hg.add(e); eyes.push(e);
+    const gl2 = new THREE.Mesh(new THREE.SphereGeometry(.009, 8, 6), glow('#ffffff')); gl2.position.set(s * .07, .135, .19); hg.add(gl2);
+  }
+  for (const s of [-1, 1]) { const n2 = new THREE.Mesh(new THREE.SphereGeometry(.006, 6, 4), M('#2a3a30')); n2.position.set(s * .012, .06, .17); hg.add(n2); }
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(.035, .004, .004), M('#3a2a38')); mouth.position.set(0, .02, .158); hg.add(mouth);
+  const ants = [];
+  if (hsh % 3 !== 0 || o.cap) for (const s of [-1, 1]) {
+    const an = new THREE.Group(); an.position.set(s * .07, .4, -.02); an.rotation.z = -s * .35; hg.add(an);
+    C(.006, .008, .18, M(skinC), 0, .09, 0, an, 6);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(.024, 12, 10), o.cap ? glow('#ffd66e') : trim); tip.position.y = .19; an.add(tip); ants.push(an);
+  }
+  if (o.legend) { const halo = new THREE.Mesh(new THREE.TorusGeometry(.17, .01, 6, 40), glow(o.color)); halo.rotation.x = PI / 2; halo.position.y = .52; hg.add(halo); }
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(.26, 24), new THREE.MeshBasicMaterial({ color:'#000', transparent:true, opacity:.32, depthWrite:false })); shadow.rotation.x = -PI / 2; shadow.position.y = .006; root.add(shadow);
+  const item = new THREE.Mesh(new RoundedBoxGeometry(.13, .13, .13, 2, .03), glow(o.color)); item.visible = false; root.add(item);
+  const sayE = document.createElement('div'); sayE.className = 'say'; const so = new CSS2DObject(sayE); so.position.y = 2.15; root.add(so);
+  const lb = document.createElement('div'); lb.className = 'lbl' + (o.cap ? ' cap' : ''); lb.textContent = o.name; lb.style.pointerEvents = 'auto'; lb.onclick = () => openAgent(o.id);
+  const lo = new CSS2DObject(lb); lo.position.y = 1.9; root.add(lo);
+  root.scale.setScalar(o.cap ? 1.22 : 1.14);
+  const P = { o, root, body, pel, legs, arms, sp, hg, eyes, ants, item, sayE, so, lb, lo, room:o.room, ph:RND() * 6, mode:'sit', plan:[], idleT:6 + RND() * 25, blink:2 + RND() * 4, busy:false, live:null };
+  root.userData.P = P; root.traverse(m => { m.userData.P = P; });
+  ALIENS.push(P); A_BY[o.id] = P; return P;
+}
+function say(P, t, d = 4800) { if (!P) return; P.sayE.textContent = t; P.sayE.style.opacity = 1; clearTimeout(P.st); P.st = setTimeout(() => P.sayE.style.opacity = 0, d); }
+
+/* ---------- места в отсеке ---------- */
+function layout(k, n) {
+  const seats = [];
+  const arc = (count, R, stepDeg, maxDeg, row, off = 0) => {
+    const sp2 = Math.min(stepDeg, count > 1 ? maxDeg * 2 / (count - 1) : 0), angs = [];
+    for (let i = 0; i < count; i++) angs.push((i - (count - 1) / 2) * sp2 + off);
+    angs.sort((a, b) => Math.abs(a) - Math.abs(b));
+    for (const a of angs) seats.push({ R, phi:a * D, row, ring:R + .78 });
+  };
+  if (k === 'meet') { for (let i = 0; i < n; i++) seats.push({ R:2.95, phi:(-118 + (n > 1 ? 236 * i / (n - 1) : 118)) * D, row:0, ring:3.95, stand:true }); seats.sort((a, b) => Math.abs(a.phi) - Math.abs(b.phi)); return seats; }
+  if (k === 'hub') { for (let i = 0; i < n; i++) seats.push({ R:4.3, phi:(38 + i * 24) * D, row:0, ring:5.08 }); return seats; }
+  if (n <= 7) arc(n, 5.9, 24, 76, 0);
+  else { const outer = Math.ceil(n * .56); arc(outer, 6.4, 21, 78, 0); arc(n - outer, 4.05, 28, 66, 1, 0); }
+  return seats;
+}
+function station(k, P, seat) {
+  const R = ROOMDATA[k], g = R.g, col = P.o.color;
+  const [x, z] = polar(seat.R, seat.phi); P.seat = seat; P.home = { x, z, ry:-seat.phi };
+  P.root.position.set(x, 0, z); P.root.rotation.y = -seat.phi;
+  if (seat.stand) { P.mode = 'stand'; return; }
+  const st = new THREE.Group(); st.position.set(x, 0, z); st.rotation.y = -seat.phi; g.add(st);
+  C(.2, .24, .05, darkM, 0, .45, 0, st, 24); C(.04, .04, .4, darkM, 0, .23, 0, st, 10); ringM(.23, .02, col, st, .015, .7);
+  // консоль между инопланетянином и центром отсека
+  const cn = new THREE.Group(); const [cx, cz] = polar(seat.R - .66, seat.phi); cn.position.set(cx, 0, cz); cn.rotation.y = -seat.phi; g.add(cn);
+  B(.95, .07, .42, M('#18202c', { metalness:.8, roughness:.25 }), 0, .78, 0, cn, .03); C(.08, .14, .74, darkM, 0, .37, 0, cn, 16);
+  B(.95, .012, .02, glow(col), 0, .82, .2, cn);
+  const T = screenTex(SCR_KIND[P.o.screen] || 'doc', col);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(.62, .39), new THREE.MeshBasicMaterial({ map:T.t, transparent:true, toneMapped:false, side:THREE.DoubleSide, depthWrite:false, opacity:.92 }));
+  scr.position.set(-.18, 1.12, -.05); scr.rotation.set(-.12, PI + .32, 0); cn.add(scr);
+  const kb = new THREE.Mesh(new THREE.PlaneGeometry(.5, .18), new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:.35, toneMapped:false, depthWrite:false })); kb.rotation.x = -PI / 2; kb.position.set(0, .83, .08); cn.add(kb);
+  P.scr = scr;
+}
+
+/* ---------- маршруты ---------- */
+const CROSS = { meet:150 * D }, PAD_PHI = 125 * D, PAD_R = 6.4;
+function arcPts(out, r, a, b) { const n = Math.max(1, Math.ceil(Math.abs(b - a) / .14)); for (let i = 1; i <= n; i++) out.push(polar(r, a + (b - a) * i / n)); }
+// A, B: { r, phi, ring } — ring:null у телепорт-площадки
+function route(k, A, B2) {
+  const cross = CROSS[k] || 100 * D, pts = [];
+  if (A.ring == null && B2.ring == null) return [polar(B2.r, B2.phi)];
+  if (A.ring == null) { pts.push(polar(B2.ring, cross)); arcPts(pts, B2.ring, cross, B2.phi); pts.push(polar(B2.r, B2.phi)); return pts; }
+  pts.push(polar(A.ring, A.phi));
+  if (B2.ring == null) { arcPts(pts, A.ring, A.phi, cross); pts.push(polar(B2.r, B2.phi)); return pts; }
+  if (Math.abs(A.ring - B2.ring) < .01) arcPts(pts, A.ring, A.phi, B2.phi);
+  else { const c = (A.phi + B2.phi >= 0 ? 1 : -1) * cross; arcPts(pts, A.ring, A.phi, c); pts.push(polar(B2.ring, c)); arcPts(pts, B2.ring, c, B2.phi); }
+  pts.push(polar(B2.r, B2.phi)); return pts;
+}
+const seatNode = P => ({ r:P.seat.R, phi:P.seat.phi, ring:P.seat.ring });
+const behind = P => ({ r:P.seat.ring, phi:P.seat.phi, ring:P.seat.ring });
+const PADN = { r:PAD_R, phi:PAD_PHI, ring:null };
+let WALKERS = 0;
+function targetOf(P, x) {
+  if (x.to === 'you') return A_BY.ilia || headOf('ceo') && A_BY[headOf('ceo').id];
+  if (x.to === 'head') { const h = headOf(P.o.dept); return h && A_BY[h.id]; }
+  return A_BY[x.to];
+}
+function planHandoff(P) {
+  const outs = (P.o.out || []).filter(x => { const T = targetOf(P, x); return T && T !== P && !T.plan.length; });
+  if (!outs.length) return false;
+  const x = outs[(RND() * outs.length) | 0], T = targetOf(P, x);
+  const home = P.room, there = T.room;
+  P.plan = [];
+  if (there === home) P.plan.push({ t:'go', pts:route(home, seatNode(P), behind(T)) });
+  else P.plan.push({ t:'go', pts:route(home, seatNode(P), PADN) }, { t:'out' }, { t:'jump', room:there }, { t:'in' }, { t:'go', pts:route(there, PADN, behind(T)) });
+  P.plan.push({ t:'give', T, x });
+  if (there === home) P.plan.push({ t:'go', pts:route(home, behind(T), seatNode(P)) });
+  else P.plan.push({ t:'go', pts:route(there, behind(T), PADN) }, { t:'out' }, { t:'jump', room:home }, { t:'in' }, { t:'go', pts:route(home, PADN, seatNode(P)) });
+  P.plan.push({ t:'sit' });
+  P.item.visible = true; P.mode = 'walk'; WALKERS++;
+  return true;
+}
+function jump(P, k) {
+  ROOMDATA[k].g.add(P.root); P.room = k;
+  const [x, z] = polar(PAD_R, PAD_PHI); P.root.position.set(x, 0, z);
+  if (k !== room) { P.lb.style.display = 'none'; P.sayE.style.display = 'none'; }
+}
+function beamFx(k) { const b = ROOMDATA[k].beam; b.userData.t = 1.1; }
+
+/* ---------- анимация ---------- */
+const tmpV = new THREE.Vector3();
+function pose(P, t, dt) {
+  const { legs, arms, sp, hg, pel } = P, w = P.mode === 'walk', sit = P.mode === 'sit', stand = P.mode === 'stand' || P.mode === 'give';
+  const sw = w ? Math.sin(P.ph) : 0;
+  pel.position.y = sit ? .52 : .72 + (w ? Math.abs(Math.cos(P.ph)) * .025 : Math.sin(t * 1.6 + P.ph) * .006);
+  legs.forEach((L, i) => {
+    const s = i ? -1 : 1;
+    if (sit) { L.hip.rotation.x = -PI / 2 + .1; L.kn.rotation.x = PI / 2 - .05; }
+    else { L.hip.rotation.x = sw * .55 * s; L.kn.rotation.x = Math.max(0, -sw * s) * .8; }
+  });
+  sp.rotation.x = sit ? .08 : w ? .06 : 0;
+  const typing = sit && !P.plan.length, fast = P.live?.status === 'work' ? 2.2 : 1;
+  arms.forEach((Aa, i) => {
+    const s = i ? -1 : 1;
+    if (typing) { Aa.shd.rotation.x = -.85 + Math.sin(t * 9 * fast + i * 2 + P.ph) * .06; Aa.el.rotation.x = -.75; Aa.shd.rotation.z = s * -.08; }
+    else if (P.mode === 'give' && i === 0) { Aa.shd.rotation.x = -1.25; Aa.el.rotation.x = -.2; Aa.shd.rotation.z = 0; }
+    else if (w && P.item.visible) { Aa.shd.rotation.x = -.7; Aa.el.rotation.x = -.6; Aa.shd.rotation.z = s * .05; }
+    else if (stand) { Aa.shd.rotation.x = Math.sin(t * .8 + P.ph + i) * .08; Aa.el.rotation.x = -.25; Aa.shd.rotation.z = s * .12; }
+    else { Aa.shd.rotation.x = -sw * .5 * s; Aa.el.rotation.x = -.2; Aa.shd.rotation.z = s * .1; }
+  });
+  hg.rotation.y = Math.sin(t * .35 + P.ph) * (typing ? .18 : .35);
+  hg.rotation.x = typing ? .12 + Math.sin(t * .7 + P.ph) * .04 : Math.sin(t * .5 + P.ph) * .05;
+  for (const [i, an] of P.ants.entries()) an.rotation.x = Math.sin(t * 2.2 + P.ph + i) * .18;
+  P.blink -= dt; const bl = P.blink < .12 ? .08 : 1; if (P.blink < 0) P.blink = 2.5 + RND() * 4;
+  for (const e of P.eyes) e.scale.y = .62 * bl;
+  if (P.item.visible) { P.item.position.set(0, 1.0 + Math.sin(t * 3) * .03, .28); P.item.rotation.y = t * 2; }
+}
+function walkTo(P, dt) {
+  const s = P.plan[0], pt = s.pts[0];
+  if (!pt) { P.plan.shift(); return; }
+  const dx = pt[0] - P.root.position.x, dz = pt[1] - P.root.position.z, d = Math.hypot(dx, dz), v = 1.25 * dt;
+  if (d < .02 || d < v) { P.root.position.x = pt[0]; P.root.position.z = pt[1]; s.pts.shift(); if (!s.pts.length) P.plan.shift(); }
+  else { P.root.position.x += dx / d * v; P.root.position.z += dz / d * v; }
+  if (d > .01) { const ry = Math.atan2(dx, dz); let dr = ry - P.root.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); P.root.rotation.y += dr * Math.min(1, dt * 10); }
+  P.ph += dt * 7.5;
+}
+function update(P, t, dt) {
+  const s = P.plan[0];
+  if (s) {
+    if (s.t === 'go') { P.mode = 'walk'; walkTo(P, dt); }
+    else if (s.t === 'out' || s.t === 'in') {
+      P.mode = 'stand'; s.k = (s.k ?? 0) + dt / .9; if (s.k === dt / .9) beamFx(P.room);
+      const k = Math.min(1, s.k), q = s.t === 'out' ? k : 1 - k;
+      P.body.scale.set(1 - q * .75, 1 + q * 1.6, 1 - q * .75); P.body.visible = q < .97;
+      if (k >= 1) { P.plan.shift(); P.body.scale.set(1, 1, 1); P.body.visible = s.t === 'in'; }
+    } else if (s.t === 'jump') { jump(P, s.room); P.plan.shift(); }
+    else if (s.t === 'give') {
+      P.mode = 'give';
+      if (s.k == null) {
+        s.k = 0; const T = s.T; tmpV.copy(T.root.position); P.root.rotation.y = Math.atan2(tmpV.x - P.root.position.x, tmpV.z - P.root.position.z);
+        say(P, `${s.x.say}${s.x.item ? ' — «' + s.x.item + '»' : ''}`);
+        logEv(`${P.o.name} → ${T.o.name}: ${s.x.say}`, P.o.color);
+        if (T.mode === 'sit' || T.mode === 'stand') setTimeout(() => say(T, ['Принял, спасибо', 'Беру в работу', 'Отлично, смотрю', 'Принято'][(RND() * 4) | 0], 2600), 1300);
+      }
+      s.k += dt; if (s.k > 1.1) P.item.visible = false;
+      if (s.k > 2.2) P.plan.shift();
+    } else if (s.t === 'sit') {
+      P.plan.shift(); P.mode = P.seat.stand ? 'stand' : 'sit'; P.root.rotation.y = P.home.ry; P.root.position.set(P.home.x, 0, P.home.z); WALKERS = Math.max(0, WALKERS - 1); P.idleT = 18 + RND() * 40;
+      if (P.room === room) { P.lb.style.display = ''; P.sayE.style.display = ''; }
+    }
+  } else if (!RM_MOTION) {
+    P.idleT -= dt;
+    if (P.idleT < 0) { P.idleT = 10 + RND() * 30; if (WALKERS < 5 && P.live?.status !== 'work' && RND() < .7) planHandoff(P); }
+    if (P.live?.status === 'work' && RND() < dt / 25) say(P, `Делаю: ${short(liveTitle(P.live), 70)}`);
+  }
+  pose(P, t, dt);
+}
+
+/* ======================= ТАРЕЛКА СНАРУЖИ ======================= */
+let SHIP = null;
+function buildShip() {
+  const g = new THREE.Group(); g.position.x = -2 * SPACING; scene.add(g); GROUPS.ship = g; g.visible = false;
+  const ufo = new THREE.Group(); ufo.position.y = 3; g.add(ufo);
+  const prof = [[0, 1.0], [1.6, .98], [3.4, .78], [5.4, .38], [6.6, .06], [6.75, 0], [6.6, -.08], [5.4, -.42], [3.6, -.78], [2.2, -.98], [0, -1.05]].map(([x, y]) => new THREE.Vector2(x, y));
+  const hull = new THREE.Mesh(new THREE.LatheGeometry(prof, 128), hullM); hull.castShadow = true; ufo.add(hull);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(6.72, .06, 8, 200), glow('#7cffb2')); band.rotation.x = PI / 2; ufo.add(band);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(5.5, .03, 8, 200), glow('#5ee7ff', .8)); lip.rotation.x = PI / 2; lip.position.y = .36; ufo.add(lip);
+  for (let i = 0; i < 18; i++) { const a = i / 18 * PI * 2; const w2 = new THREE.Mesh(new THREE.CircleGeometry(.16, 20), glow('#bff8ff', .85)); const r = 4.5; w2.position.set(Math.cos(a) * r, .58, Math.sin(a) * r); w2.lookAt(Math.cos(a) * 9, 1.8, Math.sin(a) * 9); ufo.add(w2); }
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 32, 0, PI * 2, 0, PI / 2), new THREE.MeshPhysicalMaterial({ color:'#9ff7ff', transparent:true, opacity:.28, roughness:.05, metalness:0, clearcoat:1, emissive:'#1aa7a0', emissiveIntensity:.25, side:THREE.DoubleSide, depthWrite:false }));
+  dome.position.y = .95; ufo.add(dome);
+  const core = new THREE.Mesh(new THREE.SphereGeometry(.7, 32, 24), glow('#7cffb2', .7)); core.position.y = 1.5; ufo.add(core);
+  const lights = [];
+  for (let i = 0; i < 32; i++) { const a = i / 32 * PI * 2, l = new THREE.Mesh(new THREE.SphereGeometry(.09, 12, 10), new THREE.MeshBasicMaterial({ color:'#ffffff', toneMapped:false })); l.position.set(Math.cos(a) * 6.45, -.2, Math.sin(a) * 6.45); ufo.add(l); lights.push(l); }
+  const under = new THREE.Mesh(new THREE.TorusGeometry(2.0, .12, 12, 80), glow('#7cffb2')); under.rotation.x = PI / 2; under.position.y = -1.0; ufo.add(under);
+  const beamT = cv(64, 512); { const gg = beamT.g, gr = gg.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, 'rgba(160,255,210,.85)'); gr.addColorStop(1, 'rgba(160,255,210,0)'); gg.fillStyle = gr; gg.fillRect(0, 0, 64, 512); beamT.t.needsUpdate = true; }
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 4.2, 9, 64, 1, true), new THREE.MeshBasicMaterial({ map:beamT.t, transparent:true, opacity:.5, side:THREE.DoubleSide, depthWrite:false, toneMapped:false, blending:THREE.AdditiveBlending }));
+  beam.position.y = -5.5; ufo.add(beam);
+  // планета внизу
+  const pT = cv(2048, 1024); { const gg = pT.g; gg.fillStyle = '#0c3a6e'; gg.fillRect(0, 0, 2048, 1024); for (let i = 0; i < 160; i++) { gg.fillStyle = RND() < .5 ? 'rgba(40,130,80,.8)' : 'rgba(120,100,60,.7)'; gg.beginPath(); gg.ellipse(RND() * 2048, 200 + RND() * 624, 30 + RND() * 160, 20 + RND() * 90, RND() * 3, 0, PI * 2); gg.fill(); } for (let i = 0; i < 220; i++) { gg.fillStyle = 'rgba(255,255,255,.35)'; gg.beginPath(); gg.ellipse(RND() * 2048, RND() * 1024, 40 + RND() * 200, 6 + RND() * 20, 0, 0, PI * 2); gg.fill(); } pT.t.needsUpdate = true; }
+  const planet = new THREE.Mesh(new THREE.SphereGeometry(70, 96, 64), new THREE.MeshStandardMaterial({ map:pT.t, roughness:.85, metalness:0, emissive:'#0a2a50', emissiveIntensity:.35 }));
+  planet.position.set(0, -82, -18); g.add(planet);
+  const atm = new THREE.Mesh(new THREE.SphereGeometry(71.6, 96, 64), new THREE.MeshBasicMaterial({ color:'#5ec8ff', transparent:true, opacity:.16, side:THREE.BackSide, toneMapped:false, depthWrite:false, blending:THREE.AdditiveBlending }));
+  atm.position.copy(planet.position); g.add(atm);
+  const l1 = new THREE.PointLight('#7cffb2', 40, 30, 1.4); l1.position.set(0, -3, 0); g.add(l1);
+  const l2 = new THREE.PointLight('#bfe8ff', 60, 40, 1.2); l2.position.set(-10, 10, 10); g.add(l2);
+  const l3 = new THREE.PointLight('#b58cff', 30, 40, 1.4); l3.position.set(10, 6, -8); g.add(l3);
+  // отсеки на корпусе — кликабельные метки
+  const decks = ROOMS.filter(r => r.k !== 'ship');
+  decks.forEach((r, i) => {
+    const a = i / decks.length * PI * 2, el = document.createElement('div'); el.className = 'deck';
+    el.innerHTML = `<i style="background:${r.c};box-shadow:0 0 8px ${r.c}"></i>${esc(r.n)}`; el.style.pointerEvents = 'auto'; el.onclick = () => go(r.k);
+    const o = new CSS2DObject(el); o.position.set(Math.cos(a) * 7.6, .2 + (i % 2) * .5, Math.sin(a) * 7.6); ufo.add(o);
+  });
+  SHIP = { g, ufo, lights, beam, core, planet, ROOMDATA:null };
+  ROOMDATA.ship = { g, cx:g.position.x, anim:[t => {
+    ufo.position.y = 3 + Math.sin(t * .8) * .25; ufo.rotation.y = t * .12; ufo.rotation.z = Math.sin(t * .5) * .03;
+    lights.forEach((l, i) => l.material.color.setHSL(((i / 32) + t * .15) % 1, .9, .6 + .25 * Math.sin(t * 4 + i)));
+    beam.material.opacity = .32 + .12 * Math.sin(t * 2.2); core.material.opacity = .5 + .3 * Math.sin(t * 1.7); planet.rotation.y = t * .01;
+  }] };
+}
+
+/* ======================= СБОРКА ======================= */
+buildShip();
+ROOMS.filter(r => r.k !== 'ship').forEach((r, i) => { shell(r.k, i); centerpiece(r.k); });
+for (const r of ROOMS) {
+  if (r.k === 'ship') continue;
+  const R = ROOMDATA[r.k], crew = crewOf(r.k), seats = layout(r.k, crew.length);
+  crew.forEach((c, i) => station(r.k, alien(c), seats[i]));
+  const isHub = r.k === 'hub';
+  const [hx, hz] = polar(8.25, 0);
+  R.holo = holoPanel(R.g, hx + (isHub ? -2.2 : 0), 3.35, hz + (isHub ? 1.1 : .25), isHub ? 3.9 : 4.2, isHub ? 1.75 : 1.7, 0, H => drawJournal(H, r.k), 'journal');
+  if (isHub) {
+    R.board = holoPanel(R.g, hx + 2.2, 3.35, hz + 1.1, 3.9, 1.75, 0, drawBoard, 'live');
+    // пульты пилотов мостика — без экипажа, экраны живые
+    for (const [ph, col, kind] of [[-62, '#5ee7ff', 'flow'], [-36, '#7cffb2', 'chart'], [-12, '#ffc65c', 'doc'], [86, '#b58cff', 'code']]) {
+      const cn = new THREE.Group(), [x, z] = polar(5.6, ph * D); cn.position.set(x, 0, z); cn.rotation.y = -ph * D; R.g.add(cn);
+      B(1.1, .07, .45, M('#18202c', { metalness:.8, roughness:.25 }), 0, .82, 0, cn, .03); C(.1, .16, .78, darkM, 0, .39, 0, cn, 16); B(1.1, .012, .02, glow(col), 0, .86, .21, cn);
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(.8, .5), new THREE.MeshBasicMaterial({ map:screenTex(kind, col).t, transparent:true, toneMapped:false, side:THREE.DoubleSide, depthWrite:false }));
+      sc.position.set(0, 1.25, -.12); sc.rotation.set(-.2, PI, 0); cn.add(sc);
+    }
+  }
+}
+for (const P of ALIENS) { P.lb.style.display = 'none'; P.sayE.style.display = 'none'; }
+
+/* ---------- камера и переход между отсеками ---------- */
+const look = new THREE.Vector3(), camPos = new THREE.Vector3();
+const ptr = { x:0, y:0 };
+addEventListener('pointermove', e => { ptr.x = e.clientX / innerWidth * 2 - 1; ptr.y = e.clientY / innerHeight * 2 - 1; });
+function camFor(k, t) {
+  const R = ROOMDATA[k];
+  if (k === 'ship') { const a = t * .06 + .6, d = MOBILE ? 27 : 19; camPos.set(R.cx + Math.sin(a) * d, 6.5 + ptr.y * -1.2, Math.cos(a) * d); look.set(R.cx, 1.5, 0); return; }
+  // телефон: камера ниже и ближе, сцена выше в кадре; палец по экрану поворачивает взгляд вдоль дуги экипажа
+  if (MOBILE) { camPos.set(R.cx + ptr.x * 3.2, 5.0 - ptr.y * .4, 12.2); look.set(R.cx + ptr.x * 2.2, .15, -1.6); return; }
+  camPos.set(R.cx + ptr.x * .8 + Math.sin(t * .1) * .25, 4.1 - ptr.y * .35, 8.9);
+  look.set(R.cx, 1.05, -2.3);
+}
+let curRoom = null;
+function show(k) {
+  if (curRoom) GROUPS[curRoom].visible = false;
+  // подписи рисуются только у текущего отсека — остальные прячем, иначе они висят на экране
+  for (const [gk, gg] of Object.entries(GROUPS)) gg.traverse(o => { if (o.isCSS2DObject) o.element.style.display = gk === k ? '' : 'none'; });
+  GROUPS[k].visible = true; curRoom = k;
+  const cx = ROOMDATA[k].cx; sun.position.set(cx + 5, 13, 7); sun.target.position.set(cx, 0, -1);
+  sun.intensity = k === 'ship' ? 2.2 : 1.1;
+  camFor(k, performance.now() / 1000); cam.position.copy(camPos); cam.lookAt(look);
+}
+function focus(k) {
+  $('#fade').style.opacity = 1;
+  setTimeout(() => { show(k); requestAnimationFrame(() => $('#fade').style.opacity = 0); }, 240);
+}
+
+/* ---------- клики ---------- */
+const ray = new THREE.Raycaster(), mv = new THREE.Vector2();
+function hit(e) {
+  mv.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mv, cam);
+  const hs = ray.intersectObject(GROUPS[curRoom], true);
+  for (const h of hs) { if (h.object.userData.P) return { P:h.object.userData.P }; if (h.object.userData.open) return { open:h.object.userData.open }; if (h.object.material?.wireframe === false && h.distance < 30 && h.object.isMesh && h.object.material.side !== THREE.BackSide) { /* стена или мебель закрывает */ } }
+  return null;
+}
+rnd.domElement.addEventListener('click', e => {
+  const h = hit(e); if (!h) return;
+  if (h.P) openAgent(h.P.o.id);
+  else if (h.open === 'journal') openJournal(curRoom);
+  else if (h.open === 'live') openLive();
+});
+let hovT = 0;
+rnd.domElement.addEventListener('pointermove', e => { const n = performance.now(); if (n - hovT < 90) return; hovT = n; rnd.domElement.style.cursor = hit(e) ? 'pointer' : ''; });
+
+/* ---------- живые задачи в 3D ---------- */
+function live3d(list) {
+  LIVE3D = list;
+  const by = {}; for (const t of list) { const id = liveAgent(t); if (id && !by[id]) by[id] = t; }
+  for (const P of ALIENS) { P.live = by[P.o.id] || null; P.lb.classList.toggle('busy', P.live?.status === 'work'); }
+  for (const r of ROOMS) { const R = ROOMDATA[r.k]; R?.holo?.draw(R.holo); if (R?.board) R.board.draw(R.board); }
+}
+function beamTask(id) {
+  const P = A_BY[id] || A_BY.orchestrator; if (!P) return;
+  beamFx(P.room); say(P, 'Задача получена — разбираю');
+  if (P.room !== room) setTimeout(() => go(P.room), 600);
+}
+scene3d = { focus, live:live3d, beamTask };
+// для проверки без GPU и ручных тестов: __ufo.walk('creatives') — отправить инопланетянина с передачей
+window.__ufo = { aliens:ALIENS, walk:id => A_BY[id] && planHandoff(A_BY[id]) };
+
+/* ---------- цикл ---------- */
+const clock = new THREE.Clock();
+let scrI = 0; const SCRS = () => Object.values(SCR);
+function loop() {
+  const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
+  for (const P of ALIENS) update(P, t, dt);
+  const R = ROOMDATA[curRoom];
+  for (const f of R.anim) f(t);
+  for (const H of HOLOS) H.m.position.y = H.y0 + Math.sin(t * .8 + H.ph) * .03;
+  for (const r of ROOMS) { const b = ROOMDATA[r.k]?.beam; if (b && b.userData.t > 0) { b.userData.t -= dt; b.material.opacity = Math.max(0, Math.sin(b.userData.t / 1.1 * PI)) * .55; } }
+  const ss = SCRS(); if (ss.length) for (let i = 0; i < 2; i++) drawScr(ss[scrI++ % ss.length], t);
+  camFor(curRoom, t); cam.position.lerp(camPos, Math.min(1, dt * 3)); cam.lookAt(look);
+  comp.render(); lr.render(GROUPS[curRoom], cam);
+  requestAnimationFrame(loop);
+}
+show(room); hud(); procBar();
+requestAnimationFrame(loop);
+$('#loader').classList.add('done');
+liveLoad();
+{ const q = new URLSearchParams(location.search).get('room'); if (q && RMK[q]) go(q); }
+</script>
+</body>
+</html>
