@@ -4287,7 +4287,7 @@ const etaText = (e, long = false) => { if (!e?.at) return ''; const ms = Date.pa
   if (e.late || ms < 60e3) return long ? `Дольше обычного — результат скоро, примерно к ${at}` : `≈ скоро · к ${at}`;
   return long ? `Результат — примерно через ${fmtDur(ms)}, к ${at}` : `≈ ${fmtDur(ms)} · к ${at}`; };
 const usageText = u => u && (u.ms || u.cost) ? `${fmtDur(u.ms)}${u.cost ? ' · ' + fmtUsd(u.cost) : ''}` : '';
-const RUNK = { run:'работа', revise:'правка', answer:'после ответа', execute:'действия', qa:'проверка', transcribe:'расшифровка' };
+const RUNK = { run:'работа', revise:'правка', continue:'продолжение', answer:'после ответа', execute:'действия', qa:'проверка', transcribe:'расшифровка' };
 const sizeText = n => n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)} МБ` : `${Math.max(1, Math.round(n / 1e3))} КБ`;
 function ago(iso) {
   const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -4835,7 +4835,7 @@ function renderDeskTask() {
   let acts = '';
   if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}${t.rating ? ` Ваша оценка: ${t.rating.value === 'up' ? 'хорошо' : 'есть замечания'}${t.rating.comment ? ` — «${esc(t.rating.comment)}»` : ''}. Агент учтёт её в следующих задачах.` : ''}</p>`;
   if (t.status === 'review' && !t.control) acts += `<section class="kcard"><h4 style="--g:#3ddc97"><i></i>Оценка агенту</h4><div class="rate"><button type="button" class="up" data-k="rate:up">${ico('<path d="M7 10v11H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7"/>')}Хорошо</button><button type="button" class="down" data-k="rate:down">${ico('<path d="M17 14V3h3v11zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 6.4 3H17"/>')}Есть замечания</button></div><textarea id="kRate" placeholder="Что учесть агенту в следующих задачах (необязательно). Оценка и комментарий станут его уроком — их сохранят при «Принять»"></textarea></section>`;
-  if ((t.status === 'review' || t.status === 'done') && !t.control) acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
+  if ((t.status === 'review' || t.status === 'done') && !t.control) acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Правка или продолжение</h4><textarea id="kRevise" placeholder="Что поменять — или что делать дальше. «Продолжить задачу» без текста: агент в той же ветке доделает оставшиеся шаги из «Что дальше»"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button><button class="btn-go" data-k="continue" title="Агент продолжит эту же задачу в той же сессии: выполнит следующие шаги сценария">Продолжить задачу</button></div><p class="note" id="kMicNote" hidden></p></section>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
   document.querySelectorAll('#kActs [data-k^="rate:"]').forEach(b => b.classList.toggle('on', b.dataset.k === 'rate:' + desk.rate[t.id]));
@@ -4977,6 +4977,9 @@ async function deskAct(k) {
     const o = t.question?.options?.find(x => x.id === k.slice(k.indexOf(':') + 1));
     if (!o) return;
     p = 'answer'; body = { text:o.label };
+  } else if (k === 'continue') {
+    if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
+    body = { text:$('kRevise')?.value.trim() || '', uploads:desk.uploads.filter(u => u.id).map(u => u.id) };
   } else if (k === 'answer' || k === 'revise') {
     const box = $(k === 'answer' ? 'kAnswer' : 'kRevise'), text = box?.value.trim();
     if (!text) { box?.focus(); return deskNote(k === 'answer' ? 'Напишите ответ.' : 'Напишите, что поменять.', true); }
@@ -4993,6 +4996,7 @@ async function deskAct(k) {
   if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось — попробуйте ещё раз.', true);
   if (body.uploads) desk.uploads = [];
   deskUpsert(r.j.task);
+  if (p === 'continue') toast(`«${deskTitle(t)}»: агент продолжает в той же ветке`);
   if (p === 'approve') { closeDesk(); toast(body.publish ? `Принято: «${deskTitle(t)}» — в истории офиса` : `Принято: «${deskTitle(t)}»`); }
 }
 function deskEnter() {
