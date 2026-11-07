@@ -47,6 +47,11 @@ const CREATOR = [
   ['rapid-list', 'Быстрый список', 'длинный список, растёт на экране'], ['clone-versus-reel', 'Клон против клона', 'ты дважды в кадре, X vs Y'],
   ['dual-role-dialogue', 'Диалог с собой', 'новичок и эксперт, 2 записи'], ['origin-story-reel', 'История пути', 'фото по годам, дроп музыки'],
   ['vlog-editor', 'Влог', 'клипы дня или поездки по порядку'],
+  // long videos and clips of Kadrik's «YouTube» and «Клипы» tabs
+  ['educational-youtube-editor', 'Обучающее YouTube-видео', 'длинное 16:9, визуал по смыслу'], ['split-screen-document-plus-animations', 'Документ + ты', 'урок с документом на экране', 'split-screen-document'],
+  ['tips-breakdown-youtube', 'Разбор советов', 'видео-список, глава на пункт'], ['soft-teacher', 'Урок у доски', 'доска, печатные главы'],
+  ['screen-camera-tutorial', 'Экран + камера', 'туториал в раскладках Tella'], ['ear-to-ear-captions', 'Субтитры у ушей', 'горизонтальное видео, слова по бокам от головы'],
+  ['youtube-clips', 'Клипы из YouTube', 'лучшие моменты длинного видео → шортсы'], ['coaching-call-clips', 'Клипы из созвона', 'коучинг, Q&A, Zoom → клипы'],
 ];
 // skills behind the Kadrik styles above (skill:'' there) — so they are not listed a second time as bare skill cards
 const KADRIK_SKILLS = ['montazh-rils', 'montazh-rils-kobalt', 'montazh-rils-scheme', 'montazh-rils-arena', 'montazh-rils-uimotion',
@@ -60,6 +65,7 @@ export const CATS = [
     { id:'reels-herk', label:'Как у Nate Herk', skill:'reels-herk', mock:mock('#111', '#fff', '#ff7a1a'), about:'сплит, тёмные боксовые титры, логотипы-плитки, 3D-скрины, терминал-карточки' },
     { id:'reels-promo-face', label:'Промо-история с лицом', skill:'reels-promo-face', img:'media/montazh-styles/promo.jpg', about:'кинетический хук, поиск с шайбой, светлый iOS-интерфейс, 3D-эмодзи, кодовое слово' },
     ...MONTAZH.map(([id, label, about]) => ({ id:'kadrik-' + id, label, skill:'', img:`media/montazh-styles/${id}.jpg`, about:`${about}; ${KADRIK} «${label}» (${id})` })),
+    { id:'kadrik-youtube', label:'YouTube · длинное', skill:'montazh-dlinnogo-video-youtube', img:'media/montazh-styles/youtube.jpg', about:'16:9, скринкаст в окнах; длинное видео для YouTube в стиле Студии Кадрика' },
     ...CREATOR.map(([skill, label, about, img]) => ({ id:skill, label, skill, img:`media/creator-styles/${img || skill}.jpg`, about:`${about}; стиль Creator Pack «Студии Кадрика», скилл ${skill}` })),
   ] },
   { id:'carousel', name:'Карусели', ask:'В каком стиле сделать карусель?', ratio:'4/5', styles:[
@@ -103,8 +109,8 @@ export function catalog(serverSkills = []) {
     const have = new Set([...c.styles.map(s => s.skill).filter(Boolean), ...(c.id === 'video' ? KADRIK_SKILLS : [])]), extra = [];
     for (const x of serverSkills) {
       const name = String(x.name || '');
-      if (!name || have.has(name) || SKIP.has(name) || !SKILL_RE[c.id].test(name + ' ' + String(x.description || '').slice(0, 120))) continue;
-      if (c.id === 'video' && /long|dlinn|youtube/i.test(name)) continue;
+      const hay = c.id === 'video' ? name : name + ' ' + String(x.description || '').slice(0, 120);  // video: by the name only — skills that just mention reels (competitors, strategies) are not montage
+      if (!name || have.has(name) || SKIP.has(name) || !SKILL_RE[c.id].test(hay)) continue;
       have.add(name);
       extra.push({ id:'skill-' + name, label:name, skill:name, about:String(x.description || '').replace(/\s+/g, ' ').slice(0, 160), skillOnly:true });
     }
