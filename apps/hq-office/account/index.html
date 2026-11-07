@@ -43,7 +43,32 @@ input:focus{outline:none;border-color:var(--acc)}
 .int .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .grp{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:22px 0 10px}
 .list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.list li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
-@media (max-width:520px){h1{font-size:22px}.card{padding:16px}}
+/* стили и аватары */
+.stabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.stabs button{border:1px solid var(--line);background:#181c25;color:var(--ink);padding:7px 12px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer}
+.stabs button.on{background:var(--acc);color:#071018;border-color:var(--acc);font-weight:600}
+.stabs button small{opacity:.7;margin-left:4px}
+.defs{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 14px}.defs span{font-size:12px;padding:4px 10px;border-radius:999px;background:#1a1f2a;color:var(--mute)}.defs b{color:var(--ink);font-weight:600}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:12px}
+.scard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.scard.def{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
+.scard .pv{position:relative;background:#0d1016;overflow:hidden}
+.scard .pv img{width:100%;height:100%;object-fit:contain;display:block}.scard.avc .pv img{object-fit:cover}
+.scard .pv .tag{position:absolute;top:8px;left:8px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--ok);color:#06140d}
+.mk{width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:14px;box-sizing:border-box}
+.mk .t{font-weight:800;font-size:19px;line-height:1.05;letter-spacing:-.01em}.mk.serif .t{font-family:Georgia,'Times New Roman',serif;font-weight:600;font-style:italic}
+.mk .l{height:6px;border-radius:3px;opacity:.55}.mk .l.s{width:60%}.mk .b{align-self:flex-start;font-size:10px;font-weight:700;padding:4px 9px;border-radius:999px}
+.mk.skill{background:repeating-linear-gradient(135deg,#141823 0 10px,#11141c 10px 20px);color:var(--mute);justify-content:center;align-items:center;text-align:center;font:600 12px ui-monospace,monospace}
+.scard .bd{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.scard .bd b{font-size:14px}.scard .bd small{color:var(--mute);font-size:12px;line-height:1.35;flex:1}
+.scard .bd .btn{justify-content:center;padding:7px 10px;font-size:13px}
+.scard.avc .pv{aspect-ratio:3/4}.scard.avc.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.scard.avc .ck{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff;font-weight:700;border:1px solid rgba(255,255,255,.3)}
+.scard.avc.sel .ck{background:var(--acc);color:#071018;border-color:var(--acc)}
+.avbar{position:sticky;bottom:12px;margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#141822;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.avbar .sp{flex:1}
+.sklist{list-style:none;margin:0;padding:0;display:grid;gap:6px}.sklist li{padding:9px 12px;border:1px solid var(--line);border-radius:10px}.sklist code{color:var(--acc);font-size:13px}.sklist small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+@media (max-width:520px){h1{font-size:22px}.card{padding:16px}.sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -132,6 +157,10 @@ function cabinet() {
       : m.agents.length ? `<div class="chips">${m.agents.map(a => `<span title="${esc(a.role)}">${esc(a.name)}</span>`).join('')}</div><p class="mute small">Ставьте им задачи в офисе — они работают на ваших ключах из интеграций ниже.</p>`
       : '<p class="mute small" style="margin:0">Агентов вам пока не выдали — администратор добавит их в админ-панели. Подключите интеграции заранее: как только агенты появятся, они сразу будут работать на ваших ключах.</p>'}</div>
 
+    <h2>Стили и аватары по умолчанию</h2>
+    <p class="mute small" style="margin-top:-6px">Выберите стиль для каждого вида креативов и нажмите «Поставить по умолчанию»: офис будет делать ваши рилсы, карусели, презентации и сайты только в нём и не станет спрашивать стиль. Сменить можно в любой момент — новые задачи пойдут в новом стиле. Аватаров можно отметить несколько: офис берёт их по кругу в случайном порядке.</p>
+    <div id="sty"><p class="mute">Загружаю стили…</p></div>
+
     ${m.role === 'head' && !m.email ? `<h2>Вход без ссылки</h2><div class="card"><p class="mute small" style="margin-top:0">Задайте почту и пароль — заходите в кабинет и офис сами, без новой ссылки-приглашения.</p>
       <form id="pf"><label>Почта</label><input name="email" type="email" required><label>Пароль (от 8 символов)</label><input name="password" type="password" minlength="8" required>
       <div style="margin-top:12px"><button class="btn go" type="submit">Сохранить</button></div><div class="note" id="pn"></div></form></div>` : ''}
@@ -164,6 +193,7 @@ function cabinet() {
     const r = await call('POST', '/integrations', { action:'remove', id:b.dataset.rm });
     if (r.ok) { ME.integrations = r.j.integrations; cabinet(); }
   });
+  renderStyles();
   if ($('pf')) $('pf').onsubmit = async e => {
     e.preventDefault();
     const r = await call('POST', '/account', { action:'password', ...Object.fromEntries(new FormData(e.target)) });
@@ -171,6 +201,85 @@ function cabinet() {
     if (r.ok) setTimeout(load, 800);
   };
 }
+/* ---------- стили и аватары по умолчанию (/api/assistant/prefs, assistant/styles.mjs) ---------- */
+const ST = { tab:'video', data:null, av:null, sel:null, q:'', busy:false };
+// previews of the Studio Kadrik styles are three frames side by side — wide cards show them whole
+const RATIO = { video:'3/2', carousel:'16/9', slides:'16/10', landing:'16/10' };
+async function stylesLoad() {
+  const r = await call('GET', '/prefs');
+  ST.data = r.ok ? r.j : { error:r.j.error || 'Не получилось загрузить стили.' };
+  renderStyles();
+}
+async function avatarsLoad(fresh) {
+  ST.av = { loading:true }; renderStyles();
+  const r = await call('GET', '/prefs/avatars' + (fresh ? '?fresh=1' : ''));
+  ST.av = r.ok ? r.j : { error:r.j.error || 'Не получилось загрузить аватары.' };
+  if (!ST.sel) ST.sel = new Set((ST.data?.prefs?.avatars || []).map(a => a.id));
+  renderStyles();
+}
+function mockHTML(s) {
+  if (s.img) return `<img src="../${esc(s.img)}" alt="" loading="lazy">`;
+  if (!s.mock) return `<div class="mk skill">${esc(s.skill || s.label)}<br>скилл офиса</div>`;
+  const m = s.mock;
+  return `<div class="mk ${m.font === 'serif' ? 'serif' : ''}" style="background:${m.bg};color:${m.ink}"><span class="t">${esc(s.label)}</span><span class="l" style="background:${m.ink}"></span><span class="l s" style="background:${m.ink}"></span><span class="b" style="background:${m.acc};color:${m.bg}">Кнопка</span></div>`;
+}
+function renderStyles() {
+  const box = $('sty'); if (!box) return;
+  const D = ST.data;
+  if (!D) { box.innerHTML = '<p class="mute">Загружаю стили…</p>'; if (!ST.loading) { ST.loading = true; stylesLoad(); } return; }
+  if (D.error) { box.innerHTML = `<p class="note err">${esc(D.error)}</p>`; return; }
+  const P = D.prefs, cats = D.catalog, cur = cats.find(c => c.id === ST.tab);
+  const nameOf = (cat, id) => cats.find(c => c.id === cat)?.styles.find(s => s.id === id)?.label || '';
+  const tabs = [...cats.map(c => [c.id, c.name, c.styles.length]), ['avatars', 'Аватары', (P.avatars || []).length ? `выбрано ${P.avatars.length}` : ''], ['skills', 'Все скиллы', D.skills.length]];
+  let body = '';
+  if (cur) {
+    body = `<div class="sgrid">${cur.styles.map(s => { const def = P.styles[cur.id] === s.id; return `<div class="scard${def ? ' def' : ''}">
+      <div class="pv" style="aspect-ratio:${RATIO[cur.id] || '4/5'}">${mockHTML(s)}${def ? '<span class="tag">По умолчанию</span>' : ''}</div>
+      <div class="bd"><b>${esc(s.label)}</b><small>${esc(String(s.about || '').split(';')[0])}</small>
+        ${def ? `<button class="btn" data-sdef="" data-cat="${cur.id}">Снять «по умолчанию»</button>` : `<button class="btn go" data-sdef="${esc(s.id)}" data-cat="${cur.id}">Поставить по умолчанию</button>`}</div></div>`; }).join('')}</div>`;
+  } else if (ST.tab === 'avatars') {
+    const A = ST.av;
+    if (!A) { ST.av = { loading:true }; setTimeout(() => avatarsLoad()); body = '<p class="mute">Загружаю аватары из HeyGen…</p>'; }
+    else if (A.loading) body = '<p class="mute">Загружаю аватары из HeyGen…</p>';
+    else if (A.error) body = `<p class="note err">${esc(A.error)}</p>`;
+    else {
+      const sel = ST.sel || new Set();
+      body = `<div class="sgrid">${A.looks.map(l => `<div class="scard avc${sel.has(l.id) ? ' sel' : ''}" data-av="${esc(l.id)}" role="button" tabindex="0">
+        <div class="pv">${l.preview ? `<img src="${esc(l.preview)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '<div class="mk skill">без превью</div>'}<span class="ck">${sel.has(l.id) ? '✓' : ''}</span></div>
+        <div class="bd"><b>${esc(l.name || 'Без названия')}</b><small>${esc(l.groupName || '')}${l.orient ? ' · ' + (l.orient === 'portrait' ? 'вертикальный' : l.orient === 'landscape' ? 'горизонтальный' : esc(l.orient)) : ''}</small></div></div>`).join('') || '<p class="mute">В вашем HeyGen пока нет своих аватаров.</p>'}</div>
+        <div class="avbar"><span>Отмечено: <b>${sel.size}</b>${sel.size > 1 ? ' — офис берёт их по кругу в случайном порядке' : sel.size === 1 ? ' — офис всегда берёт этого аватара' : ' — без выбора офис берёт аватара из настроек скилла'}</span><span class="sp"></span>
+          <button class="btn" data-avr>Обновить список</button>${sel.size ? '<button class="btn" data-avc>Снять все</button>' : ''}<button class="btn go" data-avs>Сохранить выбор</button><span class="note" id="avn" style="margin:0"></span></div>`;
+    }
+  } else {
+    const q = ST.q.toLowerCase(), list = D.skills.filter(x => !q || (x.name + ' ' + x.about).toLowerCase().includes(q));
+    body = `<input id="skq" placeholder="Поиск по скиллам" value="${esc(ST.q)}" style="margin-bottom:10px"><ul class="sklist">${list.map(x => `<li><code>${esc(x.name)}</code><small>${esc(x.about)}</small></li>`).join('') || '<li class="mute">Ничего не нашлось.</li>'}</ul>
+      <p class="mute small">Все скиллы исполнителя офиса — агенты выбирают из них сами. Список обновляется, когда исполнитель перезапускается.</p>`;
+  }
+  box.innerHTML = `<div class="defs">${cats.map(c => `<span>${esc(c.name)}: <b>${esc(nameOf(c.id, P.styles[c.id]) || 'спрашивать')}</b></span>`).join('')}<span>Аватары: <b>${(P.avatars || []).length ? P.avatars.map(a => esc(a.name || a.id)).join(', ') : 'из настроек скилла'}</b></span></div>
+    <div class="stabs">${tabs.map(([id, n, c]) => `<button data-stab="${id}" class="${ST.tab === id ? 'on' : ''}">${esc(n)}${c !== '' ? `<small>${esc(c)}</small>` : ''}</button>`).join('')}</div>${body}`;
+  if ($('skq')) { const i = $('skq'); i.oninput = () => { ST.q = i.value; const p = i.selectionStart; renderStyles(); $('skq').focus(); $('skq').setSelectionRange(p, p); }; }
+}
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-stab],[data-sdef],[data-av],[data-avs],[data-avr],[data-avc]');
+  if (!t || !$('sty')?.contains(t)) return;
+  if (t.dataset.stab) { ST.tab = t.dataset.stab; return renderStyles(); }
+  if (t.dataset.sdef !== undefined) {
+    if (ST.busy) return; ST.busy = true; t.disabled = true;
+    const r = await call('POST', '/prefs', { action:'style', cat:t.dataset.cat, id:t.dataset.sdef });
+    ST.busy = false;
+    if (r.ok) ST.data.prefs = r.j.prefs; else alert(r.j.error || 'Не получилось.');
+    return renderStyles();
+  }
+  if (t.dataset.av) { const id = t.dataset.av; ST.sel ||= new Set(); ST.sel.has(id) ? ST.sel.delete(id) : ST.sel.add(id); return renderStyles(); }
+  if (t.dataset.avc !== undefined) { ST.sel = new Set(); return renderStyles(); }
+  if (t.dataset.avr !== undefined) return avatarsLoad(true);
+  if (t.dataset.avs !== undefined) {
+    const r = await call('POST', '/prefs', { action:'avatars', ids:[...(ST.sel || [])] });
+    if (r.ok) { ST.data.prefs = r.j.prefs; renderStyles(); const n = $('avn'); if (n) { n.className = 'note ok'; n.textContent = 'Сохранено.'; } }
+    else { const n = $('avn'); if (n) { n.className = 'note err'; n.textContent = r.j.error || 'Не получилось.'; } }
+  }
+});
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset?.av) { e.preventDefault(); e.target.click(); } });
 if (location.hash === '#register') TAB = 'register';
 load();
 </script>

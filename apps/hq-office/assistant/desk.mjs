@@ -633,6 +633,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (a?.id === ANALYST) reportContext(t, reportPeriod('week', moscowDate()));
       const named = String(r.style_named || '').trim();
       if (t.route.visual && !t.style && named) t.style = pickStyle(t.route.visual, named) || { label:named.slice(0, 120), skill:'', about:'' };
+      // the person's default style of this kind (cabinet → «Стили и аватары») — the office uses it and does not ask
+      const sk = styleCat(t.route);
+      if (sk && !t.style && !named) { const d = prefs?.style(t.by?.id || 'owner', sk, serverSkills); if (d) t.style = { label:d.label, skill:d.skill || '', about:d.about || '', cat:sk, def:true }; }
       if (t.style) applyStyle(t);
       if (r.action === 'ask' && String(r.question || '').trim()) {
         t.status = 'question'; t.question = { from:'dispatcher', text:r.question.trim() };
@@ -671,6 +674,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   /* ---------- the style question ---------- */
 
+  // the kind of creative a route makes: the cabinet keeps a default style for each
+  const styleCat = r => r?.visual || (r?.deliverable === 'slides' ? 'slides' : r?.deliverable === 'landing' ? 'landing' : '');
   const visualOf = r => r.visual === 'video' || r.visual === 'carousel' ? r.visual
     : r.deliverable === 'video' ? 'video' : r.deliverable === 'carousel' && STYLE_SKILL_RE.carousel.test(String(r.skill || '') + ' ' + String(r.title || '')) ? 'carousel' : '';
   function styleOptions(visual) {
@@ -705,7 +710,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     t.route.style = t.style;
     const st = curStage(t);
     if (st && !st.visual) return;
-    if (t.style.skill && !ORCHESTRATORS.has(t.route.skill)) t.route.skill = t.style.skill;
+    if (t.style.skill && t.route.visual && !ORCHESTRATORS.has(t.route.skill)) t.route.skill = t.style.skill;
   }
   function answerTask(t, text, files = []) {
     t.snoozed = '';
@@ -730,7 +735,15 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const s = t.style || t.route?.style, st = curStage(t);
     if (!s || (st && !st.visual)) return '';
     if (s.label === STYLE_ANY.label) return 'Стиль: владелец оставил выбор тебе — выбери подходящий под сценарий и назови его в отчёте.';
-    return `Стиль, который выбрал владелец: «${s.label}»${s.about ? ` (${s.about})` : ''}${s.skill && s.skill !== t.route.skill ? `. Для монтажа вызови скилл ${s.skill} инструментом Skill` : ''}. Делай строго в этом стиле, не спрашивай его заново и не меняй на ротацию.`;
+    return `${s.def ? 'Стиль по умолчанию, который владелец выбрал в кабинете' : 'Стиль, который выбрал владелец'}: «${s.label}»${s.about ? ` (${s.about})` : ''}${s.skill && s.skill !== t.route.skill ? `. Для оформления вызови скилл ${s.skill} инструментом Skill` : ''}. Делай строго в этом стиле, не спрашивай его заново и не меняй на ротацию.`;
+  };
+  // the HeyGen avatar of this task: picked once from the person's avatars in the cabinet (in turn, random order)
+  const needsAvatar = t => t.pipeline?.id === 'reel' || t.route?.skill === 'remake-top-reel'
+    || /аватар|heygen|хейген|двойник|цифров\S* копи/i.test([t.text, t.route?.brief, t.route?.skill, ...t.answers.map(x => x.a)].join(' '));
+  const avatarLine = t => {
+    if (!t.avatar && needsAvatar(t) && prefs) { const a = prefs.nextAvatar(t.by?.id || 'owner'); if (a) { t.avatar = a; step(t, `Аватар по умолчанию: «${a.name || a.id}».`); } }
+    const a = t.avatar;
+    return a ? `Аватар HeyGen для ролика (выбор владельца в кабинете): look_id ${a.id}${a.name ? ` («${a.name}»)` : ''}${a.voice ? `, голос voice_id ${a.voice}` : ', голос — его голос по умолчанию'}. Рендери аватара именно этим образом — вместо образа из настроек скилла; другой не бери.` : '';
   };
 
   function queue(t, pending) {
@@ -779,7 +792,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (p.kind === 'run' && a.id === CC.id) return [`Ты — Claude Code на сервере офиса AICEX: универсальный исполнитель Ильи Палия. Задачу поставил сам Илья через своего цифрового двойника (hq2.aicex.club).`,
       '', `Задача: ${t.route.title}`, `Слова Ильи: «${t.text}»`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
-      styleLine(t),
+      styleLine(t), avatarLine(t),
       `У тебя все скиллы команды (${serverSkills.length || 'список'} в ~/.claude/skills) — сам выбери подходящие и вызывай их инструментом Skill; без подходящего делай сам.`,
       `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t),
       'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', mcpNote(), lessonsNote(CC.id).text, '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
@@ -805,14 +818,14 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       '', `Задача: ${t.route.title}`, `Слова владельца: «${t.text}»`, `ТЗ от диспетчера: ${t.route.brief}`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       t.route.skill ? `Скилл: ${t.route.skill} — вызови его инструментом Skill и работай по нему.` : 'Если среди твоих скиллов есть подходящий — работай по нему.',
-      styleLine(t),
+      styleLine(t), avatarLine(t),
       `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), ...competitorsNote(t), ...pipelineNote(t), mcpNote(), lessonsNote(a.id).text, '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
   }
   // the office «Нейроворонка»: its agents get the plan of the project, the state of the cabinet and the knowledge of the main office
   // as files in in/ (server.mjs → setContext → cabinet.contextFiles); refreshed every time the task goes to an agent of that office
   let contextOf = null, runnerKeys = null;
   // integrations of the cabinet (integrations.mjs): the keys of the person a task belongs to — env and MCP of that job; publishing keys
-  let jobEnv = null, pubKeys = null;   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
+  let jobEnv = null, pubKeys = null, prefs = null;   // prefs — styles.mjs: the person's default styles and avatars (cabinet)   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
   function attachContext(t) {
     if (!contextOf) return;
     let files = [];
@@ -1029,7 +1042,12 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       t.plan = preset.plan || null;
       t.route = { agent:preset.agent, skill:preset.skill || '', title:String(preset.title).slice(0, 90), brief:t.text, deliverable:preset.deliverable || 'other', why:preset.why || 'план контента на день' };
       t.route.visual = preset.deliverable === 'carousel' ? 'carousel' : 'none';
-      if (preset.style) { t.style = (STYLE_MENU[t.route.visual] || []).find(x => x.label === preset.style) || { label:preset.style, skill:'', about:'' }; applyStyle(t); }
+      if (preset.style) {
+        // the person's default style of this kind wins over the preset's (cabinet → «Стили и аватары»)
+        const cat = styleCat(t.route), d = cat && prefs?.style(t.by?.id || 'owner', cat, serverSkills);
+        t.style = d ? { label:d.label, skill:d.skill || '', about:d.about || '', cat, def:true } : (STYLE_MENU[t.route.visual] || []).find(x => x.label === preset.style) || { label:preset.style, skill:'', about:'' };
+        applyStyle(t);
+      }
       queue(t, { kind:'run' });
       step(t, `${preset.why || 'План контента на день'} — «${agentOf(preset.agent)?.name}» взялся сам.`);
       emit(t);
@@ -1994,7 +2012,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     return notFound(res);
   }
 
-  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, setJobEnv:fn => { jobEnv = fn; }, setPubKeys:fn => { pubKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, setJobEnv:fn => { jobEnv = fn; }, setPubKeys:fn => { pubKeys = fn; }, setPrefs:p => { prefs = p; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view), publishTask, tickPubs, pubFiles, publications:() => pubs,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE, runner:runnerView };
