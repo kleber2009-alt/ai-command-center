@@ -487,6 +487,25 @@ test('аналитика контента: отчёт за вчера кажды
   assert.ok(week); assert.match(week.text, /с 02\.11\.2026 по 08\.11\.2026/);
 });
 
+test('кабинет: задача человека идёт на его ключах (env и MCP в claim); без выданных агентов задачу не поставить', async () => {
+  const d = setup();
+  d.desk.setJobEnv(t => t.by?.id === 'anna' ? { env:{ APIFY_TOKEN:'anna-apify' }, mcp:[{ server:'chat.?place', header:'Authorization', prefix:'Bearer ', env:'', value:'cp-anna' }] } : { env:{}, mcp:[] });
+  const ANNA = { 'x-head':encodeURIComponent(JSON.stringify({ id:'anna', name:'Анна', dept:'', agents:['slides'] })) };
+  const NOBODY = { 'x-head':encodeURIComponent(JSON.stringify({ id:'bob', name:'Боб', dept:'', agents:[] })) };
+  const no = await d.call('POST', 'tasks', { text:'сделай презентацию' }, NOBODY);
+  assert.equal(no.status, 403); assert.match(no.j.error, /Агентов вам ещё не выдали/);
+  const r = await d.call('POST', 'tasks', { text:'сделай презентацию' }, ANNA);
+  assert.equal(r.status, 200);
+  await new Promise(res => setTimeout(res, 30));
+  const job = await d.claim();
+  assert.deepEqual(job.env, { APIFY_TOKEN:'anna-apify' }); assert.equal(job.mcp[0].value, 'cp-anna');
+  await d.finish(job.id, { result:'error', error:'x' });
+  // the owner's task — without Anna's keys
+  await d.task('сделай презентацию');
+  const own = await d.claim();
+  assert.equal(own.env, undefined); assert.equal(own.mcp, undefined);
+});
+
 /* ---------- pipelines, QA, approvals, lessons, usage ---------- */
 
 test('конвейер «Оффер → лендинг»: этапы передают файлы, контролёр возвращает один раз', async () => {
