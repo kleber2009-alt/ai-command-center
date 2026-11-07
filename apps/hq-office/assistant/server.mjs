@@ -45,6 +45,7 @@ import { startTelegram } from './tg.mjs';
 import { initCabinet } from './cabinet.mjs';
 import { createTokens } from './tokens.mjs';
 import { initIntegrations } from './integrations.mjs';
+import { keysStatus } from './keys.mjs';
 import { useTokens } from './publish.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -451,6 +452,8 @@ const ROUTES = {
   },
   // the admin panel: the patch over agents.js for the site (public — the same team every visitor sees), the owner's actions
   'GET office/patch.js': (req, res) => { res.writeHead(200, { 'content-type':'text/javascript; charset=utf-8', 'cache-control':'no-cache' }); res.end(admin.script()); },
+  // «Ключи»: what is filled — names and checkmarks only, never a value
+  'GET admin/keys': (req, res, o) => o ? json(res, 200, keysStatus({ cabinet:integ.list('owner'), runner:desk.runner() })) : json(res, 403, { error:'Только для владельца.' }),
   'GET admin': (req, res, o) => o ? json(res, 200, { patch:admin.patch(), log:admin.log() }) : json(res, 403, { error:'Только для владельца.' }),
   'POST admin': async (req, res, o) => {
     if (!o) return json(res, 403, { error:'Только для владельца.' });
