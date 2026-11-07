@@ -239,6 +239,9 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
   100 тыс. просмотров / 1000 комментариев / 1000 репостов → разбор и идеи. В hq2 — агент `competitors`.
 - `strategy-human-expert` / `strategy-volume-factory` — контент-стратегии по моделям @sashasence («Человек + эксперт») и @arina_alexx
   («Конвейер объёма»). В hq2 — агенты `humanexpert` и `volumefactory`.
+- `youtube-scriptwriter` — «YouTube-сценарист»: длинные ролики YouTube по механике Iman Gadzhi углом Ильи «сначала формула денег,
+  потом нейросеть» — сценарий (хук-развилка → доверие → 4 уровня → вовлечение → кульминация → CTA в бот), упаковка, описание-воронка,
+  план канала на три полки, разбор ролика. Полный разбор — `references/strategy.md`. В hq2 — агент `youtube`, отдел маркетинга.
 - `chief-marketer` — «Главный маркетолог»: собирает идеи всех агентов контента в контент-план на сутки (`out/plan.json`), план — в
   @instaoo_bot с ✅, одобренное — агентам с монтажом. В hq2 — агент `chiefmarketer`, каждое утро в 09:40 МСК.
 - `publish-planner` — «Планер публикаций»: подпись Instagram и текст Threads, сверка кодового слова с цепочками ChatPlace (нет цепочки — слово

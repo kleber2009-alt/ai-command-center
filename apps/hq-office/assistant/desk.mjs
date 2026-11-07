@@ -120,7 +120,7 @@ const CHIEF = 'chiefmarketer';
 // «Планер публикаций»: подпись, сверка кодового слова с цепочками ChatPlace, время — и выход в Instagram и Threads (pub*, ниже)
 const PLANNER = 'planner';
 // whose latest results he reads before the plan (the agents of content and research)
-const CHIEF_TEAM = ['socialstats', 'competitors', 'viral', 'humanexpert', 'volumefactory', 'audience', 'market', 'scripts', 'leadmagnet', 'threads', 'carousel', 'remake'];
+const CHIEF_TEAM = ['socialstats', 'competitors', 'viral', 'humanexpert', 'volumefactory', 'youtube', 'audience', 'market', 'scripts', 'leadmagnet', 'threads', 'carousel', 'remake'];
 const PUBLIC_URL = (process.env.HQ_PUBLIC_URL || 'https://hq2.aicex.club').replace(/\/$/, '');
 const ruDate = iso => iso.split('-').reverse().join('.');
 // links to videos that the transcriber can download (yt-dlp; Instagram also through Apify)
@@ -754,7 +754,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
      research get it as in/competitors.md with every task. At deploy the file is copied next to the server (twin-skills/). */
   const HERE = path.dirname(new URL(import.meta.url).pathname);
   // content, ideas and research: who looks for hits, writes and plans content (not montage, slides, landings, ads)
-  const CONTENT_IDS = new Set(['market', 'chiefmarketer', 'competitors', 'humanexpert', 'volumefactory', 'transcriber', 'socialstats', 'audience', 'viral', 'scripts', 'remake', 'carousel', 'publish', 'threads',
+  const CONTENT_IDS = new Set(['market', 'chiefmarketer', 'competitors', 'humanexpert', 'volumefactory', 'youtube', 'transcriber', 'socialstats', 'audience', 'viral', 'scripts', 'remake', 'carousel', 'publish', 'threads',
     'nfresearch', 'nfscripts', 'nfpublish', 'nfcarousel']);
   function competitorsText() {
     for (const f of [path.join(HERE, 'twin-skills/competitors/references/competitors.md'), path.join(HERE, '../../../.claude/skills/competitors/references/competitors.md')])
