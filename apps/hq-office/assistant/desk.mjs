@@ -65,7 +65,7 @@ const LESSONS_KEEP = 24, LESSONS_SHOW = 10;
 /* Queue: continuations (an answer, a revision, the QA, an approved action) and the transcriber go first, a long render
    last; every 30 minutes of waiting lifts a task one level, so nothing waits forever. Light tasks do not need the
    server's heavy slot — the runner does them next to a render (HQ_RUNNER_WORKERS, two by default). */
-const PRIO = { qa:0, answer:1, execute:1, revise:1, resume:1, transcribe:1, run:2 };
+const PRIO = { qa:0, answer:1, execute:1, revise:1, continue:1, resume:1, transcribe:1, run:2 };
 const AGING_MS = 30 * 60e3;
 // disk: inputs and old versions of closed tasks — after KEEP_DAYS; the runner's job folder — after RUNNER_KEEP_DAYS
 const KEEP_DAYS = Number(process.env.HQ_DESK_KEEP_DAYS || 30), RUNNER_KEEP_DAYS = Number(process.env.HQ_RUNNER_KEEP_DAYS || 7);
@@ -783,10 +783,11 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       `У тебя все скиллы команды (${serverSkills.length || 'список'} в ~/.claude/skills) — сам выбери подходящие и вызывай их инструментом Skill; без подходящего делай сам.`,
       `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t),
       'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', mcpNote(), lessonsNote(CC.id).text, '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
-    if (p.kind === 'revise' && !t.session) return `Задача: ${t.route.title}. Слова владельца: «${t.text}». Результат лежит в out/ (главный файл ${t.result?.main || 'out/index.html'}).\n\n` + jobPrompt({ ...t, session:'x' });
+    if ((p.kind === 'revise' || p.kind === 'continue') && !t.session) return `Задача: ${t.route.title}. Слова владельца: «${t.text}». Результат лежит в out/ (главный файл ${t.result?.main || 'out/index.html'}).\n\n` + jobPrompt({ ...t, session:'x' });
     if (p.kind === 'revise' && p.from === 'qa') return `«Контролёр качества» проверил твой результат до показа владельцу и просит доработать:\n${p.text}\n\nИсправь это в файлах out/ (главный файл — тот же). Отчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше), первым добавь раздел «## Что изменено» — что исправил по замечаниям. Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>.`;
     if (p.kind === 'execute') return `Владелец разрешил действия во внешних системах:\n${(t.approval?.actions || []).map((x, i) => `${i + 1}. ${x}`).join('\n')}\n\nВыполни ровно их инструментами подключённых систем — ничего сверх и ничего не меняя в параметрах. Если какое-то действие не получилось — не повторяй вслепую, опиши ошибку. Затем отчёт целиком в том же формате; в «Главное» — что выполнено, с id, ссылками и цифрами из ответов систем. Обнови out/index.html под итог. Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>.`;
     if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»\n\nОтчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше) и первым добавь раздел «## Что изменено» — 1–3 пункта о правке.${filesNote(p.files)}\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
+    if (p.kind === 'continue') return `Владелец посмотрел результат и просит продолжить эту же задачу в этой же ветке — доделать то, что ещё не сделано.${p.text ? `\nЕго слова: «${p.text}»` : ''}${filesNote(p.files)}\n\nПроверь, что уже лежит в out/ и что ты сам написал в «Что дальше» / незавершённых шагах прошлого отчёта, и выполни следующие шаги${p.text ? ' с учётом слов владельца' : ' — столько, сколько успеешь качественно'}. Сделанное раньше не переделывай без нужды. Действия во внешних системах — как и раньше, только через разрешение владельца.\n\nОтчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше) и первым добавь раздел «## Что сделано в продолжении» — какие шаги закрыты сейчас; в «Что дальше» — что ещё осталось (или «всё сделано»). Обнови главный файл out/ под итог. Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца не продолжить.`;
     if (p.kind === 'resume') return `${p.text}${filesNote(p.files)}\n\nОтчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше). Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца не закончить.`;
     if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»${filesNote(p.files)}\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
     if (a.dept === 'council') return [a.id === 'legends'
@@ -809,7 +810,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   // the office «Нейроворонка»: its agents get the plan of the project, the state of the cabinet and the knowledge of the main office
   // as files in in/ (server.mjs → setContext → cabinet.contextFiles); refreshed every time the task goes to an agent of that office
-  let contextOf = null, runnerKeys = null;   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
+  let contextOf = null, runnerKeys = null;
+  // integrations of the cabinet (integrations.mjs): the keys of the person a task belongs to — env and MCP of that job; publishing keys
+  let jobEnv = null, pubKeys = null;   // runnerKeys — tokens.mjs: Instagram/Threads for the scripts of the runner (keys.env)
   function attachContext(t) {
     if (!contextOf) return;
     let files = [];
@@ -928,6 +931,11 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     learn(t.route?.agent, 'revise', t.route?.title, text);
     queue(t, { kind:'revise', text, files }); t.published = false; step(t, `Правка: ${text}${filesStep(files)}`); emit(t);
   }
+  // continue: the same session goes on with the next steps of the scenario (not a correction — no lesson for the agent)
+  function continueTask(t, text = '', files = []) {
+    t.snoozed = '';
+    queue(t, { kind:'continue', text, files }); t.published = false; step(t, `Продолжить задачу${text ? `: ${text}` : ' — следующие шаги'}${filesStep(files)}`); emit(t);
+  }
   // accept: the rating (up / down) and its comment become the agent's lessons
   function approveTask(t, publish = true, rating = '', comment = '') {
     t.snoozed = '';
@@ -961,7 +969,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     // stopped in the middle of the agent's work: the same session goes on (its out/ stays), not a fresh start
     const cont = p.wasWork && t.session && !['transcribe', 'qa'].includes(pending.kind) && !(pending.kind === 'run' && t.route?.agent === 'billing');
     queue(t, cont ? { kind:'resume', of:pending.kind === 'resume' ? pending.of : pending.kind, files:pending.files || [],
-      text:pending.kind === 'revise' || pending.of === 'revise' ? `Работу над правкой владельца («${pending.text || ''}») ставили на паузу. Продолжи её с того места, где остановился: проверь, что уже лежит в out/, и доделай.`
+      text:pending.kind === 'continue' || pending.of === 'continue' ? `Продолжение задачи${pending.text ? ` («${pending.text}»)` : ''} ставили на паузу. Продолжи с того места, где остановился: проверь, что уже лежит в out/, и доделай следующие шаги.`
+        : pending.kind === 'revise' || pending.of === 'revise' ? `Работу над правкой владельца («${pending.text || ''}») ставили на паузу. Продолжи её с того места, где остановился: проверь, что уже лежит в out/, и доделай.`
         : 'Работа стояла на паузе у владельца. Продолжи задачу с того места, где остановился: проверь, что уже лежит в out/, и доделай целиком.' } : pending);
     step(t, why); emit(t);
   }
@@ -1055,6 +1064,10 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (!['review', 'done'].includes(t.status) || !text) return { error:'Правку можно дать только к готовому результату и с текстом правки.' };
       t.snoozed = '';
       reviseTask(t, text, takeUploads(t, opt.uploads));
+    } else if (action === 'continue') {
+      if (!['review', 'done'].includes(t.status) || t.control) return { error:'Продолжить можно только задачу с готовым результатом.' };
+      t.snoozed = '';
+      continueTask(t, text, takeUploads(t, opt.uploads));
     } else if (action === 'approve') {
       if (t.status !== 'review') return { error:'Принять можно только результат на проверке.' };
       t.snoozed = '';
@@ -1338,6 +1351,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       'Напиши подпись, сверь кодовое слово с цепочками ChatPlace, подготовь файлы и предложи время — по скиллу publish-planner.';
     const t = createTask({ text, preset:{ agent:PLANNER, skill:'publish-planner', deliverable:'research', title:`Публикация · ${title}`, why:'Опубликовать готовую работу' } }).task;
     t.pubOf = src.id; t.pubFiles = {};
+    if (src.by) t.by = src.by;   // a head's work is published to the head's own accounts (their integrations)
     const dir = path.join(taskDir(t.id), 'in'), from = path.join(taskDir(src.id), 'v' + src.result.version);
     fs.mkdirSync(dir, { recursive:true });
     for (const f of files) {
@@ -1377,7 +1391,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     if (!ig.length) ig = video ? [video] : [...own.filter(r => P_JPG.test(r.path) && /^media\//.test(r.path)), ...srcRefs.filter(r => P_JPG.test(r.path))].slice(0, 10);
     if (!th.length) th = video ? [video] : srcRefs.filter(r => P_IMG.test(r.path)).slice(0, 20);
     const p = pubOf(t) || { id:t.id, task:t.id, created:now() };
-    Object.assign(p, { source:t.pubOf || '', title:String(j.title || t.route.title).slice(0, 140), platforms:platforms.length ? platforms : ['instagram', 'threads'],
+    Object.assign(p, { by:t.by?.id || '', source:t.pubOf || '', title:String(j.title || t.route.title).slice(0, 140), platforms:platforms.length ? platforms : ['instagram', 'threads'],
       kind:video ? 'reel' : ig.length > 1 || th.length > 1 ? 'carousel' : 'image', caption:String(j.caption || '').slice(0, 2200), threads:String(j.threads || j.caption || '').slice(0, 500),
       code_word:String(j.code_word || '').slice(0, 40), chain:j.chain && typeof j.chain === 'object' ? { found:Boolean(j.chain.found), name:String(j.chain.name || '').slice(0, 120), id:String(j.chain.id || '').slice(0, 60) } : null,
       replaced:j.replaced?.from ? { from:String(j.replaced.from).slice(0, 40), to:String(j.replaced.to || '').slice(0, 40), why:String(j.replaced.why || '').slice(0, 200) } : null,
@@ -1460,7 +1474,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       const media = {};
       for (const k of ['instagram', 'threads']) media[k] = (p.media?.[k] || []).map(r => ({ url:url(r), kind:refKind(r), name:r.path.split('/').pop() })).filter(m => m.url);
       let res;
-      try { res = await publishAll({ ...p, media }); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
+      try { res = await publishAll({ ...p, media }, pubKeys ? { k:pubKeys(p.by || 'owner') } : {}); } catch (e) { res = Object.fromEntries(p.platforms.map(k => [k, { error:e.message }])); }
       p.results = res; p.publishedAt = now();
       const vals = Object.values(res);
       p.status = vals.every(x => x.ok) ? 'published' : vals.some(x => x.error) ? 'failed' : 'manual';
@@ -1764,10 +1778,12 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         }
         t.worker = worker; t.workAt = now();
         const rk = runnerKeys ? runnerKeys() : null;
+        const je = jobEnv ? jobEnv(t) : null;
         const extra = { purge:purge.map(x => x.id), heavy:isHeavy(t), ...(rk && Object.keys(rk).length ? { keys:rk } : {}),
+          ...(je?.env && Object.keys(je.env).length ? { env:je.env } : {}), ...(je?.mcp?.length ? { mcp:je.mcp } : {}),
           // the result of a continuation: the runner downloads into out/ only what is missing there — its job folder may be
           // gone (purge, or the runner freed disk space on its own); files that are there stay untouched
-          ...(t.result && ['revise', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
+          ...(t.result && ['revise', 'continue', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
         if (t.runnerPurged) t.runnerPurged = false;
         if (t.pending.kind === 'transcribe') {
           t.status = 'work'; t.error = '';
@@ -1784,7 +1800,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         const a = agentOf(t.route.agent);
         t.status = 'work'; t.versions = (t.versions || 0) + 1; t.workVersion = t.versions; t.error = '';
         if (t.pending.kind === 'run') t.lessonsUsed = lessonsNote(t.route.agent).n;
-        step(t, (t.pending.kind === 'execute' ? `«${a?.name}» выполняет разрешённые действия.` : t.pending.kind === 'revise' ? `«${a?.name}» вносит правку${t.pending.from === 'qa' ? ' по замечаниям контролёра' : ''}.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : t.pending.kind === 'resume' ? `«${a?.name}» продолжает после паузы.` : `«${a?.name}» взял задачу в работу.`) + etaNote(t));
+        step(t, (t.pending.kind === 'execute' ? `«${a?.name}» выполняет разрешённые действия.` : t.pending.kind === 'revise' ? `«${a?.name}» вносит правку${t.pending.from === 'qa' ? ' по замечаниям контролёра' : ''}.` : t.pending.kind === 'continue' ? `«${a?.name}» продолжает задачу — следующие шаги.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : t.pending.kind === 'resume' ? `«${a?.name}» продолжает после паузы.` : `«${a?.name}» взял задачу в работу.`) + etaNote(t));
         emit(t);
         return json(res, 200, { id:t.id, kind:t.pending.kind, version:t.versions, agent:t.route.agent, skill:t.route.skill, title:t.route.title,
           prompt:jobPrompt(t), session:t.pending.kind === 'run' ? '' : t.session || '', files:t.files.map(f => f.name), ...extra,
@@ -1961,6 +1977,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       catch (e) { return json(res, 400, { error:e.message }); }
     }
     if (M === 'POST' && rest === 'tasks') {
+      if (head && !head.agents?.length) return json(res, 403, { error:'Агентов вам ещё не выдали — владелец добавит их в админ-панели. Пока можно настроить кабинет и интеграции.' });
       const b = await readJson(req);
       if (!String(b.text || '').trim()) return json(res, 400, { error:'Опишите задачу.' });
       if (head && b.agent && !head.agents.includes(b.agent)) return json(res, 403, { error:'Этот агент не в вашем отделе — поставить ему задачу может его руководитель или владелец.' });
@@ -1976,7 +1993,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       if (head && !canManage(head, t)) return json(res, 403, { error:'Это задача другого отдела — ею управляет её руководитель или владелец. Вам она видна только для просмотра.' });
       const b = await readJson(req), text = String(b.text || '').trim().slice(0, 4000);
       // the history of the task names who acted when it is a head, not the owner
-      const ACT = { answer:'ответ', revise:'правка', approve:'принят результат', retry:'повтор', cancel:'отмена' };
+      const ACT = { answer:'ответ', revise:'правка', continue:'продолжение', approve:'принят результат', retry:'повтор', cancel:'отмена' };
       if (head && ACT[seg[2]]) { step(t, `${head.name}, руководитель: ${ACT[seg[2]]}.`); if (seg[2] === 'approve') t.approvedBy = { id:head.id, name:head.name }; }
       if (seg[2] === 'answer') {
         if (t.status !== 'question' || !text) return json(res, 400, { error:'Сейчас вопроса нет.' });
@@ -1986,6 +2003,11 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
       if (seg[2] === 'revise') {
         if (!['review', 'done'].includes(t.status) || !text) return json(res, 400, { error:'Правку можно дать к готовому результату.' });
         reviseTask(t, text, takeUploads(t, b.uploads));
+        return json(res, 200, { task:view(t) });
+      }
+      if (seg[2] === 'continue') {
+        if (!['review', 'done'].includes(t.status) || t.control) return json(res, 400, { error:'Продолжить можно задачу с готовым результатом.' });
+        continueTask(t, text, takeUploads(t, b.uploads));
         return json(res, 200, { task:view(t) });
       }
       if (seg[2] === 'approve') {
@@ -2013,7 +2035,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     return notFound(res);
   }
 
-  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, setContext:fn => { contextOf = fn; }, setRunnerKeys:fn => { runnerKeys = fn; }, setJobEnv:fn => { jobEnv = fn; }, setPubKeys:fn => { pubKeys = fn; }, summary, tickRoutines, contentPlan, tickPauses, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view), publishTask, tickPubs, pubFiles, publications:() => pubs,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };

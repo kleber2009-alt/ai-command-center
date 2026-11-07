@@ -238,6 +238,24 @@ test('правка: новая версия в той же сессии, ист�
   assert.equal(h.length, 1); assert.equal(h[0].id, 'desk-' + id);
 });
 
+test('продолжить задачу: следующие шаги в той же сессии, без урока агенту', async () => {
+  const d = setup();
+  const id = await d.toReview();
+  await d.call('POST', `tasks/${id}/approve`, { publish:true });
+  const r = await d.call('POST', `tasks/${id}/continue`, {});
+  assert.equal(r.status, 200);
+  let job = await d.claim();
+  assert.equal(job.kind, 'continue'); assert.equal(job.session, 'S-run'); assert.equal(job.version, 2);
+  assert.match(job.prompt, /продолжить эту же задачу/); assert.match(job.prompt, /Что сделано в продолжении/);
+  assert.deepEqual(job.restore, ['index.html']);
+  await d.deliver(job, { 'index.html':'<h1>v2</h1>' }, { summary:'## Что сделано\nшаги 4–7' });
+  let t = await d.get(id);
+  assert.equal(t.status, 'review'); assert.equal(t.result.version, 2);
+  await d.call('POST', `tasks/${id}/continue`, { text:'теперь подключи вебхук' });
+  job = await d.claim();
+  assert.equal(job.kind, 'continue'); assert.match(job.prompt, /теперь подключи вебхук/);
+});
+
 test('файлы результата: владельцу всегда, гостю — только опубликованная версия', async () => {
   const d = setup();
   const id = await d.toReview();
@@ -499,6 +517,25 @@ test('аналитика контента: отчёт за вчера кажды
   const week = d2.desk.tickRoutines(new Date('2026-11-09T07:00:00Z')).find(t => t.routine === 'content-week');   // пн 9 ноября
   process.env.HQ_ROUTINES = 'off';
   assert.ok(week); assert.match(week.text, /с 02\.11\.2026 по 08\.11\.2026/);
+});
+
+test('кабинет: задача человека идёт на его ключах (env и MCP в claim); без выданных агентов задачу не поставить', async () => {
+  const d = setup();
+  d.desk.setJobEnv(t => t.by?.id === 'anna' ? { env:{ APIFY_TOKEN:'anna-apify' }, mcp:[{ server:'chat.?place', header:'Authorization', prefix:'Bearer ', env:'', value:'cp-anna' }] } : { env:{}, mcp:[] });
+  const ANNA = { 'x-head':encodeURIComponent(JSON.stringify({ id:'anna', name:'Анна', dept:'', agents:['slides'] })) };
+  const NOBODY = { 'x-head':encodeURIComponent(JSON.stringify({ id:'bob', name:'Боб', dept:'', agents:[] })) };
+  const no = await d.call('POST', 'tasks', { text:'сделай презентацию' }, NOBODY);
+  assert.equal(no.status, 403); assert.match(no.j.error, /Агентов вам ещё не выдали/);
+  const r = await d.call('POST', 'tasks', { text:'сделай презентацию' }, ANNA);
+  assert.equal(r.status, 200);
+  await new Promise(res => setTimeout(res, 30));
+  const job = await d.claim();
+  assert.deepEqual(job.env, { APIFY_TOKEN:'anna-apify' }); assert.equal(job.mcp[0].value, 'cp-anna');
+  await d.finish(job.id, { result:'error', error:'x' });
+  // the owner's task — without Anna's keys
+  await d.task('сделай презентацию');
+  const own = await d.claim();
+  assert.equal(own.env, undefined); assert.equal(own.mcp, undefined);
 });
 
 /* ---------- pipelines, QA, approvals, lessons, usage ---------- */

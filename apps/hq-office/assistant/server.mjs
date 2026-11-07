@@ -44,6 +44,7 @@ import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate 
 import { startTelegram } from './tg.mjs';
 import { initCabinet } from './cabinet.mjs';
 import { createTokens } from './tokens.mjs';
+import { initIntegrations } from './integrations.mjs';
 import { useTokens } from './publish.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -117,6 +118,15 @@ desk.setContext(() => cabinet.contextFiles());
 const tokens = createTokens({ dataDir:DATA_DIR, notify:notifyTg });
 useTokens(tokens);
 desk.setRunnerKeys(() => tokens.runnerKeys());
+// the cabinet's integrations: everyone's own keys (integrations.mjs); a task and a publication go on the keys of the person they belong to.
+// The owner without his own key — on the office's (GitHub secrets); a head or a user without a key — without it (no office keys for them)
+const integ = initIntegrations({ dataDir:DATA_DIR, secret:SECRET });
+desk.setJobEnv(t => { const uid = t.by?.id || 'owner'; return { env:integ.envFor(uid), mcp:integ.mcpFor(uid) }; });
+desk.setPubKeys(uid => {
+  const own = k => integ.get(uid, k);
+  if (uid === 'owner') return { ig:own('IG_ACCESS_TOKEN') || tokens.get('ig'), igUser:own('IG_USER_ID') || tokens.igUser(), threads:own('THREADS_ACCESS_TOKEN') || tokens.get('threads') };
+  return { ig:own('IG_ACCESS_TOKEN'), igUser:own('IG_USER_ID'), threads:own('THREADS_ACCESS_TOKEN') };
+});
 setTimeout(() => tokens.tick().catch(e => console.error('tokens:', e.message)), 60e3).unref();
 setInterval(() => tokens.tick().catch(e => console.error('tokens:', e.message)), 6 * 3600e3).unref();
 
@@ -150,7 +160,7 @@ function isOwner(req) {
 function whoOf(req) {
   if (isOwner(req)) return { owner:true };
   const u = team.check(signedValue(req));
-  return u ? { head:{ id:u.id, name:u.name, dept:u.dept, agents:u.agents } } : null;
+  return u ? { head:{ id:u.id, name:u.name, dept:u.dept, agents:u.agents, role:u.role || 'head', email:u.email || '' } } : null;
 }
 // Telegram Web App initData: the hash is an HMAC of the sorted fields by the key HMAC("WebAppData", bot token); a day at most
 function tgUser(initData, botToken) {
@@ -459,6 +469,50 @@ const ROUTES = {
     json(res, 200, { ok:true, user:{ id:r.user.id, name:r.user.name, dept:r.user.dept } }, { 'set-cookie':cookie('hqa', `${r.value}.${sign(r.value)}`, team.LOGIN_DAYS * 86400) });
   },
   // the owner's team screen: heads, their agents, invite links, access on/off
+  /* ---------- personal cabinet (account/): registration, login by email, profile, integrations ---------- */
+  'POST register': async (req, res) => {
+    if (!PASSWORD) return json(res, 503, { error:'Регистрация закрыта: офис ещё не настроен.' });
+    if (limited('reg:' + clientIp(req), 5, 3600e3)) return json(res, 429, { error:'Слишком много регистраций — попробуйте через час.' });
+    const b = await jsonBody(req);
+    try {
+      const r = team.register({ name:b.name, email:b.email, password:b.password });
+      admin.note(r.user.name, `зарегистрировался (${r.user.email})`);
+      json(res, 200, { ok:true, user:{ id:r.user.id, name:r.user.name } }, { 'set-cookie':cookie('hqa', `${r.value}.${sign(r.value)}`, team.LOGIN_DAYS * 86400) });
+    } catch (e) { json(res, 400, { error:e.message }); }
+  },
+  'POST user-login': async (req, res) => {
+    if (limited('ulogin:' + clientIp(req), 10, 900e3)) return json(res, 429, { error:'Слишком много попыток — подождите 15 минут.' });
+    const b = await jsonBody(req);
+    const r = team.login({ email:b.email, password:b.password });
+    if (!r) return json(res, limited('ulogin:fail', 100, 3600e3) ? 429 : 401, { error:'Неверная почта или пароль.' });
+    json(res, 200, { ok:true, user:{ id:r.user.id, name:r.user.name } }, { 'set-cookie':cookie('hqa', `${r.value}.${sign(r.value)}`, team.LOGIN_DAYS * 86400) });
+  },
+  'GET account': (req, res, o) => {
+    const w = o ? { owner:true } : whoOf(req);
+    if (!w) return json(res, 200, { role:'guest' });
+    const uid = w.owner ? 'owner' : w.head.id, agents = desk.agents();
+    const mine = w.owner ? agents : agents.filter(a => w.head.agents.includes(a.id));
+    json(res, 200, { role:w.owner ? 'owner' : w.head.role, id:uid, name:w.owner ? 'Илья' : w.head.name, email:w.owner ? '' : w.head.email, dept:w.owner ? '' : w.head.dept,
+      agents:mine.map(a => ({ id:a.id, name:a.name, role:a.role, dept:a.deptName || a.dept })), integrations:integ.list(uid),
+      team:w.owner ? team.list().map(u => ({ id:u.id, name:u.name, role:u.role, email:u.email, agents:u.agents.length, disabled:u.disabled, lastSeen:u.lastSeen })) : null });
+  },
+  'POST account': async (req, res, o) => {
+    const w = o ? null : whoOf(req), b = await jsonBody(req);
+    if (b.action === 'password') {
+      if (!w) return json(res, 403, { error:'Пароль владельца задаётся секретом HQ_ASSISTANT_PASSWORD.' });
+      try { return json(res, 200, { ok:true, user:team.setPassword(w.head.id, { email:b.email, password:b.password }) }); } catch (e) { return json(res, 400, { error:e.message }); }
+    }
+    json(res, 400, { error:'Неизвестное действие.' });
+  },
+  'POST integrations': async (req, res, o) => {
+    const w = o ? { owner:true } : whoOf(req);
+    if (!w) return json(res, 403, { error:'Войдите в кабинет.' });
+    const uid = w.owner ? 'owner' : w.head.id, b = await jsonBody(req), id = String(b.id || '');
+    if (limited('integ:' + uid, 40, 600e3)) return json(res, 429, { error:'Слишком часто — подождите пару минут.' });
+    const r = b.action === 'remove' ? integ.remove(uid, id) : b.action === 'test' ? { check:await integ.test(uid, id) } : await integ.set(uid, id, b.fields || {});
+    if (r.error) return json(res, 400, r);
+    json(res, 200, { ...r, integrations:integ.list(uid) });
+  },
   'GET team': (req, res, o) => o ? json(res, 200, { users:team.list(), agents:desk.agents().map(a => ({ id:a.id, name:a.name, dept:a.dept, role:a.role })) }) : json(res, 403, { error:'Только для владельца.' }),
   'POST team': async (req, res, o) => {
     if (!o) return json(res, 403, { error:'Только для владельца.' });

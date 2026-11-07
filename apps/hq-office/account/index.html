@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Личный кабинет · офис AICEX</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0b0d12;--card:#12151c;--line:rgba(255,255,255,.08);--ink:#e9ecf2;--mute:#9aa3b5;--acc:#7fd3ff;--ok:#3ddc97;--bad:#ff6b6b;--warn:#ffb020}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+a{color:var(--acc)}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 64px}
+header.top{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.logo{font-weight:700;letter-spacing:.02em}.logo span{color:var(--acc)}
+.top .sp{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#181c25;color:var(--ink);padding:9px 14px;border-radius:10px;font:inherit;font-size:14px;cursor:pointer;text-decoration:none}
+.btn:hover{border-color:rgba(127,211,255,.4)}
+.btn.go{background:var(--acc);color:#071018;border-color:var(--acc);font-weight:600}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}h3{font-size:16px;margin:0}
+.mute{color:var(--mute)}.small{font-size:13px}
+.auth{max-width:420px;margin:40px auto}
+.tabs{display:flex;gap:6px;margin-bottom:16px}.tabs button{flex:1}
+.tabs button.on{background:var(--acc);color:#071018;border-color:var(--acc)}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
+input{width:100%;background:#0d1016;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font:inherit}
+input:focus{outline:none;border-color:var(--acc)}
+.note{margin-top:12px;font-size:13px;min-height:18px}.note.err{color:var(--bad)}.note.ok{color:var(--ok)}
+.me{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.av{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:20px;background:linear-gradient(135deg,#2b5cff,#7fd3ff);color:#fff}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(127,211,255,.12);color:var(--acc);margin-left:8px;vertical-align:middle}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chips span{font-size:12px;padding:2px 8px;border-radius:999px;background:#1a1f2a;color:var(--mute)}
+.int{display:flex;flex-direction:column;gap:6px}
+.int .hd{display:flex;align-items:flex-start;gap:10px}.int .hd h3{flex:1}
+.st{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.st.ok{background:rgba(61,220,151,.12);color:var(--ok)}.st.bad{background:rgba(255,107,107,.12);color:var(--bad)}
+.st.off{background:#1a1f2a;color:var(--mute)}.st.office{background:rgba(255,176,32,.12);color:var(--warn)}
+.int .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.grp{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:22px 0 10px}
+.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.list li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+@media (max-width:520px){h1{font-size:22px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div class="logo">AICEX <span>офис</span> · личный кабинет</div><div class="sp"></div><a class="btn ghost" href="../">← В офис</a><span id="topActs"></span></header>
+  <main id="app"><p class="mute">Загружаю…</p></main>
+</div>
+<script>
+const API = '/api/assistant';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const ROLE = { owner:'Администратор', head:'Руководитель', user:'Пользователь' };
+let ME = null, TAB = 'login';
+async function call(method, path, body) {
+  const r = await fetch(API + path, { method, credentials:'include', headers:body ? { 'content-type':'application/json' } : {}, body:body ? JSON.stringify(body) : undefined });
+  let j = {}; try { j = await r.json(); } catch {}
+  return { ok:r.ok, j };
+}
+async function load() {
+  const { j } = await call('GET', '/account');
+  ME = j;
+  ME.role === 'guest' || !ME.role ? authView() : cabinet();
+}
+
+/* ---------- вход и регистрация ---------- */
+function authView() {
+  $('topActs').innerHTML = '';
+  $('app').innerHTML = `<div class="auth card">
+    <h1>${TAB === 'register' ? 'Регистрация' : 'Вход в кабинет'}</h1>
+    <p class="mute small">${TAB === 'register' ? 'Свой кабинет офиса: подключаете свои сервисы — Apify, ElevenLabs, HeyGen и другие, и ваши задачи работают на ваших ключах. Доступ к агентам выдаёт администратор.' : 'Руководители и пользователи — по почте и паролю. Администратор — паролем офиса.'}</p>
+    <div class="tabs"><button class="btn ${TAB === 'login' ? 'on' : ''}" data-tab="login">Вход</button><button class="btn ${TAB === 'register' ? 'on' : ''}" data-tab="register">Регистрация</button><button class="btn ${TAB === 'owner' ? 'on' : ''}" data-tab="owner">Администратор</button></div>
+    <form id="af">
+      ${TAB === 'register' ? '<label>Имя</label><input name="name" autocomplete="name" required>' : ''}
+      ${TAB !== 'owner' ? '<label>Почта</label><input name="email" type="email" autocomplete="email" required>' : ''}
+      <label>Пароль${TAB === 'register' ? ' (от 8 символов)' : ''}</label><input name="password" type="password" autocomplete="${TAB === 'register' ? 'new-password' : 'current-password'}" required minlength="${TAB === 'register' ? 8 : 1}">
+      <div style="margin-top:16px"><button class="btn go" type="submit">${TAB === 'register' ? 'Создать кабинет' : 'Войти'}</button></div>
+      <div class="note" id="an"></div>
+    </form></div>`;
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; authView(); });
+  $('af').onsubmit = async e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    $('an').className = 'note'; $('an').textContent = 'Секунду…';
+    const path = TAB === 'register' ? '/register' : TAB === 'owner' ? '/login' : '/user-login';
+    const r = await call('POST', path, f);
+    if (!r.ok) { $('an').className = 'note err'; $('an').textContent = r.j.error || 'Не получилось.'; return; }
+    load();
+  };
+}
+
+/* ---------- кабинет ---------- */
+function statusOf(it) {
+  if (it.connected && it.check?.ok) return `<span class="st ok">Подключено${it.check.account ? ' · ' + esc(it.check.account) : ''}</span>`;
+  if (it.connected && it.check && !it.check.ok) return '<span class="st bad">Ключ не работает</span>';
+  if (it.connected) return '<span class="st ok">Сохранено</span>';
+  if (it.office) return '<span class="st office">Ключ офиса</span>';
+  return '<span class="st off">Не подключено</span>';
+}
+function intCard(it) {
+  return `<div class="card int" id="i-${it.id}">
+    <div class="hd"><h3>${esc(it.name)}</h3>${statusOf(it)}</div>
+    <div class="mute small">${esc(it.about)}</div>
+    <div class="chips">${it.uses.map(u => `<span>${esc(u)}</span>`).join('')}</div>
+    <form data-int="${it.id}">
+      ${it.fields.map(f => `<label>${esc(f.label)}</label><input name="${f.env}" ${f.secret ? 'type="password" autocomplete="off"' : ''} placeholder="${esc(f.value || f.hint || '')}">`).join('')}
+      <div class="acts"><button class="btn go" type="submit">${it.connected ? 'Обновить' : 'Подключить'}</button>
+        ${it.connected ? `<button class="btn" type="button" data-test="${it.id}">Проверить</button><button class="btn danger" type="button" data-rm="${it.id}">Отключить</button>` : ''}
+        <a class="btn ghost" href="guides/${esc(it.id)}.pdf" target="_blank" rel="noopener">Инструкция PDF</a>
+        <a class="btn ghost" href="${esc(it.site)}" target="_blank" rel="noopener">Где взять ключ ↗</a></div>
+      <div class="note ${it.check && !it.check.ok ? 'err' : ''}" id="n-${it.id}">${it.check && !it.check.ok ? 'Ответ сервиса: ' + esc(it.check.error) : it.office && !it.connected ? 'Сейчас работает ключ офиса. Подключите свой — и ваши задачи пойдут на нём.' : ''}</div>
+    </form></div>`;
+}
+function cabinet() {
+  const m = ME, initials = (m.name || '?').split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase();
+  $('topActs').innerHTML = '<button class="btn" id="out">Выйти</button>';
+  $('out').onclick = async () => { await call('POST', '/logout'); TAB = 'login'; load(); };
+  const groups = [...new Set(m.integrations.map(i => i.group))];
+  const connected = m.integrations.filter(i => i.connected).length;
+  $('app').innerHTML = `
+    <div class="card me"><div class="av">${esc(initials)}</div><div style="flex:1;min-width:200px">
+      <h1>${esc(m.name)}<span class="badge">${ROLE[m.role] || m.role}</span></h1>
+      <div class="mute small">${m.email ? esc(m.email) + ' · ' : ''}${m.dept ? 'отдел ' + esc(m.dept) + ' · ' : ''}интеграций подключено: ${connected} из ${m.integrations.length}</div></div></div>
+
+    <h2>Мои агенты</h2>
+    <div class="card">${m.role === 'owner' ? `<p class="mute small" style="margin:0">Вы администратор: вам доступны все ${m.agents.length} агентов офиса, люди и доступы — в «Админке» офиса.</p>`
+      : m.agents.length ? `<div class="chips">${m.agents.map(a => `<span title="${esc(a.role)}">${esc(a.name)}</span>`).join('')}</div><p class="mute small">Ставьте им задачи в офисе — они работают на ваших ключах из интеграций ниже.</p>`
+      : '<p class="mute small" style="margin:0">Агентов вам пока не выдали — администратор добавит их в админ-панели. Подключите интеграции заранее: как только агенты появятся, они сразу будут работать на ваших ключах.</p>'}</div>
+
+    ${m.role === 'head' && !m.email ? `<h2>Вход без ссылки</h2><div class="card"><p class="mute small" style="margin-top:0">Задайте почту и пароль — заходите в кабинет и офис сами, без новой ссылки-приглашения.</p>
+      <form id="pf"><label>Почта</label><input name="email" type="email" required><label>Пароль (от 8 символов)</label><input name="password" type="password" minlength="8" required>
+      <div style="margin-top:12px"><button class="btn go" type="submit">Сохранить</button></div><div class="note" id="pn"></div></form></div>` : ''}
+
+    <h2>Интеграции</h2>
+    <p class="mute small" style="margin-top:-6px">Ключи хранятся на сервере офиса в зашифрованном виде и никому не показываются — даже вам: видны только последние 4 символа. Задачи, которые вы ставите, идут на ваших ключах${m.role === 'owner' ? '; без вашего ключа — на ключе офиса из секретов' : ''}. Пошагово, где взять каждый ключ, — <a href="guides/vse-integracii.pdf" target="_blank" rel="noopener">все инструкции одним PDF</a> или кнопка «Инструкция PDF» в карточке.</p>
+    ${groups.map(g => `<div class="grp">${esc(g)}</div><div class="grid2">${m.integrations.filter(i => i.group === g).map(intCard).join('')}</div>`).join('')}
+
+    ${m.team ? `<h2>Люди офиса</h2><div class="card"><ul class="list">${m.team.length ? m.team.map(u => `<li><span>${esc(u.name)}<span class="badge">${ROLE[u.role] || u.role}</span>${u.disabled ? ' <span class="mute small">отключён</span>' : ''}<br><span class="mute small">${esc(u.email || 'вход по ссылке')}</span></span><span class="mute small">агентов: ${u.agents}</span></li>`).join('') : '<li class="mute">Пока никого — пригласите руководителей в «Админке» или дайте ссылку на регистрацию.</li>'}</ul>
+      <p class="mute small">Регистрация для новых людей: <a href="${location.origin}${location.pathname}">${location.host}${location.pathname}</a> → «Регистрация». Выдать агентов — «Админка» → «Люди».</p></div>` : ''}`;
+
+  document.querySelectorAll('form[data-int]').forEach(f => f.onsubmit = async e => {
+    e.preventDefault();
+    const id = f.dataset.int, fields = {};
+    for (const [k, v] of new FormData(f)) if (String(v).trim()) fields[k] = v;
+    const n = $('n-' + id); n.className = 'note'; n.textContent = 'Сохраняю и проверяю…';
+    const r = await call('POST', '/integrations', { action:'save', id, fields });
+    if (!r.ok) { n.className = 'note err'; n.textContent = r.j.error || 'Не получилось.'; return; }
+    ME.integrations = r.j.integrations; cabinet();
+    const n2 = $('n-' + id); if (r.j.check?.ok) { n2.className = 'note ok'; n2.textContent = 'Подключено и проверено' + (r.j.check.account ? ': ' + r.j.check.account : '') + '.'; }
+  });
+  document.querySelectorAll('[data-test]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.test, n = $('n-' + id); n.className = 'note'; n.textContent = 'Проверяю…';
+    const r = await call('POST', '/integrations', { action:'test', id });
+    ME.integrations = r.j.integrations || ME.integrations; cabinet();
+    const n2 = $('n-' + id); n2.className = 'note ' + (r.j.check?.ok ? 'ok' : 'err'); n2.textContent = r.j.check?.ok ? 'Ключ рабочий' + (r.j.check.account ? ': ' + r.j.check.account : '') + '.' : 'Ответ сервиса: ' + (r.j.check?.error || r.j.error || 'ошибка');
+  });
+  document.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
+    if (!confirm('Отключить интеграцию? Ключ будет удалён с сервера.')) return;
+    const r = await call('POST', '/integrations', { action:'remove', id:b.dataset.rm });
+    if (r.ok) { ME.integrations = r.j.integrations; cabinet(); }
+  });
+  if ($('pf')) $('pf').onsubmit = async e => {
+    e.preventDefault();
+    const r = await call('POST', '/account', { action:'password', ...Object.fromEntries(new FormData(e.target)) });
+    $('pn').className = 'note ' + (r.ok ? 'ok' : 'err'); $('pn').textContent = r.ok ? 'Готово — входите по почте и паролю.' : r.j.error || 'Не получилось.';
+    if (r.ok) setTimeout(load, 800);
+  };
+}
+if (location.hash === '#register') TAB = 'register';
+load();
+</script>
+</body>
+</html>

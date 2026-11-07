@@ -968,6 +968,7 @@
 <nav class="dock glass" id="dock" aria-label="Вид">
   <button data-cmd="neuro" id="dNeuro" hidden title="Тестовый кабинет продукта «Нейроворонка»: кампания, 6 контуров, контент с метками до оплаты, находки → задачи"><svg viewBox="0 0 24 24"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>Нейроворонка</button>
   <button data-cmd="admin" id="dAdmin" hidden title="Админ-панель: люди и доступы, агенты, новый агент, журнал"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>Админка</button>
+  <button data-cmd="account" id="dAccount" title="Личный кабинет: профиль, мои агенты, интеграции — свои ключи Apify, ElevenLabs, HeyGen и других сервисов"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Кабинет</button>
   <button data-cmd="login" class="login" id="dLogin" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Войти</button>
   <button data-cmd="newtask" class="go" id="dNew" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Задача агенту</button>
   <button data-cmd="overview" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Обзор</button>
@@ -4286,7 +4287,7 @@ const etaText = (e, long = false) => { if (!e?.at) return ''; const ms = Date.pa
   if (e.late || ms < 60e3) return long ? `Дольше обычного — результат скоро, примерно к ${at}` : `≈ скоро · к ${at}`;
   return long ? `Результат — примерно через ${fmtDur(ms)}, к ${at}` : `≈ ${fmtDur(ms)} · к ${at}`; };
 const usageText = u => u && (u.ms || u.cost) ? `${fmtDur(u.ms)}${u.cost ? ' · ' + fmtUsd(u.cost) : ''}` : '';
-const RUNK = { run:'работа', revise:'правка', answer:'после ответа', execute:'действия', qa:'проверка', transcribe:'расшифровка' };
+const RUNK = { run:'работа', revise:'правка', continue:'продолжение', answer:'после ответа', execute:'действия', qa:'проверка', transcribe:'расшифровка' };
 const sizeText = n => n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)} МБ` : `${Math.max(1, Math.round(n / 1e3))} КБ`;
 function ago(iso) {
   const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -4834,7 +4835,7 @@ function renderDeskTask() {
   let acts = '';
   if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}${t.rating ? ` Ваша оценка: ${t.rating.value === 'up' ? 'хорошо' : 'есть замечания'}${t.rating.comment ? ` — «${esc(t.rating.comment)}»` : ''}. Агент учтёт её в следующих задачах.` : ''}</p>`;
   if (t.status === 'review' && !t.control) acts += `<section class="kcard"><h4 style="--g:#3ddc97"><i></i>Оценка агенту</h4><div class="rate"><button type="button" class="up" data-k="rate:up">${ico('<path d="M7 10v11H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7"/>')}Хорошо</button><button type="button" class="down" data-k="rate:down">${ico('<path d="M17 14V3h3v11zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 6.4 3H17"/>')}Есть замечания</button></div><textarea id="kRate" placeholder="Что учесть агенту в следующих задачах (необязательно). Оценка и комментарий станут его уроком — их сохранят при «Принять»"></textarea></section>`;
-  if ((t.status === 'review' || t.status === 'done') && !t.control) acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
+  if ((t.status === 'review' || t.status === 'done') && !t.control) acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Правка или продолжение</h4><textarea id="kRevise" placeholder="Что поменять — или что делать дальше. «Продолжить задачу» без текста: агент в той же ветке доделает оставшиеся шаги из «Что дальше»"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button><button class="btn-go" data-k="continue" title="Агент продолжит эту же задачу в той же сессии: выполнит следующие шаги сценария">Продолжить задачу</button></div><p class="note" id="kMicNote" hidden></p></section>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
   document.querySelectorAll('#kActs [data-k^="rate:"]').forEach(b => b.classList.toggle('on', b.dataset.k === 'rate:' + desk.rate[t.id]));
@@ -4976,6 +4977,9 @@ async function deskAct(k) {
     const o = t.question?.options?.find(x => x.id === k.slice(k.indexOf(':') + 1));
     if (!o) return;
     p = 'answer'; body = { text:o.label };
+  } else if (k === 'continue') {
+    if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
+    body = { text:$('kRevise')?.value.trim() || '', uploads:desk.uploads.filter(u => u.id).map(u => u.id) };
   } else if (k === 'answer' || k === 'revise') {
     const box = $(k === 'answer' ? 'kAnswer' : 'kRevise'), text = box?.value.trim();
     if (!text) { box?.focus(); return deskNote(k === 'answer' ? 'Напишите ответ.' : 'Напишите, что поменять.', true); }
@@ -4992,6 +4996,7 @@ async function deskAct(k) {
   if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось — попробуйте ещё раз.', true);
   if (body.uploads) desk.uploads = [];
   deskUpsert(r.j.task);
+  if (p === 'continue') toast(`«${deskTitle(t)}»: агент продолжает в той же ветке`);
   if (p === 'approve') { closeDesk(); toast(body.publish ? `Принято: «${deskTitle(t)}» — в истории офиса` : `Принято: «${deskTitle(t)}»`); }
 }
 function deskEnter() {
@@ -5403,6 +5408,7 @@ function select(id, flyCam = false) {
 function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo', 'admin', 'neuro', 'login', 'newtask'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`)?.classList.toggle('on', on); }
 function cmd(k) {
+  if (k === 'account') { location.href = 'account/'; return; }
   if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo', 'admin', 'neuro'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
   if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 96, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 50, zc + 0.6), V3(0, 0, zc), 1.6); }
@@ -5470,6 +5476,7 @@ function moreSheet() {
     ['tour', 'Экскурсия', '<path d="m8 5 11 7-11 7z"/>'], ['holo', 'Голограмма', '<ellipse cx="12" cy="20" rx="6" ry="1.6"/><circle cx="12" cy="8" r="4"/>'], ['labels', 'Подписи', '<path d="M4 6h16M4 12h10M4 18h7"/>']];
   $('msh').innerHTML = `<i class="grip"></i><h3>Вид офиса</h3><div class="row">${views.map(([k, l, p]) => `<button data-mc="${k}"${k === 'labels' && labelsOn ? ' class="on"' : ''}>${ic(p)}${l}</button>`).join('')}</div>
     <h3>Оформление</h3><div class="row">${Object.entries(THEMES).map(([id, T]) => `<button data-th="${id}"${id === STYLE ? ' class="on"' : ''}><span class="sw">${T.sw.map(c => `<i style="--c:${c}"></i>`).join('')}</span>${esc(T.name)}</button>`).join('')}</div>
+    <h3>Кабинет</h3><div class="row"><button data-mc="account">${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')}Личный кабинет и интеграции</button></div>
     ${role() === 'owner' ? `<h3>Админка</h3><div class="row"><button data-mc="admin">${ic('<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}Админ-панель</button>${NEURO ? `<button data-mc="neuro">${ic('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>')}Кабинет кампании</button>` : ''}</div>` : ''}
     <h3>Аккаунт</h3><div class="acct">${s?.owner ? `<span>Вы вошли как владелец</span><button class="btn-go" data-mc="logout">Выйти</button>`
       : s?.configured?.login ? `<span>Войдите, чтобы ставить задачи и видеть, что в работе</span><button class="btn-go" data-mc="login">Войти</button>` : '<span>Демо для гостей</span>'}</div>`;

@@ -59,7 +59,7 @@ QA_TOOLS = ["Bash", "Read", "Glob", "Grep", "WebFetch"]
 DENIED_TOOLS = ["Bash(sudo:*)", "Bash(su:*)", "Bash(ssh:*)", "Bash(scp:*)", "Bash(sftp:*)", "Bash(rsync:*)", "Bash(git push:*)",
                 "Bash(docker:*)", "Bash(systemctl:*)", "Bash(crontab:*)", "Bash(pkill:*)", "Bash(killall:*)", "Bash(shutdown:*)", "Bash(reboot:*)",
                 "Read(~/.ssh/**)", "Read(~/hq-runner/*.env)", "Read(~/hq-runner/mcp*.json)", "Read(~/.claude/.credentials.json)", "Read(**/.env)"]
-VERSION = "11"
+VERSION = "12"
 WORKERS = max(1, int(os.environ.get("HQ_RUNNER_WORKERS", "2") or 2))
 # окружение для Claude Code и скриптов: без токена офиса (им нельзя сдавать задачи от имени исполнителя)
 CHILD_ENV = {k: v for k, v in os.environ.items() if k not in ("HQ_DESK_RUNNER_TOKEN",)}
@@ -426,7 +426,7 @@ def run_transcribe(job):
         return call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": "Пришлите ссылку на ролик или само видео — без него расшифровывать нечего."})
     step(f"Транскрибатор взял {len(sources)} источник(а) — скачивает и расшифровывает.")
     started = time.time()
-    p = subprocess.Popen([sys.executable, "-I", str(TRANSCRIBER), *sources, "--out", str(dest)], cwd=d, stdin=subprocess.DEVNULL, env=CHILD_ENV,
+    p = subprocess.Popen([sys.executable, "-I", str(TRANSCRIBER), *sources, "--out", str(dest)], cwd=d, stdin=subprocess.DEVNULL, env=job_env(job),
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     timer = threading.Timer(30 * 60, p.kill)
     timer.start()
@@ -656,8 +656,9 @@ def run_job(job):
             "--permission-mode", "default" if qa else "acceptEdits", "--allowedTools", *tools,
             "--disallowedTools", *DENIED_TOOLS,
             "--add-dir", str(d), str(SKILLS), "--model", MODEL, "--effort", job.get("effort") or EFFORT]
-    if MCP["config"]:
-        args += ["--mcp-config", MCP["config"]]
+    mcp_cfg = job_mcp(job, d)
+    if mcp_cfg:
+        args += ["--mcp-config", mcp_cfg]
     if job.get("session"):
         args += ["--resume", job["session"]]
 
@@ -675,7 +676,7 @@ def run_job(job):
             log(jid, "cancelled before start")
             return
         logf = open(d / "claude.log", "a", encoding="utf-8")
-        p = proc["p"] = subprocess.Popen(args, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1, env=CHILD_ENV)
+        p = proc["p"] = subprocess.Popen(args, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1, env=job_env(job))
         timer = threading.Timer(LIMIT, p.kill)
         timer.start()
         threading.Thread(target=poll, daemon=True).start()
@@ -822,6 +823,36 @@ def main():
     log(f"потоков: {WORKERS} (первый — любые задачи, остальные — лёгкие)")
     for w in workers:
         w.join()
+
+
+def job_env(job):
+    """Окружение задачи: общее + ключи интеграций человека, чья это задача (личный кабинет офиса → claim.env)."""
+    extra = {k: str(v) for k, v in (job.get("env") or {}).items() if re.fullmatch(r"[A-Z0-9_]{2,40}", str(k)) and v}
+    return {**CHILD_ENV, **extra} if extra else CHILD_ENV
+
+
+def job_mcp(job, d):
+    """MCP задачи: ChatPlace / HeyGen на ключах человека из его кабинета (claim.mcp) — копия mcp-config в папке задачи."""
+    over = job.get("mcp") or []
+    if not over or not MCP.get("config"):
+        return MCP.get("config", "")
+    try:
+        cfg = json.loads(Path(MCP["config"]).read_text(encoding="utf-8"))
+        for name, sv in (cfg.get("mcpServers") or {}).items():
+            for o in over:
+                if not re.search(o.get("server") or "^$", name, re.I):
+                    continue
+                if o.get("header"):
+                    sv.setdefault("headers", {})[o["header"]] = (o.get("prefix") or "") + o["value"]
+                if o.get("env"):
+                    sv.setdefault("env", {})[o["env"]] = o["value"]
+        f = d / ".mcp-job.json"
+        f.write_text(json.dumps(cfg), encoding="utf-8")
+        os.chmod(f, 0o600)
+        return str(f)
+    except Exception as e:  # noqa: BLE001
+        log(job.get("id"), "mcp:", e)
+        return MCP.get("config", "")
 
 
 KEYS_FILE = Path(os.path.expanduser(os.environ.get("HQ_KEYS_FILE") or str(HOME / "hq-runner/keys.env")))

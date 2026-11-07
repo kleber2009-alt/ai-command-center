@@ -396,14 +396,14 @@ function detail(id) {
   if (t.status === 'review') body += `<div class="card"><span style="font-size:13px;font-weight:700">Оценка агенту — станет его уроком</span>
       <div class="btns"><button class="b${rate === 'up' ? ' on' : ''}" data-a="rate" data-id="${t.id}" data-v="up">Хорошо</button><button class="b${rate === 'down' ? ' on' : ''}" data-a="rate" data-id="${t.id}" data-v="down">Есть замечания</button></div>
       ${rate === 'down' ? `<label><span class="sr">Что учесть</span><textarea id="rateText" placeholder="Что учесть агенту в следующий раз"></textarea></label>` : ''}</div>`;
-  if (S.revise === t.id) body += `<div class="card" id="rv"><span style="font-size:13px;font-weight:700">Правка — агент поправит в той же сессии</span>
-      <label><span class="sr">Что поправить</span><textarea id="revText" placeholder="Что поменять?"></textarea></label>
-      <div class="btns"><button class="b" data-a="mic" data-to="revText">Голосом</button><button class="b pri" data-a="revise" data-id="${t.id}">Отправить правку</button></div></div>`;
+  if (S.revise === t.id) body += `<div class="card" id="rv"><span style="font-size:13px;font-weight:700">Правка или продолжение — в той же сессии</span>
+      <label><span class="sr">Что поправить или что делать дальше</span><textarea id="revText" placeholder="Что поменять — или что делать дальше (для продолжения можно пусто)"></textarea></label>
+      <div class="btns"><button class="b" data-a="mic" data-to="revText">Голосом</button><button class="b" data-a="revise" data-id="${t.id}">Отправить правку</button><button class="b pri" data-a="continue" data-id="${t.id}">Продолжить задачу</button></div></div>`;
   body += controls(t);
   if (['work', 'queued', 'routing', 'paused'].includes(t.status)) body += `<div class="card"><span class="lbl" style="margin:0">Ход работы</span>${(t.steps || []).slice(-10).map(s => `<div class="log"><time>${esc(new Date(s.at).toTimeString().slice(0, 5))}</time><span>${esc(s.text)}</span></div>`).join('')}
       <div class="btns"><button class="b" data-a="cancel" data-id="${t.id}">Отменить задачу</button></div></div>`;
-  const sticky = t.status === 'review' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Правка</button><button class="b ok" data-a="accept" data-id="${t.id}">Принять</button></div>`
-    : t.status === 'done' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Нужна правка</button></div>` : '';
+  const sticky = t.status === 'review' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Правка / дальше</button><button class="b ok" data-a="accept" data-id="${t.id}">Принять</button></div>`
+    : t.status === 'done' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Правка или продолжить</button></div>` : '';
   return header('Задача', t.agent?.name || 'Задача', true) + `<main>${body}</main>${sticky}`;
 }
 // управление задачей: пауза и продолжение, срочно, отложить — те же действия, что в чате бота
@@ -535,6 +535,7 @@ document.addEventListener('click', e => {
   if (a === 'accept') { const rate = S.rate[id] || '', comment = $('rateText')?.value.trim() || ''; return act(() => post(`/tasks/${id}/approve`, { publish:true, rating:rate, comment }), 'Принято — в истории офиса').then(j => { if (j && route().s === 'detail') history.back(); }); }
   if (a === 'rate') { S.rate[id] = S.rate[id] === v ? '' : v; return render(); }
   if (a === 'revise-open') { S.revise = id; render(); return $('rv')?.scrollIntoView({ behavior:'smooth' }); }
+  if (a === 'continue') { const text = $('revText')?.value.trim() || ''; return act(() => post(`/tasks/${id}/continue`, { text }), 'Агент продолжает задачу').then(() => { S.revise = ''; render(); }); }
   if (a === 'revise') { const text = $('revText')?.value.trim(); if (!text) return toast('Напишите, что поправить'); return act(() => post(`/tasks/${id}/revise`, { text }), 'Правка ушла агенту').then(() => { S.revise = ''; render(); }); }
   if (a === 'answer') return act(() => post(`/tasks/${id}/answer`, { text:v }), v === 'Выполнить' ? 'Разрешено — агент выполняет' : v === 'Не выполнять' ? 'Агент сдаст результат без действия' : `Передал агенту: ${v}`);
   if (a === 'answer-text') { const text = $('ans')?.value.trim(); if (!text) return toast('Напишите ответ'); return act(() => post(`/tasks/${id}/answer`, { text }), 'Ответ передан'); }

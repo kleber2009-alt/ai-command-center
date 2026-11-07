@@ -25,7 +25,7 @@ export function initTeam(dataDir) {
   const cleanId = s => String(s || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
 
   // public view for the owner's team screen (no codes of used or expired invites)
-  const view = u => ({ id:u.id, name:u.name, dept:u.dept, agents:u.agents, disabled:Boolean(u.disabled), created:u.created, lastSeen:u.lastSeen || '',
+  const view = u => ({ id:u.id, name:u.name, dept:u.dept, agents:u.agents, role:u.role || 'head', email:u.email || '', disabled:Boolean(u.disabled), created:u.created, lastSeen:u.lastSeen || '',
     invite:(() => { const i = db.invites.filter(x => x.user === u.id && !x.used && Date.parse(x.exp) > Date.now()).at(-1); return i ? { exp:i.exp } : null; })() });
 
   return {
@@ -77,6 +77,39 @@ export function initTeam(dataDir) {
       if (!u.lastSeen || Date.now() - Date.parse(u.lastSeen) > 36e5) { u.lastSeen = now(); save(); }
       return u;
     },
+    /* self-registration: a user of the office with a password. Their own cabinet and integrations at once; agents — only those the
+       owner gives them in the admin panel (until then they set no tasks). Passwords — scrypt with a salt. */
+    register({ name, email, password }) {
+      email = String(email || '').trim().toLowerCase().slice(0, 120);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Укажите почту.');
+      if (String(password || '').length < 8) throw new Error('Пароль — от 8 символов.');
+      if (db.users.some(u => u.email === email)) throw new Error('Такая почта уже зарегистрирована — войдите.');
+      const salt = crypto.randomBytes(16).toString('hex');
+      const u = { id:'u-' + crypto.randomBytes(5).toString('hex'), role:'user', name:clean(name) || email.split('@')[0], email, dept:'',
+        agents:[], ver:1, disabled:false, created:now(), lastSeen:now(), pass:{ salt, hash:crypto.scryptSync(String(password), salt, 32).toString('hex') } };
+      db.users.push(u); save();
+      return { user:u, value:`user.${u.id}.${u.ver}.${Date.now() + LOGIN_DAYS * 864e5}` };
+    },
+    login({ email, password }) {
+      const u = db.users.find(x => x.email && x.email === String(email || '').trim().toLowerCase());
+      if (!u?.pass || u.disabled) return null;
+      const h = crypto.scryptSync(String(password || ''), u.pass.salt, 32);
+      if (!crypto.timingSafeEqual(h, Buffer.from(u.pass.hash, 'hex'))) return null;
+      u.lastSeen = now(); save();
+      return { user:u, value:`user.${u.id}.${u.ver}.${Date.now() + LOGIN_DAYS * 864e5}` };
+    },
+    // a head who came by an invite link sets a password and an email — to come back without a new link
+    setPassword(id, { email, password }) {
+      const u = get(id); if (!u) throw new Error('Нет такого сотрудника.');
+      if (String(password || '').length < 8) throw new Error('Пароль — от 8 символов.');
+      email = String(email || u.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Укажите почту.');
+      if (db.users.some(x => x.email === email && x.id !== id)) throw new Error('Эта почта уже занята.');
+      const salt = crypto.randomBytes(16).toString('hex');
+      Object.assign(u, { email, pass:{ salt, hash:crypto.scryptSync(String(password), salt, 32).toString('hex') } }); save();
+      return view(u);
+    },
+    view,
     LOGIN_DAYS,
   };
 }
