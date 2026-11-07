@@ -155,7 +155,8 @@ export function cardKeyboard(v, { mode = '', site = '', webApp = false } = {}) {
     rows.push([B('✍️ Ответить', `ans:${id}`), B('⏰ Отложить', `z:${id}`), B('✖️ Отменить', `x:${id}`)]);
   } else if (v.status === 'review') {
     rows.push([B('✅ Принять', `ok:${id}`), B('👍', `up:${id}`), B('👎', `dn:${id}`)]);
-    rows.push([B('✏️ Правка', `rv:${id}`), B('📎 Файлы', `f:${id}`), B('⏰ Отложить', `z:${id}`)]);
+    rows.push([B('✏️ Правка', `rv:${id}`), B('⏭ Продолжить задачу', `cn:${id}`)]);
+    rows.push([B('📎 Файлы', `f:${id}`), B('⏰ Отложить', `z:${id}`)]);
     rows.push([B('Принять без публикации', `okp:${id}`), B('✖️ Отменить', `x:${id}`)]);
     if (v.canPublish) rows.push([B('📤 Опубликовать', `pb:${id}`)]);
   } else if (v.status === 'queued') {
@@ -173,7 +174,7 @@ export function cardKeyboard(v, { mode = '', site = '', webApp = false } = {}) {
     const ps = v.publication?.status;
     if (ps === 'scheduled') rows.push([B('🚀 Сейчас', `pn:${id}`), B('🗓 Другое время', `pm:${id}`), B('✖️ Снять', `pc:${id}`)]);
     else if (ps === 'manual' || ps === 'failed') rows.push([B('📎 Файлы и подпись', `pf:${id}`), B('🔁 Ещё раз', `pn:${id}`)]);
-    else rows.push([B('📎 Файлы', `f:${id}`), B('✏️ Правка', `rv:${id}`)]);
+    else rows.push([B('📎 Файлы', `f:${id}`), B('✏️ Правка', `rv:${id}`), B('⏭ Продолжить', `cn:${id}`)]);
     if (v.canPublish) rows.push([B('📤 Опубликовать', `pb:${id}`)]);
   }
   if (open && v.status !== 'cancelled') rows.push([open]);
@@ -528,6 +529,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
       case 'up': return ack(desk.act(id, 'approve', '', 'up'));
       case 'dn': return promptFor('down', '👎 Что не так? Ответьте текстом или голосом — агент учтёт это в следующих задачах.');
       case 'rv': return promptFor('revise', '✏️ Какую правку внести? Ответьте текстом или голосом, можно с файлами.');
+      case 'cn': return ack(desk.act(id, 'continue'));
       case 'ans': return promptFor('answer', '✍️ Ваш ответ — текстом или голосом, можно с файлами.');
       case 'o': {
         const v = desk.get(id), o = v?.question?.options?.find(x => x.id === arg);
